@@ -214,8 +214,8 @@ class FileHandler:
         overwrite: bool, optional
             If False (Default) existing files will not be overwritten.
         file_name_iterator: list or None, optional
-            Has to match with the 'index' length. Each element is replaced with the '{i}' placeholder in 'f_name_formatter'.
-            e.g. f_name_formatter='file_{i}', file_name_iterator=[1,2,3] -> file_1, file_2, file_3
+            Has to match with the 'index' length. Each element is replaced with the '{i}' placeholder in
+            'f_name_formatter', e.g., f_name_formatter='file_{i}', file_name_iterator=[1,2,3] -> file_1, file_2, file_3
         """
 
         if not f_name_formatter.endswith(ending):

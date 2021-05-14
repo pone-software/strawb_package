@@ -25,8 +25,14 @@ python3 -m build
 ```
 This will create the files located in the folder `.egg-info`.
 
+### Install requirements
+To install the required python packages run.
+```bash
+pip install -r requirements.txt
+```
+
 ### Install with pip
-Run the following command to install the package, and replace `.` with the root directory of the package. 
+Run the following command to install the package. In case you are not in the directory of the repository replace `.` with the root directory of the package. 
 ```bash
 pip3 install -U --user -e .
 ```

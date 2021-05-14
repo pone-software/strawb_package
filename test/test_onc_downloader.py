@@ -9,8 +9,8 @@ class TestONCDownload(TestCase):
         onc_downloader = ONCDownloader('0db751f8-9430-47af-bc11-ed6691b38e22', showInfo=False)
 
         filters = {'deviceCode': 'TUMPMTSPECTROMETER002',
-                   'dateFrom': '2021-05-10T19:00:00.000Z',
-                   'dateTo': '2021-05-10T21:59:59.000Z',
+                   'dateFrom': '2021-05-01T19:00:00.000Z',
+                   'dateTo': '2021-05-01T21:59:59.000Z',
                    'extension': 'hdf5'}
 
         # in background

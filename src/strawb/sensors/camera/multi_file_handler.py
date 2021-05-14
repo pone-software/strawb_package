@@ -5,13 +5,14 @@ import numpy as np
 from tqdm import tqdm
 
 from .file_handler import FileHandler
+from ...config_parser.config_parser import Config
 
 
 class MultiFileHandler(FileHandler):
     """Based on CameraRun it features the combination of multiple CameraRuns. This allows,
     e.g. to calculate the dark frame based on a bigger dataset."""
 
-    def __init__(self, module, date='20210429', camera_run_list=None, number_files=None):
+    def __init__(self, module, date, camera_run_list=None, number_files=None):
         FileHandler.__init__(self, module=module, file_name=None)  # keep it empty
         self.meta_data_run_index = None  # stores which meta data belongs to which item in the camera_run_list
 
@@ -23,7 +24,18 @@ class MultiFileHandler(FileHandler):
         else:
             self.camera_run_list = camera_run_list
 
-    def load_all_from_path(self, path='module_data', date=None, number_files=None):
+    def load_all_from_path(self, path=None, date=None, number_files=None):
+        """Loads all camera files from the path and the specified date.
+        PARAMETER
+        ---------
+        path: str or None, optional
+            The path where the raw hdf5 files are loated. If None (default), it's the parameter from the config file.
+        date: str or None, optional
+            If None (default), it's the parameter from the config file. '20210429'
+        """
+        if path is None:
+            path = Config.raw_data_dir
+
         if date is None:
             date = self.date
 
