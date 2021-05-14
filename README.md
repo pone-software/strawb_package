@@ -1,7 +1,6 @@
-## H5DAQ
+## STRAWb
 
-H5DAQ is a standalone module which provides a DAQ system based on hdf5-files powered by ``h5py, numpy, logging, scheduler``.
-The package consists of two main classes [DAQDaemon](#daqdaemon) and [DAQJob](#daqjob).
+STRAWb is a python module which simplifies and streamlines the work with the STRAWb data.
 
 #### Table of Contents
 1. [Example](#example)
@@ -45,21 +44,10 @@ This problem happens if you move the source code directory after the egg-link fi
 
 ## Code Structure
 
-### DAQJob
-The DAQJob is responsible for taking and buffering data. A single DAQJob can hold different datasets with different shapes. 
-Internally the datasets are saved as numpy arrays. 
+### ONCDownloader
 
-To add a new item to each dataset, a getter function is executed. This getter function has to be provided at the initialisation of the DAQJob ,and it should be a python function.
-This getter function returns one entry for each dataset with the correct shape ,and single entries must be interpretable with the given dtype per data-set. 
-Therefore, the length of the datasets along the first axis (axis=0) is the same for all datasets. The time when the getter is executed is saved automatically. It is also possible to provide the time from the getter as the first item.
+### Sensors
 
-For more information see the doc-string in [DAQJob (src file)](./src/h5daq/daq_job.py).
-
-### DAQDaemon
-The [DAQDaemon (src file)](./src/h5daq/daq_daemon.py), collects the buffered data from the [DAQJob(s)](#daqjob) and writes it to a hdf5 file, where each DAQJob gets its own hdf5-group (internal directory).
-The DAQDaemon also runs the scheduler-loop for all scheduled DAQJob(s).
-
----
 ## TODO List:
-* [ ] include options for logger with parameters (which file, rollover, level, fmt)
+* [ ] 
 * [ ] 
