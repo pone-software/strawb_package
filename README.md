@@ -13,7 +13,6 @@ STRAWb is a python module which simplifies and streamlines the work with the STR
 ```python
 import strawb
 
-
 ```
 For more examples have a lock in the [example folder](./examples).
 
@@ -49,5 +48,5 @@ This problem happens if you move the source code directory after the egg-link fi
 ### Sensors
 
 ## TODO List:
-* [ ] 
-* [ ] 
+* [ ] add examples
+* [ ] add all sensor types
