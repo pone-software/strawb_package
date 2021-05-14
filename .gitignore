@@ -1,3 +1,5 @@
 /module_data/
 /raw_module_data/
 /processed_data/
+/build/*
+/src/STRAWB.egg-info/

@@ -2,24 +2,26 @@ import os
 from unittest import TestCase
 import numpy as np
 
-from config_parser import Config
+from src.strawb.config_parser.config_parser import Config
 from src.strawb.sensors.camera.file_handler import FileHandler
 
+
 class TestCameraFileHandlerInit(TestCase):
+    def setUp(self):
+        self.file_name = 'TUMPMTSPECTROMETER002_20210510T190000.000Z-SDAQ-CAMERA.hdf5'
+        self.module = 'PMTSPECTROMETER002'
+
     def test_init_full_path(self):
-        file_name = os.path.join(Config.raw_data_dir,
-                                 'TUMPMTSPECTROMETER002_20210510T190000.000Z-SDAQ-CAMERA.hdf5')
-        cam_run = FileHandler(file_name)
-        self.assertEqual('PMTSPECTROMETER002', cam_run.module)
+        cam_run = FileHandler(os.path.join(Config.raw_data_dir, self.file_name))
+        self.assertEqual(self.module, cam_run.module)
         # check here only the time
         self.assertIsInstance(cam_run.time,
                               np.ndarray,
                               f'cam_run.time has to be a np.ndarray, got: {type(cam_run.time)}')
 
     def test_init_default_path(self):
-        file_name = 'TUMPMTSPECTROMETER002_20210510T190000.000Z-SDAQ-CAMERA.hdf5'
-        cam_run = FileHandler(file_name)
-        self.assertEqual('PMTSPECTROMETER002', cam_run.module)
+        cam_run = FileHandler(self.file_name)
+        self.assertEqual(self.module, cam_run.module)
         # check here only the time
         self.assertIsInstance(cam_run.time,
                               np.ndarray,
@@ -28,6 +30,7 @@ class TestCameraFileHandlerInit(TestCase):
     def test_init_non_exiting_file(self):
         file_name = 'TUMPMTSPECTROMETER002_20210510T250000.000Z-SDAQ-CAMERA.hdf5'
         self.assertRaises(FileNotFoundError, FileHandler, file_name=file_name)
+
 
 class TestCameraFileHandler(TestCase):
     def setUp(self):

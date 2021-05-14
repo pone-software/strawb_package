@@ -11,10 +11,10 @@ https://data.oceannetworks.ca/home?TREETYPE=1&LOCATION=11&TIMECONFIG=0
 ### Example
 
 ```python
-from src.strawb.onc_downloader import ONCDownload  # has to be adopted probably
+import strawb
 import os
 
-onc_downloader = ONCDownload('0db751f8-9430-47af-bc11-ed6691b38e22', showInfo=False)
+onc_downloader = strawb.ONCDownloader('0db751f8-9430-47af-bc11-ed6691b38e22', showInfo=False)
 
 filters = {'deviceCode': 'TUMPMTSPECTROMETER002',
            'dateFrom': '2021-05-10T19:00:00.000Z',

@@ -1,12 +1,12 @@
 import os
 from unittest import TestCase
 
-from src.strawb.onc_downloader import ONCDownload
+from src.strawb.onc_downloader import ONCDownloader
 
 
 class TestONCDownload(TestCase):
     def test_basic(self):
-        onc_downloader = ONCDownload('0db751f8-9430-47af-bc11-ed6691b38e22', showInfo=False)
+        onc_downloader = ONCDownloader('0db751f8-9430-47af-bc11-ed6691b38e22', showInfo=False)
 
         filters = {'deviceCode': 'TUMPMTSPECTROMETER002',
                    'dateFrom': '2021-05-10T19:00:00.000Z',

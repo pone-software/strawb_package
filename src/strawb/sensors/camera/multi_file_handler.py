@@ -4,7 +4,7 @@ import os
 import numpy as np
 from tqdm import tqdm
 
-from src.strawb.sensors.camera import FileHandler
+from .file_handler import FileHandler
 
 
 class MultiFileHandler(FileHandler):
@@ -39,7 +39,6 @@ class MultiFileHandler(FileHandler):
             run_index = self.meta_data_run_index.max() + 1
 
         for i in tqdm(glob.glob(search_string)[:number_files]):
-            print(i)
             try:
                 cam_run_i = FileHandler(i)
                 self.append(run_index, cam_run_i)

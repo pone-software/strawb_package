@@ -3,7 +3,7 @@ import numpy as np
 import h5py
 import os
 
-from config_parser import Config
+from ...config_parser.config_parser import Config
 
 
 class FileHandler:
@@ -254,7 +254,7 @@ class FileHandler:
             f_name_i = f_name_formatter.format(**formatter_dict)
             f_name_target_i = os.path.join(directory, f_name_i)
             if os.path.exists(f_name_target_i) and overwrite:
-                print('skip', f_name_target_i)
+                print('skip:', f_name_target_i)
             else:
                 print('save:', f_name_target_i)
                 cv2.imwrite(f_name_i, rgb[i, :, :, ::-1])  # [:,:,::-1] as cv2 takes BGR and not RGB
