@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/.idea/strawb_analysis.iml" filepath="$PROJECT_DIR$/.idea/strawb_analysis.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/strawb_package.iml" filepath="$PROJECT_DIR$/.idea/strawb_package.iml" />
     </modules>
   </component>
 </project>

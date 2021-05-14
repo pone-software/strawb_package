@@ -1,7 +1,7 @@
 # Config File for the STRAWb package
 
 [Paths]
-home_dir: ~/PycharmProjects/strawb_analysis/
+home_dir: {RepositoryHome}
 # home_dir: ~/straw
 raw_data_dir: %(home_dir)s/raw_module_data
 proc_data_dir: %(home_dir)s/processed_data
