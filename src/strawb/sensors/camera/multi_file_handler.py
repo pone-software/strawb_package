@@ -29,7 +29,7 @@ class MultiFileHandler(FileHandler):
         PARAMETER
         ---------
         path: str or None, optional
-            The path where the raw hdf5 files are loated. If None (default), it's the parameter from the config file.
+            The path where the raw hdf5 files are loaded. If None (default), it's the parameter from the config file.
         date: str or None, optional
             If None (default), it's the parameter from the config file. '20210429'
         """
