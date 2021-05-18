@@ -52,6 +52,8 @@ This problem happens if you move the source code directory after the egg-link fi
 ### ONCDownloader
 
 ### Sensors
+Information on the data taking with the sensors can be currently found at https://gitlab.lrz.de/strawb/mctl (TUM ressource).
+Here, the example folder contains an exemplary read-out of the hdf5 data (.ipynb).
 
 ## TODO List:
 * [ ] add examples
