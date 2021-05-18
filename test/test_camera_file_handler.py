@@ -34,11 +34,14 @@ class TestCameraFileHandlerInit(TestCase):
 
 class TestCameraFileHandler(TestCase):
     def setUp(self):
-        file_name = 'TUMPMTSPECTROMETER002_20210510T210000.000Z-SDAQ-CAMERA.hdf5'
+        file_name = 'TUMPMTSPECTROMETER002_20210501T190000.000Z-SDAQ-CAMERA.hdf5'
         self.cam_run = FileHandler(file_name)
 
     def test_image2png_lucifer(self):
         self.cam_run.image2png_lucifer()
+
+    def test_image2png_all(self):
+        self.cam_run.image2png(exclude_invalid=False)
 
     def test_images_most_charge(self):
         mode_list, mask_list = self.cam_run.get_lucifer_mask()
