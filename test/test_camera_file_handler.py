@@ -6,10 +6,15 @@ from src.strawb.config_parser.config_parser import Config
 from src.strawb.sensors.camera.file_handler import FileHandler
 
 
+# define file to test
+file_name = 'TUMPMTSPECTROMETER002_20210524T190000.000Z-SDAQ-CAMERA.hdf5'
+module = 'PMTSPECTROMETER002'
+
+
 class TestCameraFileHandlerInit(TestCase):
     def setUp(self):
-        self.file_name = 'TUMPMTSPECTROMETER002_20210510T190000.000Z-SDAQ-CAMERA.hdf5'
-        self.module = 'PMTSPECTROMETER002'
+        self.file_name = file_name
+        self.module = module
 
     def test_init_full_path(self):
         cam_run = FileHandler(os.path.join(Config.raw_data_dir, self.file_name))
@@ -28,13 +33,11 @@ class TestCameraFileHandlerInit(TestCase):
                               f'cam_run.time has to be a np.ndarray, got: {type(cam_run.time)}')
 
     def test_init_non_exiting_file(self):
-        file_name = 'TUMPMTSPECTROMETER002_20210510T250000.000Z-SDAQ-CAMERA.hdf5'
         self.assertRaises(FileNotFoundError, FileHandler, file_name=file_name)
 
 
 class TestCameraFileHandler(TestCase):
     def setUp(self):
-        file_name = 'TUMPMTSPECTROMETER002_20210501T190000.000Z-SDAQ-CAMERA.hdf5'
         self.cam_run = FileHandler(file_name)
 
     def test_image2png_lucifer(self):
