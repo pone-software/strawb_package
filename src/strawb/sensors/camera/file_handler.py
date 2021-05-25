@@ -1,3 +1,5 @@
+# Author: Kilian Holzapfel <kilian.holzapfel@tum.de>
+
 import cv2
 import numpy as np
 import h5py
@@ -10,7 +12,7 @@ class FileHandler:
     """Everything related to a single hdf5 file. The RAW image data is accessed directly
     form the hdf5 file to save RAM. It is capable of determine invalid pictures (property: invalid_mask)
     and takes the n darkest pictures as an average for a dark frame. It also includes the
-    basic functions to demosaic the raw data into RGB values for both, multiple frames or a single frame"""
+    basic functions to de-mosaic the raw data into RGB values for both, multiple frames or a single frame"""
     bayer_pattern_dict = {  # "COLOR_BAYER_BG2BGR_EA":cv2.COLOR_BAYER_BG2BGR_EA,
         # "COLOR_BAYER_GB2BGR_EA":cv2.COLOR_BAYER_GB2BGR_EA,
         # "COLOR_BAYER_RG2BGR_EA":cv2.COLOR_BAYER_RG2BGR_EA,
@@ -44,7 +46,7 @@ class FileHandler:
         self.index_in_file = None  # the index of the specific measurement in the file, as the arrays may be sorted
         self.exposure_time = None  # exposure time per measurement in seconds: float, [0...~63s]
         self.gain = None  # gain per measurement: int, [0...100]
-        self.EffMargins = None  # pixels margin after the demosaicing in pixels: int, [left, right, top, bottom]
+        self.EffMargins = None  # pixels margin after the de-mosaicing in pixels: int, [left, right, top, bottom]
         self.time = None  # time of the measurement since epoch in seconds [precision us]: float
 
         # Lucifer options: opt: -127 or 0 off, 1 Torch, 2 Flash; addr: 0 all, [1..4] single
