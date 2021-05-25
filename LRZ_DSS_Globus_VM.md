@@ -19,4 +19,5 @@ The registration can take a while until it's transferred to the *Globus* server.
 ## VM
 VM management portal: https://cc.lrz.de
 There you need a special LRZ-ID similar to your normal LRZ-ID but different.
-For the moment this is: `di46lez`
+
+For the moment this is: `di46lez` (password is posted in Slack, search for the ID).
