@@ -1,3 +1,5 @@
+# Author: Kilian Holzapfel <kilian.holzapfel@tum.de>
+
 import glob
 import os
 
