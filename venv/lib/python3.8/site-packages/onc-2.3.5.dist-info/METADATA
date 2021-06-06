@@ -1,0 +1,45 @@
+Metadata-Version: 2.1
+Name: onc
+Version: 2.3.5
+Summary: Ocean 2.0 API Python Client Library
+Home-page: https://wiki.oceannetworks.ca/display/O2A/Python+Client+Library
+Author: ONC Data Team
+Author-email: data@oceannetworks.ca
+Maintainer: Dany Cabrera
+Maintainer-email: dcabrera@uvic.ca
+License: Apache 2.0
+Keywords: ONC Ocean API
+Platform: UNKNOWN
+Classifier: Programming Language :: Python :: 3
+Classifier: License :: OSI Approved :: Apache Software License
+Classifier: Operating System :: OS Independent
+Description-Content-Type: text/markdown
+Requires-Dist: requests
+Requires-Dist: python-dateutil
+Requires-Dist: numpy
+Requires-Dist: humanize
+Requires-Dist: urllib3
+
+# ONC API Python Client Library
+
+This library facilitates access to scientific data hosted by [Ocean Networks Canada](https://oceannetworks.ca) through the
+[Oceans 2.0 API](https://wiki.oceannetworks.ca/display/O2A/Oceans+2.0+API+Home) public web services.
+
+This repository updates the [ONC pip package](https://pypi.org/project/onc) which can be installed with the command:
+
+```shell
+pip install onc
+```
+
+## Documentation
+
+For complete documentation and examples, visit https://wiki.oceannetworks.ca/display/O2A/Oceans+2.0+API+Home
+
+
+## Maintainers
+
+* Current maintainer: [Dany Cabrera](dcabrera@oceannetworks.ca)
+* Previous maintainers: [Allan Rempel](agrempel@uvic.ca), [Ryan Ross](ryanross@uvic.ca)
+
+
+

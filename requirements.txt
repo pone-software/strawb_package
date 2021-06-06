@@ -4,3 +4,4 @@ h5py~=3.2.1
 tqdm~=4.60.0
 onc~=2.3.5
 setuptools~=46.0.0
+scipy~=1.6.3
