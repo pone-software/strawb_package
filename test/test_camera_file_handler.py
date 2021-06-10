@@ -7,8 +7,8 @@ from src.strawb.sensors.camera.file_handler import FileHandler
 
 
 # define file to test
-file_name = 'TUMPMTSPECTROMETER002_20210524T190000.000Z-SDAQ-CAMERA.hdf5'
-module = 'PMTSPECTROMETER002'
+file_name = 'TUMMINISPECTROMETER001_20210528T190000.000Z-SDAQ-CAMERA.hdf5'
+module = 'MINISPECTROMETER001'  # 'PMTSPECTROMETER002'
 
 
 class TestCameraFileHandlerInit(TestCase):
@@ -50,7 +50,15 @@ class TestCameraFileHandler(TestCase):
         mode_list, mask_list = self.cam_run.get_lucifer_mask()
         mask_lucifer = np.any(mask_list, axis=0)
 
-        mask = (self.cam_run.integrated_minus_dark > 5e3) & self.cam_run.invalid_mask & ~mask_lucifer
+        # get the mask with pictures over the threshold; mask_0 masks invalid and lucifer pictures
+        mask_0 = self.cam_run.invalid_mask & ~mask_lucifer
+        mask = (self.cam_run.integrated_minus_dark > 5e3) & mask_0
+
+        # in case there is non over the threshold take all pictures over the mean charge
+        if sum(mask) == 0:
+            mask = self.cam_run.integrated_minus_dark > np.mean(self.cam_run.integrated_minus_dark[mask_0])
+            mask = mask & mask_0
+
         index = np.argsort(self.cam_run.integrated_minus_dark)
         index = index[mask[index]]  # remove invalid items  & cam_module.invalid_mask
         index = index[::-1]  # revers the order
