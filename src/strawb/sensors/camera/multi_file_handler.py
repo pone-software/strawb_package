@@ -52,7 +52,12 @@ class MultiFileHandler(FileHandler):
         else:
             run_index = self.meta_data_run_index.max() + 1
 
-        for i in tqdm(glob.glob(search_string)[:number_files]):
+        file_list = [i for i in tqdm(glob.glob(search_string)[:number_files])]
+        if not file_list:
+            print(f'No File found for pattern: {search_string}. Download it first.')
+            return None
+
+        for i in file_list:
             try:
                 cam_run_i = FileHandler(i)
                 self.append(run_index, cam_run_i)
@@ -65,6 +70,7 @@ class MultiFileHandler(FileHandler):
             self.camera_run_list = camera_run_list
         else:
             self.camera_run_list.extend(camera_run_list)
+
         self.time_sort()
 
     def load_raw(self, index=None, exclude_invalid=True):
@@ -102,6 +108,10 @@ class MultiFileHandler(FileHandler):
         return integrated_minus_dark
 
     def image2png(self, index=None, file_name_iterator=None, exclude_invalid=True, **kwargs):
+        if self.camera_run_list is None:
+            print('No data loaded.')
+            return
+
         if index is None:
             index = np.arange(self.integrated_raw.shape[0])
         else:

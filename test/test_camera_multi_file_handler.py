@@ -9,8 +9,8 @@ from src.strawb.sensors.camera import MultiFileHandler
 
 class TestCameraMultiFileHandlerInit(TestCase):
     def setUp(self):
-        self.date = '20210510'
-        self.module = 'PMTSPECTROMETER002'
+        self.date = '20210609'
+        self.module = 'PMTSPECTROMETER001'
 
     def test_init_full_path(self):
         cam_run = MultiFileHandler(date=self.date, module=self.module)
@@ -20,23 +20,13 @@ class TestCameraMultiFileHandlerInit(TestCase):
                               np.ndarray,
                               f'cam_run.time has to be a np.ndarray, got: {type(cam_run.time)}')
 
-    def test_init_default_path(self):
-        cam_run = FileHandler(self.file_name)
-        self.assertEqual(self.module, cam_run.module)
-        # check here only the time
-        self.assertIsInstance(cam_run.time,
-                              np.ndarray,
-                              f'cam_run.time has to be a np.ndarray, got: {type(cam_run.time)}')
 
-    def test_init_non_exiting_file(self):
-        file_name = 'TUMPMTSPECTROMETER002_20210510T250000.000Z-SDAQ-CAMERA.hdf5'
-        self.assertRaises(FileNotFoundError, FileHandler, file_name=file_name)
-
-
-class TestCameraFileHandler(TestCase):
+class TestCameraMultiFileHandler(TestCase):
     def setUp(self):
-        file_name = 'TUMPMTSPECTROMETER002_20210510T210000.000Z-SDAQ-CAMERA.hdf5'
-        self.cam_run = FileHandler(file_name)
+        self.date = '20210609'
+        # self.module = 'MINISPECTROMETER001'
+        self.module = 'PMTSPECTROMETER002'
+        self.cam_run = MultiFileHandler(date=self.date, module=self.module)
 
     def test_image2png_lucifer(self):
         self.cam_run.image2png_lucifer()

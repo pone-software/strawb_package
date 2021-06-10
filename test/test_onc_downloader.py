@@ -8,9 +8,9 @@ class TestONCDownload(TestCase):
     def test_basic(self):
         onc_downloader = ONCDownloader('0db751f8-9430-47af-bc11-ed6691b38e22', showInfo=False)
 
-        filters = {'deviceCode': 'TUMMINISPECTROMETER001',  # 'TUMPMTSPECTROMETER002'
-                   'dateFrom': '2021-05-28T19:00:00.000Z',
-                   'dateTo': '2021-05-28T19:59:59.000Z',
+        filters = {'deviceCode': 'TUMPMTSPECTROMETER002',  # 'TUMPMTSPECTROMETER002', 'TUMMINISPECTROMETER001'
+                   'dateFrom': '2021-06-09T20:00:00.000Z',
+                   'dateTo': '2021-06-09T23:59:59.000Z',
                    'extension': 'hdf5'}
 
         # in background
