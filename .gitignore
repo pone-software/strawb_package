@@ -4,3 +4,5 @@
 /build/*
 /src/STRAWB.egg-info/
 /dist/
+.DS_Store
+
