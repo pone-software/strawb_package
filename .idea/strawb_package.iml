@@ -7,6 +7,9 @@
       <excludeFolder url="file://$MODULE_DIR$/build/bdist.macosx-10.9-x86_64" />
       <excludeFolder url="file://$MODULE_DIR$/src/STRAWB.egg-info" />
       <excludeFolder url="file://$MODULE_DIR$/dist" />
+      <excludeFolder url="file://$MODULE_DIR$/build" />
+      <excludeFolder url="file://$MODULE_DIR$/processed_data" />
+      <excludeFolder url="file://$MODULE_DIR$/raw_module_data" />
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />

@@ -1,6 +1,8 @@
-/module_data/
-/raw_module_data/
-/processed_data/
-/build/*
-/src/STRAWB.egg-info/
-/dist/
+module_data/
+raw_module_data/
+processed_data/
+build/
+src/STRAWB.egg-info
+dist/
+envs/
+venv/
