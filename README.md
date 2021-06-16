@@ -37,6 +37,10 @@ Run the following command to install the package. In case you are not in the dir
 pip3 install -U --user -e .
 ```
 
+#### Anaconda installation
+```bash
+pip install opencv-python
+```
 #### AssertionError: Egg-link
 In case you see an `AssertionError: Egg-link`, run:
 ```bash

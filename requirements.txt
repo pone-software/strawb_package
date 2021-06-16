@@ -1,6 +1,6 @@
-opencv-python~=4.2.0.32
-numpy~=1.18.2
+opencv-python
+numpy~=1.20.2
 h5py~=3.2.1
 tqdm~=4.60.0
 onc~=2.3.5
-setuptools~=46.0.0
+setuptools~=52.0.0
