@@ -38,6 +38,7 @@ pip3 install -U --user -e .
 ```
 
 #### Anaconda installation
+If you use an python anaconda installation `conda activate` your environment in a terminal and run:
 ```bash
 pip install opencv-python
 ```

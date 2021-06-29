@@ -48,3 +48,10 @@ Standard Module SN001   | STR4 | STANDARDMODULE  | TUMSTANDARDMODULE001
 Standard Module SN004   | STR7 | STANDARDMODULE  | TUMSTANDARDMODULE004
 Standard Module SN003   | STR8 | STANDARDMODULE  | TUMSTANDARDMODULE003
 Wavelength Shifting Optical Module SN001 | STR1 | WAVELENGTHOPTICALMODULE | UMAINZWOM001
+
+
+## When something went wrong
+### Connection timeout:
+`
+requests.exceptions.ConnectTimeout: HTTPSConnectionPool(host='data.oceannetworks.ca', port=443): Max retries exceeded with url: /api/archivefiles?token=0db751f8-9430-47af-bc11-ed6691b38e22&method=getFile&filename=TUMPMTSPECTROMETER002_20210627T110000.000Z-SDAQ-CAMERA.hdf5 (Caused by ConnectTimeoutError(<urllib3.connection.HTTPSConnection object at 0x1054de7c0>, 'Connection to data.oceannetworks.ca timed out. (connect timeout=60)'))
+`

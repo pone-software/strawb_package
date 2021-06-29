@@ -3,6 +3,7 @@ import threading
 from onc.onc import ONC  # pip install onc; https://pypi.org/project/onc/
 # from ..config_parser.config_parser import Config
 from strawb.config_parser.config_parser import Config
+import os
 
 
 class ONCDownloader(ONC):
@@ -42,3 +43,6 @@ class ONCDownloader(ONC):
         """ Downloads the files and stores the result internally."""
         print(f'Download in directory: {self.outPath}')
         self.result = self.getDirectFiles(**kwargs)
+        for res_i in self.result['downloadResults']:
+            if 'file' in res_i:
+                res_i['file'] = os.path.abspath(os.path.join(self.outPath, res_i['file']))
