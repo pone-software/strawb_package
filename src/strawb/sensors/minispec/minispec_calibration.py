@@ -6,11 +6,11 @@ from inspect import getfullargspec
 # this class use least square method to fit a general exposure time and temperature dependent
 # dark count function. Then subtract the dark value from known spectrum, return the calibrated value
 
-# other note: for simplification, this version only use the "fit_loop_pixel" method from Kilian's version
+# other note: for simplification, here we adapt the "fit_loop_pixel" method from Kilian's gitlab strawb analysis framework
 
 class DarkCountFit:
     # need in put from device_handler
-    def __init__(self,fit_data_obj):
+    def __init__(self,fit_data_obj,fit_channel):
 
         # number of opt_parameter in f(dt, temp, *opt_parameter), [dt, temp] aren't opt_parameter
         # -> -len([dt, temp]) = -2
@@ -30,6 +30,7 @@ class DarkCountFit:
         # maximum possible value of tdc_counts, from Imma's measurement
         self.adc_count_max = 16000
         self.fit_obj = fit_data_obj
+        self.fit_channel = fit_channel
 
 
     #some auxiliary definitions
@@ -37,7 +38,8 @@ class DarkCountFit:
     def darkcounts_fit_function(dt, temp, y_0, dt_m, a, temp_m):
         """dt: exposure_time -> dark_counts ~ dt_m*dt
         temp: gain -> dark_counts ~expand as exponential function -> temp_m*temp + temp_m2*temp**2"""
-        return y_0 + dt_m * dt + a * dt * np.exp(temp_m * temp) # the dark count value
+        dark_count_value = y_0 + dt_m * dt + a * dt * np.exp(temp_m * temp)
+        return dark_count_value # the dark count value
 
 
     def func_min_singlepixel(self, opt, dt, temp, data):
@@ -70,9 +72,10 @@ class DarkCountFit:
         """
 
         # import dark measurement
-        adc_counts_all = self.fit_obj.ADC_counts
-        exposure_time_arr = self.fit_obj.exposure_time
-        temperature_arr = self.fit_obj.temperature_after
+        single_channel_data = self.fit_obj.data_array[self.fit_channel]
+        adc_counts_all = single_channel_data.ADC_counts
+        exposure_time_arr = single_channel_data.exposure_time
+        temperature_arr = single_channel_data.temperature_after
 
         # initialise fit parameter
         opt = []
