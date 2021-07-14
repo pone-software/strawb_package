@@ -3,9 +3,8 @@ import h5py
 
 from .onc_downloader import *
 from .sensors import *
-from .sensors import *
 
-from .virtual_hdf5 import VirtualHDF5
+from .virtual_hdf5 import VirtualHDF5, DatasetsInGroupSameSize
 
 import numpy
 
