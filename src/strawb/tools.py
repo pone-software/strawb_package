@@ -5,6 +5,32 @@ from matplotlib import pyplot as plt
 import strawb
 
 
+# add new asdatetime to h5py Dataset similar to asdtype for datetime64 when time is given as float in seconds
+class AsDatetimeWrapper(object):
+    def __init__(self, dset, unit='us'):
+        """Wrapper to convert data on reading from a dataset. 'asdatetime' is similar to asdtype of h5py Datasets for
+        and can handle datetime64 when time is given as float in seconds.
+        a = np.array([1624751981.4857635], float)  # time in seconds since epoch
+        a.asdatetime('ms')
+        -> np.array('2021-06-26T23:59:41.485763', datetime64[ms])
+        """
+        self._dset = dset
+
+        self.unit_dict = {'s': 1, 'ms': 1e3, 'us': 1e6, 'ns': 1e9}
+        if unit.lower() not in self.unit_dict:
+            raise ValueError(f'unit not in unit_dict (unit_dict), got: {unit}')
+
+        self._dtype = np.dtype(f'datetime64[{unit.lower()}]')
+        self.scale = float(self.unit_dict[unit.lower()])
+
+    def __getitem__(self, args):
+        return (self._dset.__getitem__(args, ) * self.scale).astype(self._dtype)
+
+    @staticmethod
+    def asdatetime(self, ):
+        return AsDatetimeWrapper(self, )
+
+
 def binned_mean_std(x, y, bins=100, min_count=.1):
     """Calculate the binned mean and std (standard deviation) for the given data."""
     bin_means, bin_edges, binnumber = scipy.stats.binned_statistic(x, y, statistic='mean', bins=bins)
@@ -38,3 +64,5 @@ def plot_binned_mean(x, y, bins=10000, ax=None, *args, **kwargs):
     ax.fill_between(strawb.AsDatetimeWrapper.asdatetime(bin_mid)[:],
                     y1=bin_means + bin_std, y2=bin_means - bin_std,
                     color=lin.get_color(), alpha=.2)
+
+
