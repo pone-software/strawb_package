@@ -1,5 +1,4 @@
-from strawb.basefilehandler import BaseFileHandler
-import h5py
+from strawb.base_file_handler import BaseFileHandler
 
 
 class FileHandler(BaseFileHandler):
@@ -46,43 +45,42 @@ class FileHandler(BaseFileHandler):
         # comes last to load the data in case file_name is set
         BaseFileHandler.__init__(self, *args, **kwargs)
 
-    def load_meta_data(self, ):
-        with h5py.File(self.file_name, 'r') as f:
-            # accel
-            self.accel_time = self.timestamp2datetime64(f['accel/time'][:])
-            self.accel_x = f['accel/x'][:]
-            self.accel_y = f['accel/y'][:]
-            self.accel_z = f['accel/z'][:]
+    def __load_meta_data__(self, ):
+        # accel
+        self.accel_time = self.file['accel/time']
+        self.accel_x = self.file['accel/x']
+        self.accel_y = self.file['accel/y']
+        self.accel_z = self.file['accel/z']
 
-            # magneto
-            self.magneto_time = self.timestamp2datetime64(f['magneto/time'][:])
-            self.magneto_x = f['magneto/x'][:]
-            self.magneto_y = f['magneto/y'][:]
-            self.magneto_z = f['magneto/z'][:]
+        # magneto
+        self.magneto_time = self.file['magneto/time']
+        self.magneto_x = self.file['magneto/x']
+        self.magneto_y = self.file['magneto/y']
+        self.magneto_z = self.file['magneto/z']
 
-            # pth
-            self.pth_time = self.timestamp2datetime64(f['pth/time'][:])
-            self.pth_humidity = f['pth/humidity'][:]
-            self.pth_pressure = f['pth/pressure'][:]
-            self.pth_temperature = f['pth/temperature'][:]
+        # pth
+        self.pth_time = self.file['pth/time']
+        self.pth_humidity = self.file['pth/humidity']
+        self.pth_pressure = self.file['pth/pressure']
+        self.pth_temperature = self.file['pth/temperature']
 
-            # pwrmoni
-            self.pwrmoni_time = self.timestamp2datetime64(f['pwrmoni/time'][:])
-            self.pwrmoni_c2_current = f['pwrmoni/c2_current'][:]
-            self.pwrmoni_c2_voltage = f['pwrmoni/c2_voltage'][:]
-            self.pwrmoni_laser_current = f['pwrmoni/laser_current'][:]
-            self.pwrmoni_laser_voltage = f['pwrmoni/laser_voltage'][:]
-            self.pwrmoni_motor_current = f['pwrmoni/motor_current'][:]
-            self.pwrmoni_motor_voltage = f['pwrmoni/motor_voltage'][:]
-            self.pwrmoni_padiwa_current = f['pwrmoni/padiwa_current'][:]
-            self.pwrmoni_padiwa_voltage = f['pwrmoni/padiwa_voltage'][:]
-            self.pwrmoni_switch_current = f['pwrmoni/switch_current'][:]
-            self.pwrmoni_switch_voltage = f['pwrmoni/switch_voltage'][:]
-            self.pwrmoni_trb3sc_current = f['pwrmoni/trb3sc_current'][:]
-            self.pwrmoni_trb3sc_voltage = f['pwrmoni/trb3sc_voltage'][:]
+        # pwrmoni
+        self.pwrmoni_time = self.file['pwrmoni/time']
+        self.pwrmoni_c2_current = self.file['pwrmoni/c2_current']
+        self.pwrmoni_c2_voltage = self.file['pwrmoni/c2_voltage']
+        self.pwrmoni_laser_current = self.file['pwrmoni/laser_current']
+        self.pwrmoni_laser_voltage = self.file['pwrmoni/laser_voltage']
+        self.pwrmoni_motor_current = self.file['pwrmoni/motor_current']
+        self.pwrmoni_motor_voltage = self.file['pwrmoni/motor_voltage']
+        self.pwrmoni_padiwa_current = self.file['pwrmoni/padiwa_current']
+        self.pwrmoni_padiwa_voltage = self.file['pwrmoni/padiwa_voltage']
+        self.pwrmoni_switch_current = self.file['pwrmoni/switch_current']
+        self.pwrmoni_switch_voltage = self.file['pwrmoni/switch_voltage']
+        self.pwrmoni_trb3sc_current = self.file['pwrmoni/trb3sc_current']
+        self.pwrmoni_trb3sc_voltage = self.file['pwrmoni/trb3sc_voltage']
 
-            # temperatures: attrs = {}
-            self.temperatures_time = self.timestamp2datetime64(f['temperatures/time'][:])
-            self.temperatures_temp1 = f['temperatures/temp1'][:]
-            self.temperatures_temp2 = f['temperatures/temp2'][:]
-            self.temperatures_temp3 = f['temperatures/temp3'][:]
+        # temperatures: attrs = {}
+        self.temperatures_time = self.file['temperatures/time']
+        self.temperatures_temp1 = self.file['temperatures/temp1']
+        self.temperatures_temp2 = self.file['temperatures/temp2']
+        self.temperatures_temp3 = self.file['temperatures/temp3']
