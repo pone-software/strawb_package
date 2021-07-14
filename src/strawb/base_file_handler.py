@@ -1,7 +1,5 @@
 import os
-
 import h5py
-import numpy as np
 
 from strawb.config_parser.config_parser import Config
 
@@ -34,23 +32,29 @@ class BaseFileHandler:
             self.module = file_name.rsplit('/', 1)[-1].split('_', 1)[0].replace('TUM', '')
 
     def open(self):
+        """Opens the file if it is not open"""
         if self.file is None:
             self.file = h5py.File(self.file_name, 'r', libver='latest', swmr=True)
 
     def close(self):
+        """Close the file if it is open."""
         if self.file is not None:
             self.file.close()
 
     def __enter__(self):
+        """For 'with' statement"""
         self.open()
         return self
 
     def __exit__(self, *args):
+        """For 'with' statement"""
         self.close()
 
     def load_meta_data(self, ):
+        """Opens the file and loads the data defined by __load_meta_data__."""
         self.open()
         self.__load_meta_data__()
 
     def __load_meta_data__(self, ):
+        """Placeholder which defines how data are read."""
         pass
