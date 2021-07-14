@@ -1,6 +1,7 @@
 import numpy as np
 
 
+# TODO: this class isn't ready
 class BaseSensor:
     def __init__(self):
         # Define all Meta Data arrays
