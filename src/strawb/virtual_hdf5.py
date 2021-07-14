@@ -188,15 +188,14 @@ class DatasetsInGroupSameSize:
     @staticmethod
     def pop_invalid_datasets(obj_dict, invalid_dict, hdf5_structure_dict):
         for group_i, files_i in invalid_dict.items():
-            j_pop = []
             for dataset_j in hdf5_structure_dict[group_i]:
                 j_pop = [j for j, set_j in enumerate(obj_dict[dataset_j]['VDataSets']) if set_j.path in files_i]
 
-            j_pop.sort()  # sort the indexes
-            for j in j_pop[::-1]:  # pop items from the end, otherwise indexes change
-                obj_j = obj_dict[dataset_j]['VDataSets'].pop(j)
-                obj_dict[dataset_j]['total_length'] -= obj_j.shape[0]
-                # print(dataset_j, obj_j.path, obj_j.shape[0])
+                j_pop.sort()  # sort the indexes
+                for j in j_pop[::-1]:  # pop items from the end, otherwise indexes change
+                    obj_j = obj_dict[dataset_j]['VDataSets'].pop(j)
+                    obj_dict[dataset_j]['total_length'] -= obj_j.shape[0]
+                    # print(dataset_j, obj_j.path, obj_j.shape[0])
 
         return obj_dict
 
