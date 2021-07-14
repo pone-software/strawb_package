@@ -31,7 +31,7 @@ class AsDatetimeWrapper(object):
 
 
 def hdf5_getunsorted(self, index):
-    """Wrapper to access a items of hdf5 dataset in an unsorted way. Indexes can also occur multiple times.
+    """Access a items of hdf5 dataset in an unsorted way. Indexes can also occur multiple times.
     If 'dset' is a dataset with the data [.1,.2]; dset.getunsorted([0,1,0]) -> [.1,.2,.1]"""
     unique, inv_index = np.unique(index, return_inverse=True)
     return self[unique][inv_index]
