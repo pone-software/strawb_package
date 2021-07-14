@@ -2,9 +2,8 @@ import numpy as np
 import scipy.stats
 from matplotlib import pyplot as plt
 
-import strawb
 
-
+#  ---- HDF5 Helper ----
 # add new asdatetime to h5py Dataset similar to asdtype for datetime64 when time is given as float in seconds
 class AsDatetimeWrapper(object):
     def __init__(self, dset, unit='us'):
@@ -31,6 +30,14 @@ class AsDatetimeWrapper(object):
         return AsDatetimeWrapper(self, )
 
 
+def hdf5_getunsorted(self, index):
+    """Wrapper to access a items of hdf5 dataset in an unsorted way. Indexes can also occur multiple times.
+    If 'dset' is a dataset with the data [.1,.2]; dset.getunsorted([0,1,0]) -> [.1,.2,.1]"""
+    unique, inv_index = np.unique(index, return_inverse=True)
+    return self[unique][inv_index]
+
+
+# ---- statistic and plotting ----
 def binned_mean_std(x, y, bins=100, min_count=.1):
     """Calculate the binned mean and std (standard deviation) for the given data."""
     bin_means, bin_edges, binnumber = scipy.stats.binned_statistic(x, y, statistic='mean', bins=bins)
@@ -59,8 +66,8 @@ def plot_binned_mean(x, y, bins=10000, ax=None, *args, **kwargs):
     if ax is None:  # use 'plt' if ax isn't set
         ax = plt
 
-    lin, = ax.plot(strawb.AsDatetimeWrapper.asdatetime(bin_mid)[:],
+    lin, = ax.plot(AsDatetimeWrapper.asdatetime(bin_mid)[:],
                    bin_means, *args, **kwargs)
-    ax.fill_between(strawb.AsDatetimeWrapper.asdatetime(bin_mid)[:],
+    ax.fill_between(AsDatetimeWrapper.asdatetime(bin_mid)[:],
                     y1=bin_means + bin_std, y2=bin_means - bin_std,
                     color=lin.get_color(), alpha=.2)
