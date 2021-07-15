@@ -49,6 +49,18 @@ Standard Module SN004   | STR7 | STANDARDMODULE  | TUMSTANDARDMODULE004
 Standard Module SN003   | STR8 | STANDARDMODULE  | TUMSTANDARDMODULE003
 Wavelength Shifting Optical Module SN001 | STR1 | WAVELENGTHOPTICALMODULE | UMAINZWOM001
 
+The filer can also include a `dataProductCode` or `dataProductName`, i.e. `'dataProductCode': 'SMRD'` or `'dataProductName': 'Standard Module Raw Data'` for the `...-SDAQ-MODULE.hdf5` file.
+To see the possible option for a device:
+``` python
+import os
+onc_downloader = strawb.ONCDownloader('0db751f8-9430-47af-bc11-ed6691b38e22', showInfo=False)
+
+# print posible dataProductCodes and dataProductName for the device
+print(onc_downloader.getDataProducts({'deviceCode':'TUMPMTSPECTROMETER002'}))
+# print posible dataProductCodes and dataProductName for the device only for hdf5-files
+print(onc_downloader.getDataProducts({'deviceCode':'TUMPMTSPECTROMETER002', 'extension': 'hdf5'}))
+```
+
 
 ## When something went wrong
 ### Connection timeout:
