@@ -6,3 +6,4 @@ onc~=2.3.5
 setuptools~=49.6.0
 scipy~=1.7.0
 matplotlib~=3.4.2
+humanize~=3.9.0
