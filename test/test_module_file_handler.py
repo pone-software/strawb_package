@@ -6,52 +6,36 @@ from src.strawb.config_parser.config_parser import Config
 from strawb.sensors.module.file_handler import FileHandler
 
 
-class TestCameraFileHandlerInit(TestCase):
+class TestModuleFileHandlerInit(TestCase):
     def setUp(self):
         self.file_name = 'TUMMINISPECTROMETER001_20210613T000000.000Z-SDAQ-MODULE.hdf5'
         self.module = 'MINISPECTROMETER001'
 
     def test_init_full_path(self):
-        print(1)
-
-    def test_init_full_path(self):
-        cam_run = FileHandler(os.path.join(Config.raw_data_dir, self.file_name))
-        self.assertEqual(self.module, cam_run.module)
+        module = FileHandler(os.path.join(Config.raw_data_dir, self.file_name))
+        self.assertEqual(self.module, module.module)
         # check here only the time
-        self.assertIsInstance(cam_run.temperatures_time,
+        self.assertIsInstance(module.temperatures_time[:],
                               np.ndarray,
-                              f'cam_run.time has to be a np.ndarray, got: {type(cam_run.temperatures_time)}')
+                              f'module.temperatures_time[:] has to be a np.ndarray, '
+                              f'got: {type(module.temperatures_time)}')
 
     def test_init_default_path(self):
-        cam_run = FileHandler(self.file_name)
-        self.assertEqual(self.module, cam_run.module)
+        module = FileHandler(self.file_name)
+        self.assertEqual(self.module, module.module)
         # check here only the time
-        self.assertIsInstance(cam_run.time,
+        self.assertIsInstance(module.temperatures_time[:],
                               np.ndarray,
-                              f'cam_run.time has to be a np.ndarray, got: {type(cam_run.time)}')
+                              f'module.temperatures_time[:] has to be a np.ndarray, '
+                              f'got: {type(module.temperatures_time)}')
 
     def test_init_non_exiting_file(self):
         file_name = 'TUMPMTSPECTROMETER002_20210510T250000.000Z-SDAQ-CAMERA.hdf5'
         self.assertRaises(FileNotFoundError, FileHandler, file_name=file_name)
 
 
-class TestCameraFileHandler(TestCase):
+class TestModuleFileHandlerInit(TestCase):
     def setUp(self):
-        file_name = 'TUMPMTSPECTROMETER002_20210501T190000.000Z-SDAQ-CAMERA.hdf5'
+        file_name = 'TUMMINISPECTROMETER001_20210613T000000.000Z-SDAQ-MODULE.hdf5'
         self.cam_run = FileHandler(file_name)
 
-    def test_image2png_lucifer(self):
-        self.cam_run.image2png_lucifer()
-
-    def test_image2png_all(self):
-        self.cam_run.image2png(exclude_invalid=False)
-
-    def test_images_most_charge(self):
-        mode_list, mask_list = self.cam_run.get_lucifer_mask()
-        mask_lucifer = np.any(mask_list, axis=0)
-
-        mask = (self.cam_run.integrated_minus_dark > 5e3) & self.cam_run.invalid_mask & ~mask_lucifer
-        index = np.argsort(self.cam_run.integrated_minus_dark)
-        index = index[mask[index]]  # remove invalid items  & cam_module.invalid_mask
-        index = index[::-1]  # revers the order
-        self.cam_run.image2png(index=index, f_name_formatter='{i}_{datetime}.png')
