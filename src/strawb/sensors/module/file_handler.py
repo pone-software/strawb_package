@@ -1,6 +1,25 @@
 from strawb.base_file_handler import BaseFileHandler
 
 
+class Lucifer:
+    def __init__(self, id=None):
+        self.id = id  # i.e. 51, 52, 53, 54
+        self.current = None
+        self.current_mA = None
+        self.duration = None
+        self.duration_seconds = None
+        self.mode = None
+        self.time = None
+
+    def __load_meta_data__(self, file):
+        self.current = file[f'lucifer_{self.id}/current']
+        self.current_mA = file[f'lucifer_{self.id}/current_mA']
+        self.duration = file[f'lucifer_{self.id}/duration']
+        self.duration_seconds = file[f'lucifer_{self.id}/duration_seconds']
+        self.mode = file[f'lucifer_{self.id}/mode']
+        self.time = file[f'lucifer_{self.id}/time']
+
+
 class FileHandler(BaseFileHandler):
     def __init__(self, *args, **kwargs):
         # accel
@@ -41,6 +60,9 @@ class FileHandler(BaseFileHandler):
         self.temperatures_temp1 = None
         self.temperatures_temp2 = None
         self.temperatures_temp3 = None
+
+        # list of lucifer instances
+        self.lucifer_list = None
 
         # comes last to load the data in case file_name is set
         BaseFileHandler.__init__(self, *args, **kwargs)
@@ -84,3 +106,11 @@ class FileHandler(BaseFileHandler):
         self.temperatures_temp1 = self.file['temperatures/temp1']
         self.temperatures_temp2 = self.file['temperatures/temp2']
         self.temperatures_temp3 = self.file['temperatures/temp3']
+
+        # create lucifer instances, depending on which are available in the file, Lucifer(ID) from hdf5 group lucifer_ID
+        self.lucifer_list = []
+        for i in self.file:
+            if 'lucifer' in i:
+                lucifer_i = Lucifer(int(i.replace('lucifer_', '')))
+                lucifer_i.__load_meta_data__(self.file)
+                self.lucifer_list.append(lucifer_i)
