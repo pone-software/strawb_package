@@ -12,31 +12,33 @@ class TestCameraFileHandlerInit(TestCase):
         self.module = 'PMTSPECTROMETER002'
 
     def test_init_full_path(self):
-        cam_run = FileHandler(os.path.join(Config.raw_data_dir, self.file_name))
-        self.assertEqual(self.module, cam_run.module)
+        camera = FileHandler(os.path.join(Config.raw_data_dir, self.file_name))
+        self.assertEqual(self.module, camera.module)
         # check here only the time
-        self.assertIsInstance(cam_run.time,
+        self.assertIsInstance(camera.time[:],
                               np.ndarray,
-                              f'cam_run.time has to be a np.ndarray, got: {type(cam_run.time)}')
+                              f'camera.time[:] has to be a np.ndarray, got: {type(camera.time)}')
 
     def test_init_default_path(self):
-        cam_run = FileHandler(self.file_name)
-        self.assertEqual(self.module, cam_run.module)
+        camera = FileHandler(self.file_name)
+        self.assertEqual(self.module, camera.module)
         # check here only the time
-        self.assertIsInstance(cam_run.time,
+        self.assertIsInstance(camera.time[:],
                               np.ndarray,
-                              f'cam_run.time has to be a np.ndarray, got: {type(cam_run.time)}')
+                              f'camera.time[:] has to be a np.ndarray, got: {type(camera.time)}')
 
     def test_init_non_exiting_file(self):
         file_name = 'TUMPMTSPECTROMETER002_20210510T250000.000Z-SDAQ-CAMERA.hdf5'
         self.assertRaises(FileNotFoundError, FileHandler, file_name=file_name)
 
 
-class TestCameraFileHandler(TestCase):
-    def setUp(self):
-        file_name = 'TUMPMTSPECTROMETER002_20210501T190000.000Z-SDAQ-CAMERA.hdf5'
-        self.cam_run = FileHandler(file_name)
+# class TestCameraFileHandler(TestCase):
+#     def setUp(self):
+#         file_name = 'TUMPMTSPECTROMETER002_20210501T190000.000Z-SDAQ-CAMERA.hdf5'
+#         self.cam_run = FileHandler(file_name)
 
+
+class TestPictureHandler(TestCase):
     def test_image2png_lucifer(self):
         self.cam_run.image2png_lucifer()
 
