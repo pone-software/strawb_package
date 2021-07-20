@@ -1,7 +1,8 @@
 # Author: Kilian Holzapfel <kilian.holzapfel@tum.de>
 import h5py
+from onc.onc import ONC
 
-from .onc_downloader import *
+from .onc_downloader import ONCDownloader
 from .sensors import *
 from .tools import AsDatetimeWrapper, hdf5_getunsorted
 
