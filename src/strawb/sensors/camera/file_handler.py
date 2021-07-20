@@ -12,9 +12,9 @@ class FileHandler(BaseFileHandler):
         # meta data
         # Lucifer options: opt: -127 or 0 off, 1 Torch, 2 Flash; addr: 0 all, [1..4] single
         self.lucifer_options = None  # [[opt, addr, current, duration]]
-        self.exposure_time_cmd_setting = self.file['/camera/exposure_time_cmd_setting']
-        self.measured_capture_time = self.file['/camera/measured_capture_time']
-        self.reported_resolution = self.file['/camera/reported_resolution']
+        self.exposure_time_cmd_setting = None
+        self.measured_capture_time = None
+        self.reported_resolution = None
 
         # Attributes
         self.EffMargins = None  # pixels margin after the demosaicing in pixels: int, [left, right, top, bottom]
