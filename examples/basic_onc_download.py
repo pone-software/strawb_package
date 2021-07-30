@@ -13,5 +13,3 @@ onc_downloader.download_file(filters=filters, allPages=True)
 
 # download in background, same as above but the download happens in a thread -> cmd is non blocking
 # onc_downloader.start(filters=filters, allPages=True)
-
-
