@@ -1,3 +1,7 @@
+import sys
+import threading
+import time
+
 import numpy as np
 import scipy.stats
 from matplotlib import pyplot as plt
@@ -5,6 +9,9 @@ from matplotlib import pyplot as plt
 
 #  ---- HDF5 Helper ----
 # add new asdatetime to h5py Dataset similar to asdtype for datetime64 when time is given as float in seconds
+from tqdm import tqdm
+
+
 class AsDatetimeWrapper(object):
     def __init__(self, dset, unit='us'):
         """Wrapper to convert data on reading from a dataset. 'asdatetime' is similar to asdtype of h5py Datasets for
@@ -28,6 +35,81 @@ class AsDatetimeWrapper(object):
     @staticmethod
     def asdatetime(self, ):
         return AsDatetimeWrapper(self, )
+
+
+class ShareJobThreads:
+    def __init__(self, thread_n=3):
+        """ A Class which spreads a iterable job defined by a function f to n threads. It is basically a Wrapper for:
+        for i in iterable:
+            f(i)
+
+        The above example translates to:
+        sjt = ShareJobThreads(4)  # for 4 threads
+        sjt.do(f, iterable)
+        """
+        self.thread_n = thread_n
+        self.lock = threading.Lock()
+        self.thread_bar = None
+        self.active = False
+        self.event = threading.Event()
+
+        self.threads = None  # the worker threads
+        self.iterable = None  # the iterable
+        self.i = None  # the actual index
+        self.f = None  # the function
+
+    def do(self, f, iterable):
+        self.active = True
+        self.iterable = iterable
+        self.i = 0
+        self.f = f
+
+        self.threads = []
+
+        for i in range(self.thread_n):
+            thread_i = threading.Thread(target=self.worker)
+            thread_i.start()
+            self.threads.append(thread_i)
+
+        self.thread_bar = threading.Thread(target=self.update_bar)
+        self.thread_bar.start()
+        self.thread_bar.join()
+
+    def update_bar(self, ):
+        last_i = 0
+
+        with tqdm(self.iterable,
+                  file=sys.stdout,
+                  unit='file') as bar:
+            while any([i.is_alive() for i in self.threads]) or last_i != self.i:
+                with self.lock:
+                    # print(self.i, self.active)
+                    if last_i != self.i:
+                        for i in range(self.i - last_i):
+                            bar.set_postfix({'i': self.iterable[self.i - 1 - i]})
+                            bar.update()
+
+                        last_i = self.i
+                time.sleep(0.1)  # delay a bit
+
+    def stop(self,):
+        self.active = False
+
+    def worker(self, ):
+        iterable_i = True
+        while self.active and iterable_i:
+            iterable_i = self.get_next()
+            if iterable_i is not False:
+                self.f(iterable_i)
+
+    def get_next(self, ):
+        with self.lock:
+            if len(self.iterable) > self.i:
+                iterable_i = self.iterable[self.i]
+                self.i += 1
+                return iterable_i
+            else:
+                return False
 
 
 def hdf5_getunsorted(self, index):
