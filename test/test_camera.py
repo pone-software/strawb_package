@@ -4,6 +4,7 @@ import numpy as np
 
 from src.strawb.config_parser.config_parser import Config
 from src.strawb.sensors.camera.file_handler import FileHandler
+from strawb.sensors.camera import PictureHandler
 
 
 class TestCameraFileHandlerInit(TestCase):
@@ -39,8 +40,13 @@ class TestCameraFileHandlerInit(TestCase):
 
 
 class TestPictureHandler(TestCase):
+    def setUp(self):
+        file_name = 'TUMPMTSPECTROMETER002_20210510T190000.000Z-SDAQ-CAMERA.hdf5'
+        cam_run = FileHandler(file_name)
+        self.picture_handler = PictureHandler(cam_run)
+
     def test_image2png_lucifer(self):
-        self.cam_run.image2png_lucifer()
+        self.picture_handler.image2png_lucifer()
 
     def test_image2png_all(self):
         self.cam_run.image2png(exclude_invalid=False)
