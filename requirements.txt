@@ -7,4 +7,3 @@ setuptools~=49.6.0
 scipy<=1.7.0
 matplotlib<=3.4.2
 humanize==3.10.0
-build<=0.51
