@@ -1,15 +1,16 @@
 # Authors: Kilian Holzapfel <kilian.holzapfel@tum.de>
-import sys
+
 import threading
 import types
 import os
-from tqdm import tqdm
+
 
 import humanize
 from onc.modules._util import _formatDuration
 from onc.onc import ONC  # pip install onc; https://pypi.org/project/onc/
 
 from strawb.config_parser.config_parser import Config
+from strawb.tools import ShareJobThreads
 
 
 class ONCDownloader(ONC):
@@ -77,54 +78,67 @@ def get_direct_files_progress(self, filters: dict, overwrite: bool = False, allP
     except Exception:
         raise
 
-    n = len(dataRows['files'])
-    # print('Obtained a list of {:d} files to download.'.format(n))
-
     # Download the files obtained
-    tries = 1
-    successes = 0
-    size = 0
-    time = 0
-    downInfos = []
+    class Downloader:
+        tries = 1
+        successes = 0
+        size = 0
+        time = 0
 
-    bar = tqdm(dataRows['files'], file=sys.stdout, unit='file')
-    for filename in bar:
-        # only download if file doesn't exist (or overwrite is True)
-        outPath = self._config('outPath')
-        filePath = '{:s}/{:s}'.format(outPath, filename)
-        fileExists = os.path.exists(filePath)
+        downInfos = []
 
-        bar.set_postfix({'file': filename})
-        if (not fileExists) or (fileExists and overwrite):
-            # print('   ({:d} of {:d}) Downloading file: "{:s}"'.format(tries, n, filename))
-            try:
-                downInfo = self.getFile(filename, overwrite)
-                size += downInfo['size']
-                time += downInfo['downloadTime']
-                downInfos.append(downInfo)
-                successes += 1
-            except Exception:
-                raise
-            tries += 1
-        else:
-            # print('   Skipping "{:s}": File already exists.'.format(filename))
-            downInfo = {
-                'url': self._getDownloadUrl(filename),
-                'status': 'skipped',
-                'size': 0,
-                'downloadTime': 0,
-                'file': filename
-            }
-            downInfos.append(downInfo)
+        def __init__(self, parent):
+            self.parent = parent
+            self.tries = 1
+            self.successes = 0
+            self.size = 0
+            self.time = 0
 
-    print('{:d} files ({:s}) downloaded'.format(successes, humanize.naturalsize(size)))
-    print('Total Download Time: {:s}'.format(_formatDuration(time)))
+            self.downInfos = []
+            self.info_lock = threading.Lock()
+
+        def download_file(self, filename):
+            outPath = self.parent._config('outPath')
+            filePath = '{:s}/{:s}'.format(outPath, filename)
+            fileExists = os.path.exists(filePath)
+
+            if (not fileExists) or (fileExists and overwrite):
+                # print('   ({:d} of {:d}) Downloading file: "{:s}"'.format(tries, n, filename))
+                try:
+                    downInfo = self.parent.getFile(filename, overwrite)
+                    with self.info_lock:
+                        self.size += downInfo['size']
+                        self.time += downInfo['downloadTime']
+                        self.downInfos.append(downInfo)
+                        self.successes += 1
+                except Exception:
+                    raise
+                self.tries += 1
+            else:
+                # print('   Skipping "{:s}": File already exists.'.format(filename))
+                downInfo = {
+                    'url': self.parent._getDownloadUrl(filename),
+                    'status': 'skipped',
+                    'size': 0,
+                    'downloadTime': 0,
+                    'file': filename
+                }
+                with self.info_lock:
+                    self.downInfos.append(downInfo)
+
+    downloader = Downloader(parent=self)
+
+    share_job_threads = ShareJobThreads(4)  # for 4 threads
+    share_job_threads.do(downloader.download_file, dataRows['files'])
+
+    print('{:d} files ({:s}) downloaded'.format(downloader.successes, humanize.naturalsize(downloader.size)))
+    print('Total Download Time: {:s}'.format(_formatDuration(downloader.time)))
 
     return {
-        'downloadResults': downInfos,
+        'downloadResults': downloader.downInfos,
         'stats': {
-            'totalSize': size,
-            'downloadTime': time,
-            'fileCount': successes
+            'totalSize': downloader.size,
+            'downloadTime': downloader.time,
+            'fileCount': downloader.successes
         }
     }
