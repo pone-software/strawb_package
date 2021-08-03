@@ -8,3 +8,4 @@ proc_data_dir: %(home_dir)s/processed_data
 
 [ONC]
 token: 0db751f8-9430-47af-bc11-ed6691b38e22
+threads: 4

@@ -31,7 +31,7 @@ class ONCDownloader(ONC):
             outPath = Config.raw_data_dir
 
         if token is None:
-            token = Config.token
+            token = Config.onc_token
 
         ONC.__init__(self, token, outPath=outPath, **kwargs)
         self.archive.getDirectFiles = types.MethodType(get_direct_files_progress, self.archive)  # overload the instance
@@ -128,7 +128,7 @@ def get_direct_files_progress(self, filters: dict, overwrite: bool = False, allP
 
     downloader = Downloader(parent=self)
 
-    share_job_threads = ShareJobThreads(4)  # for 4 threads
+    share_job_threads = ShareJobThreads(Config.onc_download_threads)
     share_job_threads.do(downloader.download_file, dataRows['files'])
 
     print('{:d} files ({:s}) downloaded'.format(downloader.successes, humanize.naturalsize(downloader.size)))

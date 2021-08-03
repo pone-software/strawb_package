@@ -24,4 +24,6 @@ class Config:
     raw_data_dir = config.get('Paths', 'raw_data_dir')
     proc_data_dir = config.get('Paths', 'proc_data_dir')
 
-    token = config.get('ONC', 'token')
+    # ONC
+    onc_token = config.get('ONC', 'onc_token')
+    onc_download_threads = config.get('ONC', 'threads')
