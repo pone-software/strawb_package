@@ -4,7 +4,6 @@ import threading
 import types
 import os
 
-
 import humanize
 from onc.modules._util import _formatDuration
 from onc.onc import ONC  # pip install onc; https://pypi.org/project/onc/
@@ -131,9 +130,9 @@ def get_direct_files_progress(self, filters: dict, overwrite: bool = False, allP
     share_job_threads = ShareJobThreads(Config.onc_download_threads)
     share_job_threads.do(downloader.download_file, dataRows['files'])
 
-    print('{:d} files ({:s}) downloaded. Total Download Time: {:s}'.format(downloader.successes,
-                                                                           humanize.naturalsize(downloader.size),
-                                                                           _formatDuration(downloader.time)))
+    print('Directory: {self.outPath}; {:d} files; size {:s}; time: {:s}'.format(downloader.successes,
+                                                                                humanize.naturalsize(downloader.size),
+                                                                                _formatDuration(downloader.time)))
 
     return {
         'downloadResults': downloader.downInfos,
