@@ -8,3 +8,4 @@ scipy<=1.7.0
 matplotlib<=3.4.2
 humanize~=3.9.0
 python-dateutil~=2.8.1
+pandas~=1.3.1
