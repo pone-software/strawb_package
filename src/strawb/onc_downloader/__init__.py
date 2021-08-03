@@ -131,7 +131,7 @@ def get_direct_files_progress(self, filters: dict, overwrite: bool = False, allP
     share_job_threads.do(downloader.download_file, dataRows['files'])
 
     print('Directory: {:s}; files: {:d}; size: {:s}; time: {:s}'.format(
-        self.parent._config('outPath'),
+        self._config('outPath'),
         downloader.successes,
         humanize.naturalsize(downloader.size),
         _formatDuration(downloader.time)))
