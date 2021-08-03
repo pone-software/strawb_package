@@ -3,7 +3,7 @@ import os
 import cv2
 import numpy as np
 
-from ...config_parser.config_parser import Config
+from ...config_parser.__init__ import Config
 
 
 class PictureHandler:

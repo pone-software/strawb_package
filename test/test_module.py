@@ -2,7 +2,7 @@ import os
 from unittest import TestCase
 import numpy as np
 
-from src.strawb.config_parser.config_parser import Config
+from src.strawb.config_parser.__init__ import Config
 from strawb.sensors.module.file_handler import FileHandler
 
 

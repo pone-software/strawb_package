@@ -9,7 +9,7 @@ import humanize
 from onc.modules._util import _formatDuration
 from onc.onc import ONC  # pip install onc; https://pypi.org/project/onc/
 
-from strawb.config_parser.config_parser import Config
+from strawb.config_parser.__init__ import Config
 from strawb.tools import ShareJobThreads
 
 

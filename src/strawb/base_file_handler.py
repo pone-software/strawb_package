@@ -1,7 +1,7 @@
 import os
 import h5py
 
-from strawb.config_parser.config_parser import Config
+from strawb.config_parser.__init__ import Config
 
 
 class BaseFileHandler:
