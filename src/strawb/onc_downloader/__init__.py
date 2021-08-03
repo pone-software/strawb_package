@@ -130,9 +130,11 @@ def get_direct_files_progress(self, filters: dict, overwrite: bool = False, allP
     share_job_threads = ShareJobThreads(Config.onc_download_threads)
     share_job_threads.do(downloader.download_file, dataRows['files'])
 
-    print('Directory: {self.outPath}; {:d} files; size {:s}; time: {:s}'.format(downloader.successes,
-                                                                                humanize.naturalsize(downloader.size),
-                                                                                _formatDuration(downloader.time)))
+    print('Directory: {:s}; files: {:d}; size: {:s}; time: {:s}'.format(
+        self.parent._config('outPath'),
+        downloader.successes,
+        humanize.naturalsize(downloader.size),
+        _formatDuration(downloader.time)))
 
     return {
         'downloadResults': downloader.downInfos,
