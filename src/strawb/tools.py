@@ -58,7 +58,7 @@ class ShareJobThreads:
         self.i = None  # the actual index
         self.f = None  # the function
 
-    def do(self, f, iterable):
+    def do(self, f, iterable, ):
         self.active = True
         self.iterable = iterable
         self.i = 0

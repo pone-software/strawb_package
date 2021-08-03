@@ -47,7 +47,7 @@ class ONCDownloader(ONC):
 
     def download_file(self, **kwargs):
         """ Downloads the files and stores the result internally."""
-        print(f'Download in directory: {self.outPath}')
+        # print(f'Download in directory: {self.outPath}')
         self.result = self.getDirectFiles(**kwargs)
         for res_i in self.result['downloadResults']:
             if 'file' in res_i:
@@ -127,14 +127,18 @@ def get_direct_files_progress(self, filters: dict, overwrite: bool = False, allP
 
     downloader = Downloader(parent=self)
 
-    share_job_threads = ShareJobThreads(Config.onc_download_threads)
-    share_job_threads.do(downloader.download_file, dataRows['files'])
+    if dataRows['files']:
+        if not os.path.exists(self._config('outPath')):
+            os.mkdir(self._config('outPath'))
+        share_job_threads = ShareJobThreads(Config.onc_download_threads)
+        share_job_threads.do(downloader.download_file, dataRows['files'])
 
-    print('Directory: {:s}; files: {:d}; size: {:s}; time: {:s}'.format(
+    print('Directory: {:s}; Files: {:d}; Size: {:s}; Time: {:s}'.format(
         self._config('outPath'),
         downloader.successes,
         humanize.naturalsize(downloader.size),
         _formatDuration(downloader.time)))
+
 
     return {
         'downloadResults': downloader.downInfos,
