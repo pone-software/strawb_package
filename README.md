@@ -42,6 +42,8 @@ If you use an python anaconda installation `conda activate` your environment in 
 ```bash
 pip install opencv-python
 ```
+or with `sudo` if this doesn't work.
+
 #### AssertionError: Egg-link
 In case you see an `AssertionError: Egg-link`, run:
 ```bash
