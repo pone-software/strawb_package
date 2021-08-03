@@ -25,5 +25,5 @@ class Config:
     proc_data_dir = config.get('Paths', 'proc_data_dir')
 
     # ONC
-    onc_token = config.get('ONC', 'onc_token')
+    onc_token = config.get('ONC', 'token')
     onc_download_threads = config.get('ONC', 'threads')
