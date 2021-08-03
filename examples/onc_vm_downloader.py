@@ -9,7 +9,7 @@ import numpy as np
 
 
 def download_module(dev_code):
-    """Download the files of interest for a module over the entire period of STRAWb
+    """Download the files of interest for a module over the entire period of STRAW-b
     by wrapping 'download_files_of_interest'.
     PARAMETER
     ---------
@@ -74,6 +74,7 @@ def main():
 
     for i in dev_codes:
         download_module(i)
+
 
 if __name__ == "__main__":
     # execute only if run as a script

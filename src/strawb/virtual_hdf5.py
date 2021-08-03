@@ -198,4 +198,3 @@ class DatasetsInGroupSameSize:
                     # print(dataset_j, obj_j.path, obj_j.shape[0])
 
         return obj_dict
-
