@@ -1,3 +1,5 @@
+#!/usr/bin/python3
+
 # This examples shows who to download files from the ONC server
 import strawb
 
