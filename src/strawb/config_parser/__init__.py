@@ -26,4 +26,4 @@ class Config:
 
     # ONC
     onc_token = config.get('ONC', 'token')
-    onc_download_threads = config.get('ONC', 'threads')
+    onc_download_threads = int(config.get('ONC', 'threads'))
