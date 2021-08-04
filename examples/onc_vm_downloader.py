@@ -55,7 +55,7 @@ def download_files_of_interest(dev_code, date_from, date_to):
                'dateTo': date_to.strftime("%Y-%m-%dT%H:%M:%S.999Z"),
                'extension': 'hdf5'}
 
-    for extension_i in ['hdf5', 'hld', 'raw', 'png']:
+    for extension_i in ['hdf5', 'raw', 'png']:  # 'hld'
         filters['extension'] = extension_i
         downloader_i.download_file(filters=filters, allPages=True)  # start the download in a thread (background)
 
