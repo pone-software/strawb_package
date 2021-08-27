@@ -29,6 +29,7 @@ def main():
 
     # mask by file size
     mask = pd_result['fileSize'] < .75e9
+    print(f'Exclude {np.sum(~mask)} files')
 
     # ## Select dataProducts
     # dataProduct_all = []
@@ -46,6 +47,8 @@ def main():
     onc_downloader.getDirectFiles(filters_or_result=filters_or_result)
 
 
+# execute only if run as a script
 if __name__ == "__main__":
-    # execute only if run as a script
+    print('Start sync')
     main()
+    print('Sync ended')
