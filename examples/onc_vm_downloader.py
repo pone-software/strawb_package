@@ -40,7 +40,9 @@ def main():
     # dataProduct_select.extend(
     #     [i for i in dataProduct_all if i['extension'] == 'txt' and i['dataProductName'] != 'Log File'])
 
-    filters_or_result = dict(files=pd_result[mask].to_dict(orient='records'))
+    # reduce it with the mask and the columns to 'filename', 'outPath'
+    pd_result_masked = pd_result[mask][['filename', 'outPath']]
+    filters_or_result = dict(files=pd_result_masked.to_dict(orient='records'))
     onc_downloader.getDirectFiles(filters_or_result=filters_or_result)
 
 
