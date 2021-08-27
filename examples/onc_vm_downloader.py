@@ -13,7 +13,7 @@ onc_downloader = strawb.ONCDownloader()
 def main():
     # get all possible files from the devices
     result = onc_downloader.get_files_for_dev_code(strawb.dev_codes_deployed,
-                                                   date_from=datetime.date(2021, 8, 1),
+                                                   date_from=datetime.date(2020, 10, 1),
                                                    date_to=datetime.datetime.now())
 
     # convert the list to a DataFrame for easier modifications
