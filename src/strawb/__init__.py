@@ -25,3 +25,9 @@ module_onc_id: dict = {'0000006605b0': {'ip_add': '10.136.117.166', 'dev_code': 
                        '0000006601ee': {'ip_add': '10.136.117.180', 'dev_code': 'TUMSTANDARDMODULE004'},
                        '00000065fcc0': {'ip_add': 'XX.XXX.XXX.XXX', 'dev_code': 'TEST'},
                        '__unittest__': {'ip_add': 'XX.XXX.XXX.XXX', 'dev_code': 'UNITTEST'}}
+
+# get all possible dev_codes
+dev_codes = set([i['dev_code'] for i in module_onc_id.values()])
+# subtract not deployed dev_codes
+dev_codes_deployed = dev_codes.difference(['TEST', 'UNITTEST', 'TUMSTANDARDMODULE002', 'TUMSTANDARDMODULE003'])
+
