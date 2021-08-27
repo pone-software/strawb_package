@@ -49,6 +49,6 @@ def main():
 
 # execute only if run as a script
 if __name__ == "__main__":
-    print('Start sync')
+    print(f'Start sync: {datetime.datetime.utcnow().isoformat()}')
     main()
-    print('Sync ended')
+    print(f'Sync ended: {datetime.datetime.utcnow().isoformat()}')
