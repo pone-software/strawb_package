@@ -1,19 +1,15 @@
 # Authors: Kilian Holzapfel <kilian.holzapfel@tum.de>
-
-import threading
-import types
+import datetime
 import os
+import threading
 
-import humanize
-from onc.modules._util import _formatDuration
 from onc.onc import ONC  # pip install onc; https://pypi.org/project/onc/
 
 from strawb.config_parser.__init__ import Config
-from strawb.tools import ShareJobThreads
 
 
 class ONCDownloader(ONC):
-    def __init__(self, token=None, outPath=None, **kwargs):
+    def __init__(self, token=None, outPath=None, download_threads=None, **kwargs):
         """ A wrapper class for the basic ONC module. It adds the storage of the result and can download the file inside
         a thread and therefore puts it in the background.
 
@@ -23,6 +19,9 @@ class ONCDownloader(ONC):
             The personal access token from ONC 2.0. If None (default), it's the parameter from the config file.
         outPath: str, optional
             The path in which the downloads are saved. If None (default), it's the parameter from the config file.
+        download_threads: int, optional
+            Defines the number of thread for the download. If None (default) it uses the specified 'threads' form the
+            config-file.
         kwargs: dict, optional
             parsed to ONC package initialisation.
         """
@@ -32,8 +31,11 @@ class ONCDownloader(ONC):
         if token is None:
             token = Config.onc_token
 
-        ONC.__init__(self, token, outPath=outPath, **kwargs)
-        self.archive.getDirectFiles = types.MethodType(get_direct_files_progress, self.archive)  # overload the instance
+        if download_threads is None:
+            download_threads = Config.onc_download_threads
+
+        ONC.__init__(self, token, outPath=outPath, download_threads=download_threads, **kwargs)
+
         self.filters = {}
         self.result = {}
 
@@ -53,98 +55,40 @@ class ONCDownloader(ONC):
             if 'file' in res_i:
                 res_i['file'] = os.path.abspath(os.path.join(self.outPath, res_i['file']))
 
+    def get_files_for_dev_code(self, dev_codes: list, date_from: datetime, date_to: datetime,
+                               print_stats: bool = True):
+        """
+        Get all available files on the ONC server for the dev_code and the specified date.
+        Parameters
+        ---------
+        dev_codes: list(str),
+            a valid ONC deviceCode
+        date_from: datetime,
+            e.g. datetime.date(2020, 10, 1)
+        date_to: datetime,
+            e.g. datetime.datetime.now()
+        print_stats: bool, optional
+            if the function returns stats
+        """
 
-# Overload original function to include a progress bar
-def get_direct_files_progress(self, filters: dict, overwrite: bool = False, allPages: bool = False):
-    """
-    Method to download files from the archivefiles service
-    see https://wiki.oceannetworks.ca/display/help/archivefiles for usage and available filters
-    """
-    # make sure we only get a simple list of files
-    if 'returnOptions' in filters:
-        del filters['returnOptions']
+        # get the result dict with all available files
+        result = {'files': []}
 
-    # Get a list of files
-    try:
-        if 'locationCode' in filters and 'deviceCategoryCode' in filters:
-            dataRows = self.getListByLocation(filters=filters, allPages=allPages)
-        elif 'deviceCode' in filters:
-            dataRows = self.getListByDevice(filters=filters, allPages=allPages)
-        else:
-            raise Exception(
-                'getDirectFiles filters require either a combination of "locationCode" and "deviceCategoryCode",'
-                'or a "deviceCode" present.')
-    except Exception:
-        raise
+        if print_stats:
+            print('Obtain files from:')
+        for dev_i in dev_codes:
+            filters = {
+                'deviceCode': dev_i,
+                'dateFrom': date_from.strftime("%Y-%m-%dT%H:%M:%S.000Z"),  # '2020-10-20T00:00:00.000Z',
+                'dateTo': date_to.strftime("%Y-%m-%dT%H:%M:%S.999Z"),  # '2021-10-21T00:00:10.000Z',
+                'returnOptions': 'all'}
+            result_i = self.getListByDevice(filters=filters, allPages=True)
+            result['files'].extend(result_i['files'])
 
-    # Download the files obtained
-    class Downloader:
-        tries = 1
-        successes = 0
-        size = 0
-        time = 0
+            n_files = len(result_i["files"])
+            if print_stats:
+                print(f' {dev_i}: {n_files} files')
 
-        downInfos = []
-
-        def __init__(self, parent):
-            self.parent = parent
-            self.tries = 1
-            self.successes = 0
-            self.size = 0
-            self.time = 0
-
-            self.downInfos = []
-            self.info_lock = threading.Lock()
-
-        def download_file(self, filename):
-            outPath = self.parent._config('outPath')
-            filePath = '{:s}/{:s}'.format(outPath, filename)
-            fileExists = os.path.exists(filePath)
-
-            if (not fileExists) or (fileExists and overwrite):
-                # print('   ({:d} of {:d}) Downloading file: "{:s}"'.format(tries, n, filename))
-                try:
-                    downInfo = self.parent.getFile(filename, overwrite)
-                    with self.info_lock:
-                        self.size += downInfo['size']
-                        self.time += downInfo['downloadTime']
-                        self.downInfos.append(downInfo)
-                        self.successes += 1
-                except Exception:
-                    raise
-                self.tries += 1
-            else:
-                # print('   Skipping "{:s}": File already exists.'.format(filename))
-                downInfo = {
-                    'url': self.parent._getDownloadUrl(filename),
-                    'status': 'skipped',
-                    'size': 0,
-                    'downloadTime': 0,
-                    'file': filename
-                }
-                with self.info_lock:
-                    self.downInfos.append(downInfo)
-
-    downloader = Downloader(parent=self)
-
-    if dataRows['files']:
-        if not os.path.exists(self._config('outPath')):
-            os.mkdir(self._config('outPath'))
-        share_job_threads = ShareJobThreads(Config.onc_download_threads)
-        share_job_threads.do(downloader.download_file, dataRows['files'])
-
-    print('Directory: {:s}; Files: {:d}; Size: {:s}; Time: {:s}'.format(
-        self._config('outPath'),
-        downloader.successes,
-        humanize.naturalsize(downloader.size),
-        _formatDuration(downloader.time)))
-
-
-    return {
-        'downloadResults': downloader.downInfos,
-        'stats': {
-            'totalSize': downloader.size,
-            'downloadTime': downloader.time,
-            'fileCount': downloader.successes
-        }
-    }
+        if print_stats:
+            print(f'In total: {len(result["files"])} files')
+        return result
