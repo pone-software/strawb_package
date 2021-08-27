@@ -29,7 +29,7 @@ def main():
 
     # mask by file size
     mask = pd_result['fileSize'] < .75e9
-    print(f'Exclude {np.sum(~mask)} files')
+    print(f'Exclude {len(mask[~mask])} files')
 
     # ## Select dataProducts
     # dataProduct_all = []
