@@ -46,6 +46,11 @@ def main():
     filters_or_result = dict(files=pd_result_masked.to_dict(orient='records'))
     onc_downloader.getDirectFiles(filters_or_result=filters_or_result)
 
+    # add column of which files are synced
+    pd_result['synced'] = mask
+
+    # store information in a pandas-file
+    pd_result.to_pickle(strawb.Config.pandas_file_sync_db)
 
 # execute only if run as a script
 if __name__ == "__main__":
