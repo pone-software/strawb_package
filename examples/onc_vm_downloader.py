@@ -52,6 +52,7 @@ def main():
     # store information in a pandas-file
     pd_result.to_pickle(strawb.Config.pandas_file_sync_db)
 
+
 # execute only if run as a script
 if __name__ == "__main__":
     print(f'Start sync: {datetime.datetime.utcnow().isoformat()}')
