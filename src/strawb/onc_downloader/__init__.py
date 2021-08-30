@@ -55,8 +55,8 @@ class ONCDownloader(ONC):
             if 'file' in res_i:
                 res_i['file'] = os.path.abspath(os.path.join(self.outPath, res_i['file']))
 
-    def get_files_for_dev_code(self, dev_codes: list, date_from: datetime, date_to: datetime,
-                               print_stats: bool = True):
+    def get_files_for_dev_codes(self, dev_codes: list, date_from: datetime, date_to: datetime,
+                                print_stats: bool = True):
         """
         Get all available files on the ONC server for the dev_code and the specified date.
         Parameters

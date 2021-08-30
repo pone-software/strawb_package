@@ -1,7 +1,19 @@
 #!/usr/bin/python3
 # coding: utf-8
 
-# This examples shows who to download files from the ONC server
+# WHAT THIS SCRIPT DOES
+# This script downloads all files from the ONC server for the all dev_codes defined in `strawb.dev_codes_deployed`
+# It will download it with the following structure:
+#   strawb.Config.raw_data_dir
+#       strawb.Config.raw_data_dir/$dev_codes[0]$  # i.e. tumlidar001
+#           strawb.Config.raw_data_dir/$dev_codes[0]$/2020_10
+#               # all files from October
+#           strawb.Config.raw_data_dir/$dev_codes[0]$/2020_11
+#           ...
+#       strawb.Config.raw_data_dir/$dev_codes[1]$
+#       ...
+# In addition, it saves the metadata from the ONC server for all files under: `strawb.Config.pandas_file_sync_db`
+# This file can be imported with: `pandas.read_pickle(strawb.Config.pandas_file_sync_db)` again.
 
 import datetime
 import pandas as pd
@@ -12,9 +24,9 @@ onc_downloader = strawb.ONCDownloader()
 
 def main():
     # get all possible files from the devices
-    result = onc_downloader.get_files_for_dev_code(strawb.dev_codes_deployed,
-                                                   date_from=datetime.date(2020, 10, 1),
-                                                   date_to=datetime.datetime.now())
+    result = onc_downloader.get_files_for_dev_codes(strawb.dev_codes_deployed,
+                                                    date_from=datetime.date(2020, 10, 1),
+                                                    date_to=datetime.datetime.now())
 
     # convert the list to a DataFrame for easier modifications
     pd_result = pd.DataFrame.from_dict(result['files'])
@@ -48,6 +60,10 @@ def main():
 
     # add column of which files are synced
     pd_result['synced'] = mask
+
+    # rename 'outPath' to 'fullPath' and cal. the full path
+    pd_result = pd_result.rename(columns={"outPath": "fullPath"})
+    pd_result["fullPath"] += '/' + pd_result['filename']
 
     # store information in a pandas-file
     pd_result.to_pickle(strawb.Config.pandas_file_sync_db)
