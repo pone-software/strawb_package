@@ -2,24 +2,30 @@ import os
 from unittest import TestCase
 
 from src.strawb.onc_downloader import ONCDownloader
-from strawb import Config
+from strawb import dev_codes_deployed
 
 
 class TestONCDownload(TestCase):
     def test_basic(self):
-        onc_downloader = ONCDownloader(Config.onc_token, showInfo=False)
-
-        filters = {'deviceCode': 'TUMPMTSPECTROMETER001',
-                   'dateFrom': '2021-06-27T00:00:00.000Z',
-                   'dateTo': '2021-06-27T23:59:59.000Z',
-                   'extension': 'hdf5'}
+        onc_downloader = ONCDownloader(showInfo=False)
+        dev_codes = list(dev_codes_deployed)
+        dev_codes.sort()
+        pd_result = onc_downloader.download_structured(dev_codes=dev_codes[:2],
+                                                       extensions=None,
+                                                       date_from='2021-08-30T00:00:00.000',
+                                                       date_to='2021-08-30T01:00:00.000',
+                                                       download=False,
+                                                       )
+        # in foreground, select only 5 files
+        n_files = 5
+        pd_result_masked = pd_result[:n_files][['filename', 'outPath']]
+        filters_or_result = dict(files=pd_result_masked.to_dict(orient='records'))
+        onc_downloader.getDirectFiles(filters_or_result=filters_or_result)
 
         # in background
         # onc_downloader.start(filters=filters, allPages=True)
 
         # in foreground
-        onc_downloader.download_file(filters=filters, allPages=True)
 
-        for i in onc_downloader.result['downloadResults']:
-            full_path = os.path.join(onc_downloader.outPath, i['file'])
-            self.assertTrue(os.path.exists(full_path))
+        for i in pd_result[:n_files]['fullPath']:
+            self.assertTrue(os.path.exists(i))

@@ -11,26 +11,28 @@ https://data.oceannetworks.ca/home?TREETYPE=1&LOCATION=11&TIMECONFIG=0
 ### Example
 
 ```python
-import strawb
-import os
+from src.strawb.onc_downloader import ONCDownloader
+from strawb import dev_codes_deployed
 
-onc_downloader = strawb.ONCDownloader('0db751f8-9430-47af-bc11-ed6691b38e22', showInfo=False)
+onc_downloader = ONCDownloader(showInfo=False)
 
-filters = {'deviceCode': 'TUMPMTSPECTROMETER002',
-           'dateFrom': '2021-05-10T19:00:00.000Z',
-           'dateTo': '2021-05-10T21:59:59.000Z',
-           'extension': 'hdf5'}
+# select dev_codes
+dev_codes = list(dev_codes_deployed)
+dev_codes.sort()
 
-# in background
-# onc_downloader.start(filters=filters, allPages=True)
-
-# in foreground
-onc_downloader.download_file(filters=filters, allPages=True)
-
-# and print all downloaded files
-for i in onc_downloader.result['downloadResults']:
-    full_path = os.path.join(onc_downloader.outPath, i['file'])
-    print(os.path.exists(full_path))
+# get available from ONC server, `download=False` as we want to filter some files
+pd_result = onc_downloader.download_structured(dev_codes=dev_codes[:2],
+                                               extensions=None,
+                                               date_from='2021-08-30T00:00:00.000',
+                                               date_to='2021-08-30T01:00:00.000',
+                                               download=False,
+                                               )
+# select only 5 files
+pd_result_masked = pd_result[['filename', 'outPath']]
+# prepare download
+filters_or_result = dict(files=pd_result_masked.to_dict(orient='records'))
+# download the files
+onc_downloader.getDirectFiles(filters_or_result=filters_or_result)
 ```
 
 ### Filter tags
@@ -53,7 +55,7 @@ The filer can also include a `dataProductCode` or `dataProductName`, i.e. `'data
 To see the possible option for a device:
 ``` python
 import os
-onc_downloader = strawb.ONCDownloader('0db751f8-9430-47af-bc11-ed6691b38e22', showInfo=False)
+onc_downloader = strawb.ONCDownloader(showInfo=False)
 
 # print posible dataProductCodes and dataProductName for the device
 print(onc_downloader.getDataProducts({'deviceCode':'TUMPMTSPECTROMETER002'}))

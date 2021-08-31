@@ -211,7 +211,7 @@ class ONCDownloader(ONC):
         pd_result['synced'] = mask
 
         # rename 'outPath' to 'fullPath' and cal. the full path
-        pd_result = pd_result.rename(columns={"outPath": "fullPath"})
-        pd_result["fullPath"] += '/' + pd_result['filename']
+        # pd_result = pd_result.rename(columns={"outPath": "fullPath"})
+        pd_result["fullPath"] = pd_result["outPath"] + '/' + pd_result['filename']
 
         return pd_result
