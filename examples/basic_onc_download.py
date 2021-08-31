@@ -1,15 +1,23 @@
 # This examples shows who to download files from the ONC server
-import strawb
+from src.strawb.onc_downloader import ONCDownloader
+from strawb import dev_codes_deployed
 
-onc_downloader = strawb.ONCDownloader(showInfo=False)
+onc_downloader = ONCDownloader(showInfo=False)
 
-filters = {'deviceCode': 'TUMPMTSPECTROMETER002',
-           'dateFrom': '2021-05-01T19:00:00.000Z',
-           'dateTo': '2021-05-01T21:59:59.000Z',
-           'extension': 'hdf5'}
+# select dev_codes
+dev_codes = list(dev_codes_deployed)
+dev_codes.sort()
 
-# download in foreground
-onc_downloader.download_file(filters=filters, allPages=True)
-
-# download in background, same as above but the download happens in a thread -> cmd is non blocking
-# onc_downloader.start(filters=filters, allPages=True)
+# get available from ONC server, `download=False` as we want to filter some files
+pd_result = onc_downloader.download_structured(dev_codes=dev_codes[:2],
+                                               extensions=None,
+                                               date_from='2021-08-30T00:00:00.000',
+                                               date_to='2021-08-30T01:00:00.000',
+                                               download=False,
+                                               )
+# select only 5 files
+pd_result_masked = pd_result[['filename', 'outPath']]
+# prepare download
+filters_or_result = dict(files=pd_result_masked.to_dict(orient='records'))
+# download the files
+onc_downloader.getDirectFiles(filters_or_result=filters_or_result)

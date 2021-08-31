@@ -21,7 +21,7 @@ filters = {'deviceCode': 'TUMPMTSPECTROMETER002',
            'extension': 'hdf5'}
 
 # download in foreground
-onc_downloader.download_file(filters=filters, allPages=True)
+onc_downloader.download_file(filters_or_result=filters, allPages=True)
 ```
 For more examples have a lock in the [example folder](./examples).
 
