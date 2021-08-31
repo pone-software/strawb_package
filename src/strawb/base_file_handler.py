@@ -1,3 +1,4 @@
+import glob
 import os
 import h5py
 
@@ -13,18 +14,31 @@ class BaseFileHandler:
         self.file = None  # instance of the h5py file
         self.file_name = None
         self.module = None
+        self.file_typ = None  # file type
 
         if file_name is None:
             pass
         elif os.path.exists(file_name):
             self.file_name = os.path.abspath(file_name)
+            self.file_typ = self.file_name.rsplit('.', 1)[-1]
             self.load_meta_data()
         elif os.path.exists(os.path.join(Config.raw_data_dir, file_name)):
             path = os.path.join(Config.raw_data_dir, file_name)
             self.file_name = os.path.abspath(path)
+            self.file_typ = self.file_name.rsplit('.', 1)[-1]
             self.load_meta_data()
         else:
-            raise FileNotFoundError(file_name)
+            file_name_list = glob.glob(Config.raw_data_dir + "/**/" + file_name, recursive=True)
+            if len(file_name_list) == 1:
+                self.file_name = file_name_list[0]
+                self.file_typ = self.file_name.rsplit('.', 1)[-1]
+                self.load_meta_data()
+            else:
+                if not file_name_list:
+                    raise FileNotFoundError(f'{file_name} not found nor matches any file in "{Config.raw_data_dir}"')
+                else:
+                    raise FileExistsError(f'{file_name} matches multiple files in "{Config.raw_data_dir}": '
+                                          f'{file_name_list}')
 
         # in case, extract the module name from the filename
         if module is None and file_name is not None:
@@ -34,7 +48,12 @@ class BaseFileHandler:
     def open(self):
         """Opens the file if it is not open"""
         if self.file is None:
-            self.file = h5py.File(self.file_name, 'r', libver='latest', swmr=True)
+            if self.file_typ in ['h5', 'hdf5']:
+                self.file = h5py.File(self.file_name, 'r', libver='latest', swmr=True)
+            elif self.file_typ in ['txt']:
+                self.file = open(self.file_name, 'r')
+            else:
+                raise NotImplementedError(f'file_typ not implemented {self.file_typ}')
 
     def close(self):
         """Close the file if it is open."""
@@ -50,6 +69,10 @@ class BaseFileHandler:
         """For 'with' statement"""
         self.close()
 
+    def __del__(self):
+        """ When object is not used anymore."""
+        self.close()
+
     def load_meta_data(self, ):
         """Opens the file and loads the data defined by __load_meta_data__."""
         self.open()
@@ -58,3 +81,31 @@ class BaseFileHandler:
     def __load_meta_data__(self, ):
         """Placeholder which defines how data are read."""
         pass
+
+    @staticmethod
+    def find_files(file_pattern='*.hdf5', directory=None, recursive=True, raise_nothing_found=False):
+        """ Find files with the given pattern.
+        Parameter
+        ---------
+        file_pattern: str, optional
+            The search pattern, which may contain simple shell-style wildcards.
+        directory: str, optional
+            The root directory for the search, None (default) takes the `Config.raw_data_dir`.
+        recursive: bool, optional
+            If True (default), subdirectories are included in the search.
+        raise_nothing_found: bool, optional
+            If True, a FileNotFoundError is raised if no files are found. Default, False.
+        """
+        if directory is None:
+            directory = Config.raw_data_dir
+
+        if recursive:
+            file_list = glob.glob(f'{directory.rstrip("/")}/**/{file_pattern}', recursive=True)
+        else:
+            file_list = glob.glob(f'{directory.rstrip("/")}/{file_pattern}')
+
+        if raise_nothing_found and not file_list:
+            raise FileNotFoundError(f'No files found for file_pattern: {file_pattern} in {directory}')
+
+        return file_list
+

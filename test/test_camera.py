@@ -1,4 +1,5 @@
 import os
+import random
 from unittest import TestCase
 import numpy as np
 
@@ -9,12 +10,16 @@ from strawb.sensors.camera import PictureHandler
 
 class TestCameraFileHandlerInit(TestCase):
     def setUp(self):
-        self.file_name = 'TUMPMTSPECTROMETER002_20210510T190000.000Z-SDAQ-CAMERA.hdf5'
-        self.module = 'PMTSPECTROMETER002'
+        file_list = FileHandler.find_files('*-SDAQ-CAMERA.hdf5',
+                                           directory=Config.raw_data_dir,
+                                           recursive=True,
+                                           raise_nothing_found=True)
+
+        self.full_path = random.choice(file_list)  # select a random file
+        self.file_name = os.path.split(self.full_path)[-1]
 
     def test_init_full_path(self):
-        camera = FileHandler(os.path.join(Config.raw_data_dir, self.file_name))
-        self.assertEqual(self.module, camera.module)
+        camera = FileHandler(self.full_path)
         # check here only the time
         self.assertIsInstance(camera.time[:],
                               np.ndarray,
@@ -22,15 +27,13 @@ class TestCameraFileHandlerInit(TestCase):
 
     def test_init_default_path(self):
         camera = FileHandler(self.file_name)
-        self.assertEqual(self.module, camera.module)
         # check here only the time
         self.assertIsInstance(camera.time[:],
                               np.ndarray,
                               f'camera.time[:] has to be a np.ndarray, got: {type(camera.time)}')
 
-    def test_init_non_exiting_file(self):
-        file_name = 'TUMPMTSPECTROMETER002_20210510T250000.000Z-SDAQ-CAMERA.hdf5'
-        self.assertRaises(FileNotFoundError, FileHandler, file_name=file_name)
+    def tearDown(self):
+        print(self.full_path)
 
 
 # class TestCameraFileHandler(TestCase):
