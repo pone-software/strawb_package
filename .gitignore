@@ -7,5 +7,5 @@ dist/
 envs/
 venv/
 **/.ipynb_checkpoints
-**/.DStore
+**/.DS_Store
 **/*.h5
