@@ -6,3 +6,6 @@ src/STRAWB.egg-info
 dist/
 envs/
 venv/
+**/.ipynb_checkpoints
+**/.DStore
+**/*.h5
