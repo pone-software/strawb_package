@@ -66,7 +66,7 @@ def main():
     pd_result["fullPath"] += '/' + pd_result['filename']
 
     # store information in a pandas-file
-    pd_result.to_pickle(strawb.Config.pandas_file_sync_db)
+    pd_result.to_pickle(strawb.Config.pandas_file_sync_db, protocol=4)  # protocol=4 compatible with python>=3.4
 
 
 # execute only if run as a script
