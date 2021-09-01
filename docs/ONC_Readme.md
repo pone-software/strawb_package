@@ -1,39 +1,16 @@
-# ONC Package
+# ONC Submodule
 
 ### Where can I find my token?
-On any of our Oceans 2.0 pages, once you are logged in,
+On any of the [Oceans 2.0 pages](https://data.oceannetworks.ca/home), once you are logged in,
 1. on the top right click on the Profile link
 2. on the Web Services API tab
 3. that will take you to your token.
 
-https://data.oceannetworks.ca/home?TREETYPE=1&LOCATION=11&TIMECONFIG=0
-
-### Example
-
-```python
-from src.strawb.onc_downloader import ONCDownloader
-from strawb import dev_codes_deployed
-
-onc_downloader = ONCDownloader(showInfo=False)
-
-# select dev_codes
-dev_codes = list(dev_codes_deployed)
-dev_codes.sort()
-
-# get available from ONC server, `download=False` as we want to filter some files
-pd_result = onc_downloader.download_structured(dev_codes=dev_codes[:2],
-                                               extensions=None,
-                                               date_from='2021-08-30T00:00:00.000',
-                                               date_to='2021-08-30T01:00:00.000',
-                                               download=False,
-                                               )
-# select only 5 files
-pd_result_masked = pd_result[['filename', 'outPath']]
-# prepare download
-filters_or_result = dict(files=pd_result_masked.to_dict(orient='records'))
-# download the files
-onc_downloader.getDirectFiles(filters_or_result=filters_or_result)
-```
+### Examples
+For examples check out the [examples' folder](../examples) which includes notebooks and scripts.
+- [(Script) ONC download](../examples/basic_onc_download.py)
+- [(Notebook) ONC download and filter](../examples/ONC_Downloader_Example.ipynb)
+- [(Notebook) Explore pandas_file_sync_db](../examples/explore_pandas_file_sync_db.ipynb)
 
 ### Filter tags
 The list of possible filter tags by Jeannette Bedard from ONC.
