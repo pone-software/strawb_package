@@ -25,7 +25,7 @@ class FileHandler(BaseFileHandler):
         self.RAW_Resolution = None
         self.Resolution = None
 
-        self.all_attributes = None  # holds all attributes as dict
+        self.all_attributes = None  # holds all hdf5-group camera attributes as dict
 
         # comes last to load the data in case file_name is set
         BaseFileHandler.__init__(self, *args, **kwargs)
