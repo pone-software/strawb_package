@@ -31,3 +31,6 @@ dev_codes = set([i['dev_code'] for i in module_onc_id.values()])
 # subtract not deployed dev_codes
 dev_codes_deployed = dev_codes.difference(['TEST', 'UNITTEST', 'TUMSTANDARDMODULE002', 'TUMSTANDARDMODULE003'])
 
+# sort both sets, returns a list
+dev_codes = sorted(dev_codes)
+dev_codes_deployed = sorted(dev_codes_deployed)
