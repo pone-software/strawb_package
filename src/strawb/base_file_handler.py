@@ -16,6 +16,8 @@ class BaseFileHandler:
         self.module = None
         self.file_typ = None  # file type
 
+        self.file_attributes = None  # holds all hdf5-file attributes as dict
+
         if file_name is None:
             pass
         elif os.path.exists(file_name):
@@ -76,6 +78,7 @@ class BaseFileHandler:
     def load_meta_data(self, ):
         """Opens the file and loads the data defined by __load_meta_data__."""
         self.open()
+        self.file_attributes = dict(self.file.attrs)
         self.__load_meta_data__()
 
     def __load_meta_data__(self, ):
