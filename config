@@ -2,7 +2,7 @@
 
 [Paths]
 home_dir: {RepositoryHome}
-# home_dir: ~/straw
+# home_dir: ~/strawb
 raw_data_dir: %(home_dir)s/raw_module_data
 proc_data_dir: %(home_dir)s/processed_data
 
