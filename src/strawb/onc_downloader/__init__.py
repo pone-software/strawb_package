@@ -1,6 +1,5 @@
 # Authors: Kilian Holzapfel <kilian.holzapfel@tum.de>
 import datetime
-import os
 import threading
 
 import pandas
@@ -41,21 +40,20 @@ class ONCDownloader(ONC):
         self.filters = {}
         self.result = {}
 
-        self.download_thread = threading.Thread(target=self.download_file)
+        self.download_thread = threading.Thread(target=self.getDirectFiles)
 
     def start(self, **kwargs):
         """Starts the download in background (thread). The rests is similar to download_file"""
         if not self.download_thread.is_alive():
-            self.download_thread = threading.Thread(target=self.download_file, kwargs=kwargs)
+            self.download_thread = threading.Thread(target=self.getDirectFiles, kwargs=kwargs)
             self.download_thread.start()
 
-    def download_file(self, **kwargs):
-        """ Downloads the files and stores the result internally."""
-        # print(f'Download in directory: {self.outPath}')
-        self.result = self.getDirectFiles(**kwargs)
-        for res_i in self.result['downloadResults']:
-            if 'file' in res_i:
-                res_i['file'] = os.path.abspath(os.path.join(self.outPath, res_i['file']))
+    def getDirectFiles(self, **kwargs):
+        """ Downloads the files and stores the result internally. See ONC.getDirectFiles for the usage."""
+        self.result = ONC.getDirectFiles(self, **kwargs)
+        # for res_i in self.result['downloadResults']:
+        #     if 'file' in res_i:
+        #         res_i['file'] = os.path.abspath(os.path.join(self.outPath, res_i['file']))
 
     def get_files_for_dev_codes(self, dev_codes: list, date_from: datetime, date_to: datetime,
                                 print_stats: bool = True):
