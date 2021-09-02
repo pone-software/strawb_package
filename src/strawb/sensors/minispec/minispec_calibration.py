@@ -4,14 +4,14 @@ from inspect import getfullargspec
 
 
 # this class use least square method to fit a general exposure time and temperature dependent
-# dark count function. Then subtract the dark value from known spectrum, return the calibrated value
+# dark count function. Then subtract the dark value from known Spectrum, return the calibrated value
 
-# other note: for simplification, here we adapt the "fit_loop_pixel" method from Kilian's gitlab strawb analysis framework
+# other note: for simplification, here we adapt the "fit_loop_pixel" method
+# from Kilian's gitlab strawb analysis framework
 
 class DarkCountFit:
     # need in put from device_handler
-    def __init__(self,fit_data_obj,fit_channel):
-
+    def __init__(self, fit_data_obj, fit_channel):
         # number of opt_parameter in f(dt, temp, *opt_parameter), [dt, temp] aren't opt_parameter
         # -> -len([dt, temp]) = -2
         self.len_opt_parameter = len(getfullargspec(self.darkcounts_fit_function).args) - 2
@@ -23,8 +23,8 @@ class DarkCountFit:
         self.opt_00[2] = 44.  # A:multi factor of exponential part
         self.opt_00[3] = 0.12  # temp_m:
 
-        #generate zero array to store opt parameters for each pixel,each device has 288 pixel
-        #saved when 'fit_loop_pixel' or 'fit_pixel_allin1' is executed
+        # generate zero array to store opt parameters for each pixel,each device has 288 pixel
+        # saved when 'fit_loop_pixel' or 'fit_pixel_allin1' is executed
         self.opt = np.zeros((self.len_opt_parameter, 288))
 
         # maximum possible value of tdc_counts, from Imma's measurement
@@ -32,15 +32,13 @@ class DarkCountFit:
         self.fit_obj = fit_data_obj
         self.fit_channel = fit_channel
 
-
-    #some auxiliary definitions
+    # some auxiliary definitions
     @staticmethod
     def darkcounts_fit_function(dt, temp, y_0, dt_m, a, temp_m):
         """dt: exposure_time -> dark_counts ~ dt_m*dt
         temp: gain -> dark_counts ~expand as exponential function -> temp_m*temp + temp_m2*temp**2"""
         dark_count_value = y_0 + dt_m * dt + a * dt * np.exp(temp_m * temp)
-        return dark_count_value # the dark count value
-
+        return dark_count_value  # the dark count value
 
     def func_min_singlepixel(self, opt, dt, temp, data):
         """function to minimize for fit_loop_pixel
