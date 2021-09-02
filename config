@@ -1,4 +1,4 @@
-# Config File for the STRAWb package
+# Config File for the STRAWb package; see `docs/Config_File.md` for more information
 
 [Paths]
 home_dir: {RepositoryHome}
