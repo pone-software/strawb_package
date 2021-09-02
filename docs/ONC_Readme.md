@@ -78,4 +78,4 @@ Open the [Data Search tab on the Oceans 2.0 webpage](https://data.oceannetworks.
 - STRAW - `Neutrino Project Mooring 02 (Blue)`
 - STRAWb - `Neutrino Project Mooring 03`
 
-After you clicked on a module, click on `Select this data source` (window on the map), and finally a list with data-products appears. For more infromations on how to progress, check out the [Oceans 2.0 wiki](https://wiki.oceannetworks.ca/display/O2KB).
+After you clicked on a module, click on `Select this data source` (window on the map), and finally a list with data-products appears. For more information on how to progress, check out the [Oceans 2.0 wiki](https://wiki.oceannetworks.ca/display/O2KB).
