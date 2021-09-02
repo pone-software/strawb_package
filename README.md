@@ -9,7 +9,7 @@ STRAWb is a python module which simplifies and streamlines the work with the STR
 4. [ToDo-List](#todo-list)
 
 ## Code Structure
-The code consists of several submodules.
+The code consists of several submodules. The following summarise the single parts briefly, for more documentation also have a look to the [docs directory](docs).
 
 ### Config Parser
 Takes care of parsing configuration parameters for the package from a config file. The sample config file with all parameters is [here](config). If there is a config-file present at `~/.strawb/config` it reads the parameters from there. If not, it takes the sample config-file.
