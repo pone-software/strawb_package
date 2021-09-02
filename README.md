@@ -18,7 +18,7 @@ Takes care of parsing configuration parameters for the package from a config fil
 Takes care of downloading the files from the ONC server to a local directory. [Readme of the submodule](docs/ONC_Readme.md).
 
 ### Sensors
-STRAWb consists of several different Modules with different configurations of sensors. The code of the DAQ and module controlling software (MCTL) is located in [this repository](https://gitlab.lrz.de/strawb/mctl) (TUM resource, but external users can be added. Contact someone of the TUM group for access). 
+STRAWb consists of several Modules with different configurations of sensors. The code of the DAQ and module controlling software (MCTL) is located in [this repository](https://gitlab.lrz.de/strawb/mctl) (TUM resource, but external users can be added. Contact someone of the TUM group for access). 
 
 Most of the sensors use `hdf5` files to store the measurements. But some sensors use other file types like `txt`, `hld`, `raw` and `png`.
 
@@ -41,10 +41,10 @@ For the installation you have two options.
 pip3 uninstall -y strawb  # Uninstall an existing installation
 pip3 install -U git+git://github.com/pone-software/strawb_package.git@master  # Install it from the repro
 ```
-### Installation for developer
+### Installation for developers
 This installation downloads the source code, and the package loads directly from the source code for every import. Therefore, any changes to the code will have direct effect after an import.
 
-Go to the directory of [this README you are reading](README.md) is placed (basically, to the directory of the [pyproject.toml](pyproject.toml) file, but this should be the same). Depedding on your Python installation adopt python3/pip3 to python/pip, however python3 is required. And run:
+Go to the directory of [this README you are reading](README.md) is placed (basically, to the directory of the [pyproject.toml](pyproject.toml) file, but this should be the same). Depending on your Python installation adopt python3/pip3 to python/pip, however python3 is required. And run:
 ```bash
 cd /path/to/repro
 python3 -m build  # This will create the files located in the folder `.egg-info`
@@ -66,12 +66,12 @@ In case you see an `AssertionError: Egg-link`, run:
 ```bash
 rm ~/.local/lib/pythonX.X/site-packages/H5DAQ.egg-link
 ```
-where X.X is your python version, e.g. 3.7 and run the command
+where X.X is your python version, e.g., 3.7 and run the command
 ```bash
 pip3 install -U --user -e .
 ```
 again.
-This problem happens if you move the source code directory after the egg-link file is created.
+This problem happens if you move the source code directory after you created the egg-link file.
 
 ## TODO List:
 * [ ] add readme for every sensor typ
