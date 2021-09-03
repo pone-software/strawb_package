@@ -1,4 +1,4 @@
-#Documentation
+# Documentation
 This is the documentation of the STRAWb-package but also the related infrastructure like ONC and LRZ. Please also have a look to the [repository's readme](./README.md) with information about installing the package and more.
 
 ## List of Contend
