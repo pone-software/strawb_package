@@ -1,11 +1,11 @@
-# ONC Submodule
+# ONC
 
 ONC downloads the data from the modules to their database (DB). There are two (maybe more) main technics to access the data:
 1. One way to access this data is the [Oceans 2.0 webpage](https://data.oceannetworks.ca/home).
 2. The ONC python package ([original repository](https://github.com/OceanNetworksCanada/api-python-client) and [forked with extended capabilities](https://github.com/FlyingAndrew/api-python-client))
 
-Obviously but worth to mention, this repository makes use of the [forked ONC python package](https://github.com/FlyingAndrew/api-python-client).
-However, the [Oceans 2.0 webpage](https://data.oceannetworks.ca/home) is listed here for the sake of completeness at the end.
+Obviously but worth to mention, this repository makes use of the [forked ONC python package](https://github.com/FlyingAndrew/api-python-client). The submodule [ONCDownloader](../src/strawb/onc_downloader/__init__.py) wraps the implementation can add the file-path-logic on the DSS.
+The [Oceans 2.0 webpage](https://data.oceannetworks.ca/home) is listed here for the sake of completeness at the end.
 
 ## How to access the data within python
 The download of files from the ONC DB there are basically two, and a half steps:
@@ -22,6 +22,9 @@ On any of the [Oceans 2.0 pages](https://data.oceannetworks.ca), once you are lo
 1. on the top right click on the Profile link
 2. on the Web Services API tab
 3. that will take you to your token.
+
+### Source code
+
 
 ### Examples
 For examples check out the [examples' folder](../examples) which includes notebooks and scripts. For the ONC submodule this are:
