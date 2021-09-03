@@ -1,6 +1,10 @@
 # STRAWb
 
-STRAWb is a python module which simplifies and streamlines the work with the STRAWb data. It also targets the LRZ infrastructure which hosts a copy of all data (some TB) and provides computational infrastructure. For more information about the LRZ and the deployed system have a look to this [LRZ Readme](docs/LRZ_Readme.md) in the docs.
+STRAWb is a python module which simplifies and streamlines the work with the STRAWb data. Beside this Readme, there is also more documentation in the [docs directory](docs).
+
+It also targets the LRZ infrastructure which hosts a copy of all data (some TB) and provides computational infrastructure.
+For more information about the LRZ and the deployed system have a look to this [LRZ Readme](docs/LRZ_Readme.md) in the docs.
+
 
 ### Table of Contents
 1. [Code Structure](#code-structure)
