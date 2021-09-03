@@ -65,24 +65,24 @@ Replace `<your_key.key>` with the path to your .key file (not the .pub). The `<u
 #### SSH config
 To make the ssh command easier, you can set parameter pairs in the ssh-config file. The file is located on your computer at `~/.ssh/config` and add the following lines:
 ```bash
-Host <name_for_the_vm>
+Host <name_of_the_vm>
     User            <user_name>
     HostName        <ip-address>
     IdentityFile    <your_key.key>
 ```
-Replace `<name_for_the_vm>` with any name you want. Save the file. Now the ssh command reduce to:
+Replace `<name_of_the_vm>` with any name you want. Save the file. Now the ssh command reduce to:
 ```bash
-ssh <name_for_the_vm>
+ssh <name_of_the_vm>
 ```
-In addition, the `<name_for_the_vm>` works with `rsync`, and `scp`.
+In addition, the `<name_of_the_vm>` works with `rsync`, and `scp`.
 
 #### Copy files from/to the VM with rsync or scp
 To sync files between different machines (but also on the same machine) you can use `scp` or `rsync`. The usage, especially with a ssh-config is straight forward, e.g., to download/upload files from/to the VM:
 ```bash
-rsync <name_for_the_vm>:"/path/to/files/*.txt" target/dir  # downloads files all txt-files from /path/to/files/
-rsync target/dir/*.txt <name_for_the_vm>:"/path/to/files"  # upload files all txt-files from target/dir/
-rsync <name_for_the_vm>:"/path/to/files" target/dir/files  # download the whole directory
-rsync <name_for_the_vm>:"/path/to/files/" target/dir  # equals the line above
+rsync <name_of_the_vm>:"/path/to/files/*.txt" target/dir  # downloads files all txt-files from /path/to/files/
+rsync target/dir/*.txt <name_of_the_vm>:"/path/to/files"  # upload files all txt-files from target/dir/
+rsync <name_of_the_vm>:"/path/to/files" target/dir/files  # download the whole directory
+rsync <name_of_the_vm>:"/path/to/files/" target/dir  # equals the line above
 ```
 For directories, you have to take care to set the source string in the right syntax. Without or with a tailing `/` makes the different. Compare the last two lines of the example. Furthermore, there are many documentations - [like](https://linux.die.net/man/1/rsync) - explaining the difference and the various options.
 
@@ -101,4 +101,25 @@ Host straw-lrz-vm
     IdentityFile    ~/.ssh/cloud.key
 ```
 
-### 
+### Jupyter Notebook 
+
+A jupyter notebook server is running on the straw-lrz-vm at port 8080. To use it, on your computer:
+1. open a tunnel from your computer: `ssh -L 8080:localhost:8080 <name_of_the_vm>` and leave the terminal open incl. the ssh connection.
+1. open http://localhost:8080 in the browser, PW: `strawb`
+
+#### (Re-)start the server, on the VM
+Log in to the VM via `ssh -L 8080:localhost:8080 straw-lrz-vm` or `ssh straw-lrz-vm` , does not matter.
+For the restart, make sure that the old process isn’t running at the target port. For this, get the PID with e.g., `ps -ef | grep jupyter-notebook` or `htop` or similar. In case, kill it with `kill <PID>`.
+```bash
+jupyter notebook --no-browser --port=8080&; disown
+```
+From `&; disown`; `&` will put the task in background and `disown` unlinks it from the user, as closing the ssh connection will stop all linked processes.
+
+#### Ports
+You can also use any other port on your end or the vm, e.g., if you connect to different machines at once.
+On the VM start the server with an updated `--port=<VM_PORT>` ; `<VM_PORT>` can be any unused port
+The tunnel: 
+```bash
+ssh -L <LOCAL_PORT>:localhost:<VM_PORT> <name_of_the_vm>
+```
+has to match the `<VM_PORT>` and `<LOCAL_PORT>` can be any unused port + http://localhost:LOCAL_PORT
