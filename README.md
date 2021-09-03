@@ -14,7 +14,7 @@ pip3 install -U git+git://github.com/pone-software/strawb_package.git@master  # 
 ### Installation for developers
 This installation downloads the source code, and the package loads directly from the source code for every import. Therefore, any changes to the code will have direct effect after an import.
 
-Go to the directory of [this README you are reading](README.md) is placed (basically, to the directory of the [pyproject.toml](pyproject.toml) file, but this should be the same).
+Go to the directory of [this README you are reading](/README.md) is placed (basically, to the directory of the [pyproject.toml](/pyproject.toml) file, but this should be the same).
 Depending on your Python installation adopt python3/pip3 to python/pip, however python3 is required. Run:
   ```bash
   mkdir /path/to/repros  # adopted the path, be aware that git clone creates a directory with the repro name
@@ -45,7 +45,7 @@ rm ~/.local/lib/pythonX.X/site-packages/H5DAQ.egg-link
 ```
 where X.X is your python version, e.g., 3.7 and run the following command again.
 ```bash
-pip3 install -U --user -e .
+pip3 install -U -e .
 ```
 This problem happens if you move the source code directory after you created the egg-link file.
 
