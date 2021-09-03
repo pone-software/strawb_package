@@ -14,7 +14,8 @@ pip3 install -U git+git://github.com/pone-software/strawb_package.git@master  # 
 ### Installation for developers
 This installation downloads the source code, and the package loads directly from the source code for every import. Therefore, any changes to the code will have direct effect after an import.
 
-Go to the directory of [this README you are reading](README.md) is placed (basically, to the directory of the [pyproject.toml](pyproject.toml) file, but this should be the same). Depending on your Python installation adopt python3/pip3 to python/pip, however python3 is required. And run:
+Go to the directory of [this README you are reading](README.md) is placed (basically, to the directory of the [pyproject.toml](pyproject.toml) file, but this should be the same).
+Depending on your Python installation adopt python3/pip3 to python/pip, however python3 is required. And run:
 ```bash
 cd /path/to/repro
 python3 -m build  # This will create the files located in the folder `.egg-info`
