@@ -1,6 +1,6 @@
 # Config File
 
-This package use a file to define some basic settings like directories for the files, ONC token, and more. If there is a file `~/.strawb/config` it takes the parameters from there. If the file doesn't exist, it takes the default [config file](../config) from the repository which come with the code.
+This package use a file to define some basic settings like directories for the files, ONC token, and more. If there is a file `~/.strawb/config` it takes the parameters from there. If the file doesn't exist, it takes the default [config file](/config) from the repository which come with the code.
 
 The config file needs the following shape and entries.
 ```bash
@@ -18,7 +18,7 @@ threads: 4
 ```
 
 ## General Usage
-The [config parser](../src/strawb/config_parser/__init__.py) use the [configparser](https://docs.python.org/3/library/configparser.html) which comes with every Python installation. Some points for a simple start:
+The [config parser](/src/strawb/config_parser/__init__.py) use the [configparser](https://docs.python.org/3/library/configparser.html) which comes with every Python installation. Some points for a simple start:
 - To comment a line use `#` like in Python
 - Strings like `{RepositoryHome}` are placeholders like in a Python string ` 'a={a:.2}'.format(a=1.234)`. The config parser replace those strings, i.e., with something like `.format(RepositoryHome=repository_home)`
 - `%(home_dir)s` is the "interpolation of values" done by the [configparser](https://docs.python.org/3/library/configparser.html). It enables values to contain format strings which refer to other values in the same section.
@@ -33,6 +33,6 @@ The [config parser](../src/strawb/config_parser/__init__.py) use the [configpars
 ## ONC
 | key | explanation
 |---|---|
-| token | our personal onc token. [Where can I find my token?](./ONC_Readme.md#Where can I find my token?) |
+| token | our personal onc token. [Where can I find my token?](/docs/ONC_Readme.md#Where can I find my token?) |
 | threads | The number of threads for the ONC download. Threads share a CPU ( and the same network connection) therefore, higher numbers aren't faster. But some threads do the job faster than only one.|
 

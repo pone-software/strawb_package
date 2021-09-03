@@ -4,12 +4,14 @@ ONC downloads the data from the modules to their database (DB). There are two (m
 1. One way to access this data is the [Oceans 2.0 webpage](https://data.oceannetworks.ca/home).
 2. The ONC python package ([original repository](https://github.com/OceanNetworksCanada/api-python-client) and [forked with extended capabilities](https://github.com/FlyingAndrew/api-python-client))
 
-Obviously but worth to mention, this repository makes use of the [forked ONC python package](https://github.com/FlyingAndrew/api-python-client). The submodule [ONCDownloader](../src/strawb/onc_downloader/__init__.py) wraps the implementation can add the file-path-logic on the DSS.
+Obviously but worth to mention, this repository makes use of the [forked ONC python package](https://github.com/FlyingAndrew/api-python-client). The submodule [ONCDownloader](/src/strawb/onc_downloader/__init__.py) wraps the implementation can add the file-path-logic on the DSS.
 The [Oceans 2.0 webpage](https://data.oceannetworks.ca/home) is listed here for the sake of completeness at the end.
 
 ## How to access the data within python
 The download of files from the ONC DB there are basically two, and a half steps:
-- The half is, that you need a valid token for any request to the ONC DB. This package comes with a token in the [default config file](../config), but it may not be valid anymore. Therefore, you [generate your personal token](#Where can I find my token?) and set the token in the config file (the one in your home directory), [here is how you do this](Config_File.md). Usually it has to be generated only once, unless you don't generate a new token, which makes the previous token invalid.
+- The half is, that you need a valid token for any request to the ONC DB. This package comes with a token in the [default config file](/config), but it may not be valid anymore. 
+  Therefore, you generate your personal token ([Where can I find my token?](#Where can I find my token?)) and set the token in the config file - the one in your home directory ([Config file docs](/docs/Config_File.md)).
+  Usually it has to be generated only once, unless you don't generate a new token, which makes the previous token invalid.
 
 For the rest it is:
 1. you ask the ONC DB with a filter for available files.
@@ -27,13 +29,15 @@ On any of the [Oceans 2.0 pages](https://data.oceannetworks.ca), once you are lo
 
 
 ### Examples
-For examples check out the [examples' folder](../examples) which includes notebooks and scripts. For the ONC submodule this are:
-- [(Script) ONC download](../examples/basic_onc_download.py)
-- [(Notebook) ONC download and filter](../examples/ONC_Downloader_Example.ipynb)
-- [(Notebook) Explore pandas_file_sync_db](../examples/explore_pandas_file_sync_db.ipynb)
+For examples check out the [examples' folder](/examples) which includes notebooks and scripts. For the ONC submodule this are:
+- [(Script) ONC download](/examples/basic_onc_download.py)
+- [(Notebook) ONC download and filter](/examples/ONC_Downloader_Example.ipynb)
+- [(Notebook) Explore pandas_file_sync_db](/examples/explore_pandas_file_sync_db.ipynb)
 
 ### Filters
-The package use filters to specify the search on the ONC DB. Functions take the filters as a python dict with specific keys. [This link](https://wiki.oceannetworks.ca/display/O2A/archivefiles) to the official ONC docs summarise the general usage. The following example and table summarise the usage and special keys for STRAWb.
+The package use filters to specify the search on the ONC DB. Functions take the filters as a python dict with specific keys. 
+[This link](https://wiki.oceannetworks.ca/display/O2A/archivefiles) to the official ONC docs summarise the general usage. 
+The following example and table summarise the usage and special keys for STRAWb.
 ``` python
 import os
 onc_downloader = strawb.ONCDownloader(showInfo=False)
