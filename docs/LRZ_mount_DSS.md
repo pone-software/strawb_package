@@ -29,7 +29,7 @@ This section covers a minimum example mounting (NFS) a DSS Container on a VM inc
 
 ## **Mount the Container**
 1. This is the summary of: **2.2.3. Mounting a DSS Container on a VM** of the [official docs](https://doku.lrz.de/display/PUBLIC/DSS+documentation+for+users#DSSdocumentationforusers-usrgrp)
-1. Create a new directory where the DSS is mounted to, here `/dss` and mount it. Replace `<IP>:<Path>` with the **Mount Path** from [**Prepare the DSS Container**](#Prepare the DSS Container)
+1. Create a new directory where the DSS is mounted to, here `/dss` and mount it. Replace `<IP>:<Path>` with the **Mount Path** from [**Prepare the DSS Container**](#Prepare-the-DSS-Container)
 ```bash
   sudo mkdir -p /dss
   sudo mount -t nfs -o rsize=1048576,wsize=1048576,hard,tcp,bg,timeo=600,vers=3 <IP>:<Path> /dss
@@ -37,7 +37,7 @@ This section covers a minimum example mounting (NFS) a DSS Container on a VM inc
 1. Check: You can check with `df -h /dss` or `mount` if the `<Path>` is listed
 1. Add it to `/etc/fstab` for **automated mount**
    1. modify the file with: `sudo vim /etc/fstab`
-   1. add the line and replace `<IP>:<Path>` with the **Mount Path** from [**Prepare the DSS Container**](#Prepare the DSS Container)
+   1. add the line and replace `<IP>:<Path>` with the **Mount Path** from [**Prepare the DSS Container**](#Prepare-the-DSS-Container)
       ```bash
       <IP>:<Path> /dss  nfs    rsize=1048576,wsize=1048576,hard,tcp,bg,timeo=600,vers=3    0       0
       ```
@@ -54,5 +54,5 @@ This section covers a minimum example mounting (NFS) a DSS Container on a VM inc
    1. **Option 1: change the user for the one CMD only**
        1. `sudo -u <username> <cmd>` , e.g. `sudo -u <username> ls /dss`
    1. **Option 2: change the user**
-       1. `su - <username>` + enter the password you set before in the [section](#Create the users with the right UID on the VM)
+       1. `su - <username>` + enter the password you set before in the [section](#Create-the-users-with-the-right-UID-on-the-VM)
        1. execute a `<cmd>` , e.g. `ls /dss`

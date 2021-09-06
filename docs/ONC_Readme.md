@@ -10,7 +10,7 @@ The [Oceans 2.0 webpage](https://data.oceannetworks.ca/home) is listed here for 
 ## How to access the data within python
 The download of files from the ONC DB there are basically two, and a half steps:
 - The half is, that you need a valid token for any request to the ONC DB. This package comes with a token in the [default config file](/config), but it may not be valid anymore. 
-  Therefore, you generate your personal token ([Where can I find my token](#Where can I find my token)) and set the token in the config file - the one in your home directory ([Config file docs](/docs/Config_File.md)).
+  Therefore, you generate your personal token ([Where can I find my token?](#Where-can-I-find-my-token?)) and set the token in the config file - the one in your home directory ([Config file docs](/docs/Config_File.md)).
   Usually it has to be generated only once, unless you don't generate a new token, which makes the previous token invalid.
 
 For the rest it is:
@@ -19,7 +19,7 @@ For the rest it is:
 
 Check out the examples.
 
-### Where can I find my token
+### Where can I find my token?
 On any of the [Oceans 2.0 pages](https://data.oceannetworks.ca), once you are logged in,
 1. on the top right click on the Profile link
 2. on the Web Services API tab

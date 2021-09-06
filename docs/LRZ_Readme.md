@@ -52,7 +52,7 @@ To add a new IP, click `Allocate IP To Project`. The `mwn_pool` is not exposed a
 In contrast, the `internt_pool` is accessible and exposed to the internet.
 
 #### Key Pairs
-You can add key pairs with [management-portal](https://cc.lrz.de)`-> Project -> Compute -> Key Pairs`. All key pairs are added to new created VMs only. For existing VMs you have to add the keys manually to each machine. For more instructions about the ssh key see the [dedicated section](#Access a VM via SSH).
+You can add key pairs with [management-portal](https://cc.lrz.de)`-> Project -> Compute -> Key Pairs`. All key pairs are added to new created VMs only. For existing VMs you have to add the keys manually to each machine. For more instructions about the ssh key see the [dedicated section](#Access-a-VM-via-SSH).
 
 ### Access a VM via SSH
 The access to a VM is restricted to ssh with key pair only. First create a new key pair. If you don't know how, search the internet for it. In the following the key 
@@ -60,7 +60,7 @@ To add a key, someone with access to the VM has to add your public part (.pub) o
 ```bash
 ssh -i <your_key.key> <user_name>@<ip-address>
 ```
-Replace `<your_key.key>` with the path to your .key file (not the .pub). The `<user_name>` and `<ip-address>` are in the [table below](#Parameters of hosted VMs and shh_config entries).
+Replace `<your_key.key>` with the path to your .key file (not the .pub). The `<user_name>` and `<ip-address>` are in the [table below](#Parameters-of-hosted-VMs-and-shh_config-entries).
 
 #### SSH config
 To make the ssh command easier, you can set parameter pairs in the ssh-config file. The file is located on your computer at `~/.ssh/config` and add the following lines:

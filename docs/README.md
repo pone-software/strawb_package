@@ -8,8 +8,8 @@ This is the documentation of the STRAWb-package but also the related infrastruct
 Please also have a look to the [repository's readme](/README.md) with information about installing the package and more.
 
 ## Table of Contents
-1. [List of Files of the Documentation](#List of Files of the Documentation)
-1. [Code Structure](#Code Structure)
+1. [List of Files of the Documentation](#List-of-Files-of-the-Documentation)
+1. [Code Structure](#Code-Structure)
 1. [Example](#example)
 
 ## List of Files of the Documentation
