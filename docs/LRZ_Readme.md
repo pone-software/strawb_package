@@ -38,7 +38,7 @@ The registration can take a while until it's transferred to the *Globus* server.
 
 
 ## Compute Cloud
-The *Compute Cloud* is a VM hosting service of the LRZ. Here are the (official docs)[https://doku.lrz.de/display/PUBLIC/Compute+Cloud]. By default, a project has 10 CPU cores with 4.5 GB RAM per Core. The RAM ratio is fixed, but the total number of CPU cores can be higher. Therefore, contact the LRZ service desk. The VMs among projects share the same hardware. Once a VM is active, it blocks the resource.
+The *Compute Cloud* is a VM hosting service of the LRZ. Here are the [official docs](https://doku.lrz.de/display/PUBLIC/Compute+Cloud). By default, a project has 10 CPU cores with 4.5 GB RAM per Core. The RAM ratio is fixed, but the total number of CPU cores can be higher. Therefore, contact the LRZ service desk. The VMs among projects share the same hardware. Once a VM is active, it blocks the resource.
 Therefore, it is important to only activate (un-shelf) the VMs if needed and deactivate (shelf) them afterwards. However, VMs with one Core per project can run constantly. Those VMs can do regular jobs which do not require much computation power and can be an entry point to (un-)shelf other VMs which do more intense jobs. (How this works precisely has to be figured out.)
 
 ### VM management-portal
