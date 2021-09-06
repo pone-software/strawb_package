@@ -1,6 +1,6 @@
 # LRZ Documentation
 
-This project uses 2 different LRZ tools. The [DSS](#DSS) is the storage backend and the [Compute Cloud](#compute-cloud) hosts VMs. (Maybe also the [Linux Cluster](https://doku.lrz.de/display/PUBLIC/Linux+Cluster) in the future.)
+This project uses 2 different LRZ tools. The [DSS](#DSS) is the storage backend and the [Compute Cloud](#Compute-Cloud) hosts VMs. (Maybe also the [Linux Cluster](https://doku.lrz.de/display/PUBLIC/Linux+Cluster) in the future.)
 
 ## Overview
 For STRAW and STRAWb, the `straw-lrz-vm` runs 24/7, has 1 CPU with 4.5 GB RAM and therefore takes care of synchronising the module data and monitoring both detectors. But it can also do some simple calculations. For more power, another VM has to be set up. On the VM the DSS-Storage is mounted to `/dss`. 
