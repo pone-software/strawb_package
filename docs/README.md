@@ -20,7 +20,7 @@ Please also have a look to the [repository's readme](/README.md) with informatio
         1. (more to be added)
     1. [ONC - How to access the data](ONC_Readme.md)
 1. [**SSH to Modules - How to access the modules**](/docs/ONC_ssh2modules.md)
-1. [**LRZ - access the DSS and computational resources**](LRZ_Readme.md)
+1. [**LRZ - access the DSS and computational resources (VMs)**](LRZ_Readme.md)
     1. [How to mount the DSS container](LRZ_mount_DSS.md)
     
 ## Code Structure
