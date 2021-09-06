@@ -3,7 +3,7 @@
 This project uses 2 different LRZ tools. The [DSS](#DSS) is the storage backend and the [Compute Cloud](#Compute-Cloud) hosts VMs. (Maybe also the [Linux Cluster](https://doku.lrz.de/display/PUBLIC/Linux+Cluster) in the future.)
 
 ## Overview
-For STRAW and STRAWb, the `straw-lrz-vm` runs 24/7, has 1 CPU with 4.5 GB RAM and therefore takes care of synchronising the module data and monitoring both detectors. But it can also do some simple calculations. For more power, another VM has to be set up. On the VM the DSS-Storage is mounted to `/dss`. 
+For STRAW and STRAWb, the `STRAW-LRZ-VM` runs 24/7, has 1 CPU with 4.5 GB RAM and therefore takes care of synchronising the module data from the ONC DB and monitoring both detectors. But it can also do some simple calculations. For more power, another VM has to be set up. On the VM the DSS-Storage is mounted to `/dss`. 
 
 ## DSS
 The digital scientific storage (DSS) is s service provided by the LRZ (Munich).  Here are the [official docs](https://doku.lrz.de/display/PUBLIC/Data+Science+Storage) for more information. 
@@ -88,7 +88,7 @@ For directories, you have to take care to set the source string in the right syn
 
 #### Parameters of hosted VMs and shh_config entries
 
-| Name | straw-lrz-vm (24/7, 1 CPU) |
+| Name | STRAW-LRZ-VM (24/7, 1 CPU) |
 | --- | --- |
 | <user_name> | di46lez |
 | <ip-address> | 138.246.233.224 |
@@ -103,7 +103,7 @@ Host straw-lrz-vm
 
 ### Jupyter Notebook 
 
-A jupyter notebook server is running on the straw-lrz-vm at port 8080. To use it, on your computer:
+A jupyter notebook server is running on the `STRAW-LRZ-VM` at port 8080. To use it, on your computer:
 1. open a tunnel from your computer: `ssh -L 8080:localhost:8080 <name_of_the_vm>` and leave the terminal open incl. the ssh connection.
 1. open http://localhost:8080 in the browser, PW: `strawb`
 
