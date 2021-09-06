@@ -14,7 +14,7 @@ Please also have a look to the [repository's readme](/README.md) with informatio
 
 ## List of Files of the Documentation
 1. **Code Structure**
-   1. [Package Config File](Config_File.md)
+   1. [Package Config File](/docs/Config_File.md)
     1. Sensor
         1. [Camera](Camera_Readme.md)
         1. (more to be added)
