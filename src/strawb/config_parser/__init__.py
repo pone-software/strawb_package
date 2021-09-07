@@ -23,6 +23,7 @@ class Config:
 
     raw_data_dir = config.get('Paths', 'raw_data_dir')
     proc_data_dir = config.get('Paths', 'proc_data_dir')
+    virtual_hdf5_dir = config.get('Paths', 'virtual_hdf5_dir')
     pandas_file_sync_db = os.path.join(raw_data_dir, 'pandas_file_sync_db.gz')
 
     # ONC
