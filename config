@@ -1,11 +1,11 @@
-# Config File for the STRAWb package; see `docs/Config_File.md` for more information
+# Config File for the STRAWb package; see `/docs/Config_File.md` for more information
 
 [Paths]
 home_dir: {RepositoryHome}
 # home_dir: ~/strawb
 raw_data_dir: %(home_dir)s/raw_module_data
-virtual_hdf5_dir: %(home_dir)s/virtual_hdf5_dir
 proc_data_dir: %(home_dir)s/processed_data
+virtual_hdf5_dir: %(proc_data_dir)s/virtual_hdf5_dir
 
 
 [ONC]

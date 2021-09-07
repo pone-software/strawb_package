@@ -29,6 +29,7 @@ The [config parser](/src/strawb/config_parser/__init__.py) use the [configparser
 | home_dir | Is the STRAWb home dir to make relative path within the config file possible like `raw_data_dir` and `proc_data_dir`. By default its the `RepositoryHome`.|
 | raw_data_dir | The place where the files downloaded form the ONC DB end up. And its also the place where the code looks for the raw files when processing the data.|
 | proc_data_dir | The directory to store processed date | 
+| virtual_hdf5_dir | The directory to the virtual hdf5 files |
 
 ## ONC
 | key | explanation

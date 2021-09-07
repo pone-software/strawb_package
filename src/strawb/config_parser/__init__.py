@@ -29,3 +29,5 @@ class Config:
     # ONC
     onc_token = config.get('ONC', 'token')
     onc_download_threads = int(config.get('ONC', 'threads'))
+
+    del i, config  # clean up non config variables
