@@ -2,8 +2,8 @@ import os
 import random
 from unittest import TestCase
 
-from src.strawb.config_parser.__init__ import Config
-from strawb.base_file_handler import BaseFileHandler
+from src.strawb.config_parser import Config
+from src.strawb.base_file_handler import BaseFileHandler
 
 
 class TestBaseFileHandlerInit(TestCase):

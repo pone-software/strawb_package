@@ -1,12 +1,10 @@
-import datetime
-import glob
 import os
 import random
 from unittest import TestCase
 import numpy as np
 
-from src.strawb.config_parser.__init__ import Config
-from strawb.sensors.module.file_handler import FileHandler
+from src.strawb.config_parser import Config
+from src.strawb.sensors.module.file_handler import FileHandler
 
 
 class TestModuleFileHandler(TestCase):

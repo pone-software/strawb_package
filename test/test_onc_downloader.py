@@ -2,7 +2,7 @@ import os
 from unittest import TestCase
 
 from src.strawb.onc_downloader import ONCDownloader
-from strawb import dev_codes_deployed
+from src.strawb import dev_codes_deployed
 
 
 class TestONCDownload(TestCase):
