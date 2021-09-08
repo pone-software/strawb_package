@@ -34,5 +34,3 @@ class TestModuleFileHandler(TestCase):
                               np.ndarray,
                               f'module.temperatures_time[:] has to be a np.ndarray, '
                               f'got: {type(module.temperatures_time)}; file: {self.file_name}')
-
-
