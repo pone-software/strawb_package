@@ -2,8 +2,8 @@ from strawb.base_file_handler import BaseFileHandler
 
 
 class Lucifer:
-    def __init__(self, id=None):
-        self.id = id  # i.e. 51, 52, 53, 54
+    def __init__(self, lucifer_id=None):
+        self.id = lucifer_id  # i.e. 51, 52, 53, 54
         self.current = None
         self.current_mA = None
         self.duration = None
@@ -13,11 +13,20 @@ class Lucifer:
 
     def __load_meta_data__(self, file):
         self.current = file[f'lucifer_{self.id}/current']
-        self.current_mA = file[f'lucifer_{self.id}/current_mA']
         self.duration = file[f'lucifer_{self.id}/duration']
-        self.duration_seconds = file[f'lucifer_{self.id}/duration_seconds']
         self.mode = file[f'lucifer_{self.id}/mode']
         self.time = file[f'lucifer_{self.id}/time']
+
+        # some older versions doesn't have `current_mA` and `duration_seconds`
+        try:
+            self.current_mA = file[f'lucifer_{self.id}/current_mA']
+        except KeyError:
+            pass
+
+        try:
+            self.duration_seconds = file[f'lucifer_{self.id}/duration_seconds']
+        except KeyError:
+            pass
 
 
 class FileHandler(BaseFileHandler):
