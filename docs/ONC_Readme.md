@@ -22,7 +22,8 @@ For the rest it is:
 Check out the examples.
 
 ### Where can I find my token?
-On any of the [Oceans 2.0 pages](https://data.oceannetworks.ca), once you are logged in,
+Follow ['Get your API token' from the official docs](https://wiki.oceannetworks.ca/display/O2KB/Get+your+API+token) or
+on any of the [Oceans 2.0 pages](https://data.oceannetworks.ca), once you are logged in,
 1. on the top right click on the Profile link
 2. on the Web Services API tab
 3. that will take you to your token.
