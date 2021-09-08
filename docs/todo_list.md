@@ -50,9 +50,9 @@
     - [ ] run test for all files - if it is compatible with all files
     
 - Examples
-  - [ ] [/examples/basic_camera.py](/examples/basic_camera.py)
+  - [ ] [/examples/basic_camera.py](/examples/dev_camera_basic.py)
     - [ ] ...
-  - [ ] [/examples/basic_camera_notebook.ipynb](/examples/basic_camera_notebook.ipynb)
+  - [ ] [/examples/basic_camera_notebook.ipynb](/examples/dev_camera_basic_notebook.ipynb)
     - [ ] camera.FileHandler
     - [ ] pandas + plotly
     - [ ] matplotlib
