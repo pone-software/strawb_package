@@ -4,16 +4,14 @@ from src.strawb.config_parser import Config
 
 
 class TestConfigParser(TestCase):
-
     def test_basic(self):
-        members = [attr for attr in dir(Config)
-                   if not callable(getattr(Config, attr)) and not attr.startswith("__")]
+        """Very basic test. Just checks the correct types."""
+        for member in Config:
+            # # show all parameters
+            # print(f'{member.name:30s} : {member.value}')
 
-        for i in members:
-            value = Config.__getattribute__(Config, i)
-            print(f'{i:30s} : {value}')
-
-            if i == 'onc_download_threads':
-                self.assertIsInstance(value, int)
+            # check that types are correct
+            if member.name in ['onc_download_threads']:
+                self.assertIsInstance(member.value, int)
             else:
-                self.assertIsInstance(value, str)
+                self.assertIsInstance(member.value, str)
