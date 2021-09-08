@@ -1,13 +1,12 @@
 # This examples shows who to download files from the ONC server
-from src.strawb.onc_downloader import ONCDownloader
-import src.strawb as strawb
+import strawb
 
-onc_downloader = ONCDownloader(showInfo=False)
+onc_downloader = strawb.ONCDownloader(showInfo=False)
 
 # get available from ONC server, `download=False` as we want to filter some files
 # download_structured does:
 #  1. download_structured checks for available files,
-#  2. sets the direcotory for each file ('outPath'),
+#  2. sets the directory for each file ('outPath'),
 #  (3. if download=True, downloads the files)
 #  4. returns the result as a pandas.DataFrame
 pd_result = onc_downloader.download_structured(dev_codes=strawb.dev_codes_deployed[:2],  # only 2 dev's for less data
