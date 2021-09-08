@@ -16,9 +16,9 @@
     - [x] basic download test
     
 - Examples
-  - [x] [/examples/basic_onc_download.py](/examples/basic_onc_download.py)
+  - [x] [/examples/onc_basic_download.py](/examples/onc_basic_download.py)
     - [x] tested
-  - [x] [/examples/ONC_Downloader_Example.ipynb](/examples/ONC_Downloader_Example.ipynb)
+  - [x] [/examples/onc_filter_download.ipynb](/examples/onc_filter_download.ipynb)
     - [x] tested
   
 - Readme
@@ -34,7 +34,7 @@
     - [ ] run test for all files - if it is compatible with all files
     
 - Examples
-  - [x] [/examples/basic_module_notebook.ipynb](/examples/basic_module_notebook.ipynb)
+  - [x] [/examples/module_basic_notebook.ipynb](/examples/module_basic_notebook.ipynb)
     - [x] module.FileHandler
     - [x] pandas + plotly
     - [x] matplotlib

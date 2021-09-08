@@ -33,9 +33,9 @@ on any of the [Oceans 2.0 pages](https://data.oceannetworks.ca), once you are lo
 
 ### Examples
 For examples check out the [examples' folder](/examples) which includes notebooks and scripts. For the ONC submodule this are:
-- [(Script) ONC download](/examples/basic_onc_download.py)
-- [(Notebook) ONC download and filter](/examples/ONC_Downloader_Example.ipynb)
-- [(Notebook) Explore pandas_file_sync_db](/examples/explore_pandas_file_sync_db.ipynb)
+- [(Script) ONC download](/examples/onc_basic_download.py)
+- [(Notebook) ONC download and filter](/examples/onc_filter_download.ipynb)
+- [(Notebook) Explore pandas_file_sync_db](/examples/pandas_file_sync_db_explorer.ipynb)
 
 ### Filters
 The package use filters to specify the search on the ONC DB. Functions take the filters as a python dict with specific keys. 
