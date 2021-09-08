@@ -6,7 +6,7 @@ from src.strawb.config_parser import Config
 class TestConfigParser(TestCase):
     def test_basic(self):
         """Very basic test. Just checks the correct types."""
-        for member in Config:
+        for member in Config.to_list():
             # # show all parameters
             # print(f'{member.name:30s} : {member.value}')
 
