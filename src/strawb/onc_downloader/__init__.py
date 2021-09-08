@@ -1,18 +1,17 @@
 # Authors: Kilian Holzapfel <kilian.holzapfel@tum.de>
 import datetime
-import threading
 
 import pandas
 from onc.onc import ONC  # pip install onc; https://pypi.org/project/onc/
+from onc.util.util import add_docs
 
 import strawb
-from strawb.config_parser.__init__ import Config
 
 
 class ONCDownloader(ONC):
     def __init__(self, token=None, outPath=None, download_threads=None, **kwargs):
-        """ A wrapper class for the basic ONC module. It adds the storage of the result and can download the file inside
-        a thread and therefore puts it in the background.
+        """ A wrapper class for the basic ONC module. Which adds: structured_download and the
+        Config parameters as default.
 
         PARAMETER
         ---------
@@ -27,33 +26,23 @@ class ONCDownloader(ONC):
             parsed to ONC package initialisation.
         """
         if outPath is None:
-            outPath = Config.raw_data_dir
+            outPath = strawb.Config.raw_data_dir
 
         if token is None:
-            token = Config.onc_token
+            token = strawb.Config.onc_token
 
         if download_threads is None:
-            download_threads = Config.onc_download_threads
+            download_threads = strawb.Config.onc_download_threads
 
         ONC.__init__(self, token, outPath=outPath, download_threads=download_threads, **kwargs)
 
-        self.filters = {}
         self.result = {}
 
-        self.download_thread = threading.Thread(target=self.getDirectFiles)
-
-    def start(self, **kwargs):
-        """Starts the download in background (thread). The rests is similar to download_file"""
-        if not self.download_thread.is_alive():
-            self.download_thread = threading.Thread(target=self.getDirectFiles, kwargs=kwargs)
-            self.download_thread.start()
-
-    def getDirectFiles(self, **kwargs):
-        """ Downloads the files and stores the result internally. See ONC.getDirectFiles for the usage."""
-        self.result = ONC.getDirectFiles(self, **kwargs)
-        # for res_i in self.result['downloadResults']:
-        #     if 'file' in res_i:
-        #         res_i['file'] = os.path.abspath(os.path.join(self.outPath, res_i['file']))
+    @add_docs(ONC.getDirectFiles)
+    def getDirectFiles(self, filters_or_result: dict = None, overwrite: bool = False, allPages: bool = False):
+        self.result = ONC.getDirectFiles(self, filters_or_result=filters_or_result,
+                                         overwrite=overwrite,
+                                         allPages=allPages)
 
     def get_files_for_dev_codes(self, dev_codes: list, date_from: datetime, date_to: datetime,
                                 print_stats: bool = True):
@@ -111,6 +100,7 @@ class ONCDownloader(ONC):
             Takes on of the following:
             - None: takes the today-1day;
             - str in isoformat: '2021-08-31T14:33:25.209715';
+            - str in isoformat with Z: '2021-08-31T14:33:25.209715Z';
             - str: 'strawb_all' to get data since STRAWb went online
             - timedelta: date_from = now - timedelta
             - a datetime
@@ -118,6 +108,7 @@ class ONCDownloader(ONC):
             Takes on of the following:
             - None: takes the today;
             - str in isoformat: '2021-08-31T14:33:25.209715';
+            - str in isoformat with Z: '2021-08-31T14:33:25.209715Z';
             - timedelta: date_to = date_from + timedelta
             - a datetime
         download: bool, optional
@@ -130,9 +121,11 @@ class ONCDownloader(ONC):
             i.e. ['hdf5', 'hld', 'raw', 'png', 'txt'].
         :return:
         """
-        # TODO: add extensions=None, data_product_names
+        # TODO: finalise commented part `data_product_names`
         if dev_codes is None:
             dev_codes = strawb.dev_codes_deployed
+        elif isinstance(dev_codes, str):  # dev codes must be a list
+            dev_codes = [dev_codes]
 
         if date_from is None:
             date_from = datetime.datetime.now() - datetime.timedelta(days=1)
@@ -143,7 +136,7 @@ class ONCDownloader(ONC):
         elif isinstance(date_from, datetime.timedelta):
             date_from = datetime.datetime.now() - date_from
         else:
-            date_from = datetime.datetime.fromisoformat(date_from)
+            date_from = datetime.datetime.fromisoformat(date_from.rstrip('Z'))
 
         if date_to is None:
             date_to = datetime.datetime.now()
@@ -152,7 +145,7 @@ class ONCDownloader(ONC):
         elif isinstance(date_to, datetime.timedelta):
             date_to = date_from + date_to
         else:
-            date_to = datetime.datetime.fromisoformat(date_to)
+            date_to = datetime.datetime.fromisoformat(date_to.rstrip('Z'))
 
         # get all possible files from the devices
         result = self.get_files_for_dev_codes(dev_codes, date_from=date_from, date_to=date_to, print_stats=False)

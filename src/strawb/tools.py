@@ -6,7 +6,6 @@ import numpy as np
 import scipy.stats
 from matplotlib import pyplot as plt
 
-
 #  ---- HDF5 Helper ----
 # add new asdatetime to h5py Dataset similar to asdtype for datetime64 when time is given as float in seconds
 from tqdm import tqdm
@@ -92,7 +91,7 @@ class ShareJobThreads:
                         last_i = self.i
                 time.sleep(0.1)  # delay a bit
 
-    def stop(self,):
+    def stop(self, ):
         self.active = False
 
     def worker(self, ):
@@ -153,3 +152,26 @@ def plot_binned_mean(x, y, bins=10000, ax=None, *args, **kwargs):
     ax.fill_between(AsDatetimeWrapper.asdatetime(bin_mid)[:],
                     y1=bin_means + bin_std, y2=bin_means - bin_std,
                     color=lin.get_color(), alpha=.2)
+
+
+def add_docs(org_func):
+    """A decorator which forwards a docstring from a function to another, i.e. at overloading a function.
+    Usage:
+    def function():
+        '''Docstring'''
+        ...
+
+    @add_docs(function)
+    def function_2():
+        '''This docstring is overwritten/ignored!'''
+        ...
+
+    help(function)
+    -> Docstring
+    """
+
+    def desc(func):
+        func.__doc__ = org_func.__doc__
+        return func
+
+    return desc
