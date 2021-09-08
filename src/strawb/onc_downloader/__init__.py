@@ -155,7 +155,7 @@ class ONCDownloader(ONC):
             date_to = datetime.datetime.fromisoformat(date_to)
 
         # get all possible files from the devices
-        result = self.get_files_for_dev_codes(dev_codes, date_from=date_from, date_to=date_to)
+        result = self.get_files_for_dev_codes(dev_codes, date_from=date_from, date_to=date_to, print_stats=False)
 
         # convert the list to a DataFrame for easier modifications
         pd_result = pandas.DataFrame.from_dict(result['files'])
@@ -172,33 +172,34 @@ class ONCDownloader(ONC):
         mask = min_file_size <= pd_result['fileSize']
         mask &= pd_result['fileSize'] <= max_file_size
 
-        # # Select dataProducts
-        # get more information for the existing dataProductCodes
-        dataProduct_all = []
-        if extensions is not None:  # and data_product_names is not None
-            for i in pd_result['dataProductCode'].unique():
-                dataProduct_all.extend(self.getDataProducts({'dataProductCode': i}))
-
         if extensions is None:
             pass
         else:
             mask_extensions = mask.copy()*0
-            if isinstance(extensions, str):
+            if isinstance(extensions, str):  # extensions must be a list
                 extensions = [extensions]
 
             for i in extensions:
                 mask_extensions += pd_result['filename'].str.endswith(i)
             mask &= mask_extensions
+
+        # # Select dataProducts
         # if data_product_names is None:
         #     pass
         # else:
+        #     mask_data_product_names = mask.copy()*0
+        #     if isinstance(data_product_names, str):  # data_product_names must be a list
+        #         data_product_names = [data_product_names]
+        #
+        #     # get more information for the existing dataProductCodes
         #     dataProduct_all = []
         #     for i in pd_result['dataProductCode'].unique():
         #         dataProduct_all.extend(self.getDataProducts({'dataProductCode': i}))
+        #
         #     dataProduct_select = [i for i in dataProduct_all if i['dataProductName'] in data_product_names]
         #     mask &= pd_result['dataProduct'] == dataProduct_select
 
-        print(f'Exclude {len(mask[~mask])} files')
+        print(f'In total: {len(result["files"])} files; exclude: {len(mask[~mask])}; ')
         if download:
             # reduce it with the mask and the columns to 'filename', 'outPath'
             pd_result_masked = pd_result[mask][['filename', 'outPath']]
