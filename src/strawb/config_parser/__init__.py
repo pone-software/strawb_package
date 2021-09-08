@@ -4,6 +4,7 @@ from enum import Enum
 
 
 class ModConfigParser(configparser.ConfigParser):
+    """Adds type conversation to configparser.ConfigParser.get"""
     def get(self, *args, dtype: type = str, **kwargs):
         """Adds type conversation to configparser.ConfigParser.get"""
         value = configparser.ConfigParser.get(self, *args, **kwargs)
@@ -23,8 +24,10 @@ class ConfigParser:
     if not os.path.exists(config_path):
         config_path = os.path.join(repository_home, 'config')
 
+    # read the config file
     config.read(config_path)
 
+    # replace the {RepositoryHome} and make all Path absolute.
     for i in config['Paths']:
         config_path = config['Paths'][i]
         config_path = config_path.format(RepositoryHome=repository_home)
@@ -38,10 +41,9 @@ class Config(Enum):
 
     Examples
     --------
-    It inherits from Enum, therefore you can list all parameters with:
-    >>> for member in Config:\n
+    It inherits from enum.Enum, therefore you can list all parameters with:
+    >>> for member in Config:
     >>>     print(f'{member.name:30s} : {member.value}')
-
     """
 
     # PATH
