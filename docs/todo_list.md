@@ -1,20 +1,9 @@
 ## Todo List per Submodule
 
-### Config
-- FileHandler
-  - [x] supports new version
-  - [x] supports older version (tested March 2021 for Muontracker). Lucifer no `current_mA`, `duration_seconds`
-    
-- [x] Test: [/test/test_module.py](/test/test_module.py)
+### Config Parser
+- Config
+- [x] Test: [/test/test_config_parser.py](/test/test_config_parser.py)
     - [x] basic type test
-    - [ ] run test for all files - if it is compatible with all files
-    
-- Examples
-  - [x] [/examples/basic_module_notebook.ipynb](/examples/basic_module_notebook.ipynb)
-    - [x] module.FileHandler
-    - [x] pandas + plotly
-    - [x] matplotlib
-    - [ ] virtual file support
     
 - Readme
   - [x] [/docs/Config_File.md](/docs/Config_File.md)
