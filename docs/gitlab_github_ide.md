@@ -1,5 +1,5 @@
 # Github 
-fds
+
 
 # Gitlab
 
@@ -21,4 +21,6 @@ Press apply and ok, now you are set to go.
 
 In order to open the mctl repo, go to git -> Clone... -> Enter the url git@gitlab.lrz.de:strawb/mctl.git
 
+go to settings (ctrl+alt+s) -> Version control -> subversion -> SSH -> private key and enter the path to your private ssh key
 
+on https://gitlab.lrz.de to to Preferences -> SSH Keys and enter your public key
