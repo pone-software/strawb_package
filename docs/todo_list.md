@@ -42,16 +42,20 @@
     
 ### Camera
 - FileHandler
-  - [ ] supports new SDAQ version
+  - [x] supports new SDAQ version
   - [ ] supports older SDAQ version (tested <date> for <module>)
     
-- [ ] Test: [/test/test_camera.py](/test/test_camera.py)
-    - [ ] basic test
+- [x] Test: [/test/test_camera.py](/test/test_camera.py)
+    - [x] basic test
     - [ ] run test for all files - if it is compatible with all files
     
 - Examples
-  - [ ] [/examples/basic_camera.py](/examples/dev_camera_basic.py)
-    - [ ] ...
+  - [x] [/examples/camera_lucifer_export.py](/examples/camera_lucifer_export.py)
+    - [x] tested
+  - [x] [/examples/camera_all_pictures_export.py](/examples/camera_all_pictures_export.py)
+    - [x] tested
+  - [x] [/examples/camera_bright_pictures_export.py](/examples/camera_bright_pictures_export.py)
+    - [x] tested
   - [ ] [/examples/basic_camera_notebook.ipynb](/examples/dev_camera_basic_notebook.ipynb)
     - [ ] camera.FileHandler
     - [ ] pandas + plotly
