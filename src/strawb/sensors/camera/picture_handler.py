@@ -135,7 +135,7 @@ class PictureHandler:
         image_arr = self.cut2effective_pixel_arr(image_list)
         return image_arr
 
-    def image2png(self, f_name_formatter='{datetime}', directory='{proc_data_dir}/{module}',
+    def image2png(self, f_name_formatter='{datetime}', directory='{proc_data_dir}/{module_lower}',
                   bit=8, index=None, overwrite=False, file_name_iterator=None, ending='.png', **kwargs):
         """f_name has to include at least on of the formatter_dict.keys
 
@@ -148,8 +148,9 @@ class PictureHandler:
             Specifies the which images are saved. The index is the index in the raw file. None (Default) is the
             placeholder for all images in the file.
         directory: str, optional,
-            can have a placeholders {module} or {proc_data_dir} which will be replaced with module name or the directory
-            for the processed STRAWb data specified in thee config file. Default is '{proc_data_dir}/{module}'.
+            can have a placeholders {module}, {module_lower} or {proc_data_dir} which will be replaced with
+            module name, the module name in lowercase or the directory for the processed STRAWb data specified in thee
+            config file. Default is '{proc_data_dir}/{module_lower}'.
         ending: str, optional
             can be one of '.png' or '.jpg'. The ending is added automatically if the f_name_formatter doesn't end with
             the ending.
@@ -177,7 +178,8 @@ class PictureHandler:
         rgb = rgb.astype(bit_dict[bit])
 
         # prepare directory
-        directory = os.path.abspath(directory.format(proc_data_dir=Config.proc_data_dir, module=self.file.module))
+        directory = os.path.abspath(directory.format(proc_data_dir=Config.proc_data_dir,
+                                                     module=self.file.module, module_lower=self.file.module.lower()))
         os.makedirs(directory, exist_ok=True)
 
         file_name_list = []
@@ -224,13 +226,13 @@ class PictureHandler:
 
         process_dict = {}
         for mode_i, mask_i in zip(mode_list, mask_list):
-            out_str = [mode_dict[mode_i[0]]]
+            out_str = [mode_dict[mode_i[0]].lower()]  # the mode
             for i_i in mode_i[1:]:
                 if i_i != -125:
-                    out_str.append(str(i_i))
-            out_str = '_'.join(out_str)
+                    out_str.append(str(i_i))  # the settings; address, [current, [duration]]
+            out_str = '_'.join(out_str)  # <mode>_<address>_<current>_<duration>
             file_name_list = self.image2png(index=index[mask_i],
-                                            directory='{proc_data_dir}/{module}/' + out_str,
+                                            directory='{proc_data_dir}/{module_lower}/' + out_str,
                                             **kwargs)
             process_dict[str(mode_i)] = file_name_list
 
