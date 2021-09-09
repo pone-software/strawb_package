@@ -37,7 +37,7 @@ class AsDatetimeWrapper(object):
 
 
 class ShareJobThreads:
-    def __init__(self, thread_n=3):
+    def __init__(self, thread_n=3, fmt=None):
         """ A Class which spreads a iterable job defined by a function f to n threads. It is basically a Wrapper for:
         for i in iterable:
             f(i)
@@ -52,56 +52,79 @@ class ShareJobThreads:
         self.active = False
         self.event = threading.Event()
 
-        self.threads = None  # the worker threads
+        self.return_buffer = None  # to store all returns from the functions
+
+        self.threads = None  # the _worker_ threads
         self.iterable = None  # the iterable
-        self.i = None  # the actual index
+        self.i = None  # the actual index of the next item
+        self.i_bar = None  # the actual index of the done items
         self.f = None  # the function
+
+        # formatter for the bar, if not None, the iterable has to be a dict, i.e. {'a':1, 'b':2}, and the fmt: '{a}-{b}'
+        self.fmt = fmt  # formatter for the bar
 
     def do(self, f, iterable, ):
         self.active = True
         self.iterable = iterable
         self.i = 0
+        self.i_bar = 0
         self.f = f
+        self.return_buffer = []
 
         self.threads = []
 
         for i in range(self.thread_n):
-            thread_i = threading.Thread(target=self.worker)
+            thread_i = threading.Thread(target=self._worker_)
             thread_i.start()
             self.threads.append(thread_i)
 
-        self.thread_bar = threading.Thread(target=self.update_bar)
+        self.thread_bar = threading.Thread(target=self._update_bar_)
         self.thread_bar.start()
         self.thread_bar.join()
 
-    def update_bar(self, ):
+        if self.return_buffer is not []:
+            return self.return_buffer
+
+    def _update_bar_(self, ):
         last_i = 0
 
         with tqdm(self.iterable,
                   file=sys.stdout,
                   unit='file') as bar:
-            while any([i.is_alive() for i in self.threads]) or last_i != self.i:
+            while any([thread_i.is_alive() for thread_i in self.threads]) or last_i != self.i_bar:
                 with self.lock:
                     # print(self.i, self.active)
-                    if last_i != self.i:
-                        for i in range(self.i - last_i):
-                            bar.set_postfix({'i': self.iterable[self.i - 1 - i]})
+                    if last_i != self.i_bar:
+                        for i in range(self.i_bar - last_i):
+                            str_i = self.iterable[self.i - 1 - i]
+                            if self.fmt is not None and isinstance(self.iterable[self.i - 1 - i], dict):
+                                str_i = self.fmt.format(**self.iterable[self.i - 1 - i])
+
+                            bar.set_postfix({'i': str_i})
                             bar.update()
 
-                        last_i = self.i
+                        last_i = self.i_bar
                 time.sleep(0.1)  # delay a bit
 
     def stop(self, ):
         self.active = False
 
-    def worker(self, ):
+    def _worker_(self, ):
         iterable_i = True
         while self.active and iterable_i:
-            iterable_i = self.get_next()
+            iterable_i = self._get_next_()
             if iterable_i is not False:
-                self.f(iterable_i)
+                try:
+                    buffer = self.f(iterable_i)
+                except (RuntimeError, Exception) as err:
+                    print(f'Error occurred at {iterable_i}: {err}')
+                    buffer = None
+                with self.lock:
+                    if buffer is not None:
+                        self.return_buffer.append(buffer)
+                    self.i_bar += 1
 
-    def get_next(self, ):
+    def _get_next_(self, ):
         with self.lock:
             if len(self.iterable) > self.i:
                 iterable_i = self.iterable[self.i]
