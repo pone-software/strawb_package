@@ -5,6 +5,7 @@ from .config_parser import Config
 from .onc_downloader import ONCDownloader
 from .sensors import *
 from .tools import AsDatetimeWrapper, hdf5_getunsorted
+from .base_file_handler import BaseFileHandler
 
 from .virtual_hdf5 import VirtualHDF5, DatasetsInGroupSameSize
 
