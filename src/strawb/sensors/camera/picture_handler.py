@@ -1,4 +1,5 @@
 import os
+import shutil
 
 import cv2
 import numpy as np
@@ -108,12 +109,12 @@ class PictureHandler:
 
     def cut2effective_pixel_single(self, rgb):
         return np.array(rgb)[self.file.EffMargins[0]:-self.file.EffMargins[1],
-               self.file.EffMargins[2]:-self.file.EffMargins[3]]
+                             self.file.EffMargins[2]:-self.file.EffMargins[3]]
 
     def cut2effective_pixel_arr(self, rgb_arr):
         return np.array(rgb_arr)[:,
-               self.file.EffMargins[0]:-self.file.EffMargins[1],
-               self.file.EffMargins[2]:-self.file.EffMargins[3]]
+                                 self.file.EffMargins[0]:-self.file.EffMargins[1],
+                                 self.file.EffMargins[2]:-self.file.EffMargins[3]]
 
     def frame_raw_to_rgb(self, frame_raw):
         """Values have to be from [0...2**16-1] i.e. np.uint16."""
@@ -200,7 +201,7 @@ class PictureHandler:
             else:
                 # print('save:', f_name_target_i)
                 cv2.imwrite(f_name_i, rgb[i, :, :, ::-1])  # [:,:,::-1] as cv2 takes BGR and not RGB
-                os.replace(os.path.join(os.path.abspath('.'), f_name_i), f_name_target_i)  # move file
+                shutil.move(os.path.join(os.path.abspath('.'), f_name_i), f_name_target_i)  # move file
 
             file_name_list.append(f_name_target_i)
         return file_name_list
