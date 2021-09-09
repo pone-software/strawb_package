@@ -45,5 +45,5 @@ To keep this Readme short, each sensor has a separated readme in the [/docs](/do
 For examples check out the [examples' folder](/examples) which includes notebooks and scripts.
 - [(Script) ONC download](/examples/onc_basic_download.py)
 - [(Notebook) ONC download and filter](/examples/onc_filter_download.ipynb)
-- [(Notebook) Explore hdf5 file](/examples/explore_hdf5_file.ipynb)
+- [(Notebook) Explore hdf5 file](/examples/hdf5_explore_file.ipynb)
 - [(Notebook) Explore pandas_file_sync_db](/examples/pandas_file_sync_db_explorer.ipynb)
