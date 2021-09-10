@@ -17,7 +17,7 @@ Add your public key to GitHub or GitLab via the webpage. Follow the links for
 [GitLab](https://docs.gitlab.com/ee/ssh/#add-an-ssh-key-to-your-gitlab-account) or
 [GitHub](https://docs.github.com/en/github/authenticating-to-github/connecting-to-github-with-ssh/adding-a-new-ssh-key-to-your-github-account).
 
-## Connect GitLab to PyCharm with https token
+## Connect GitLab with https token
 First you have to install the Gitlab Plugin:
 1. In PyCharm, open `Settings/Preferences -> Plugins` ([official Plugins doc](https://www.jetbrains.com/help/pycharm/managing-plugins.html)).
 2. Make sure to select `Marketplace`, search for `GitLab Projects`([plugin homepage](https://plugins.jetbrains.com/plugin/14110-gitlab-projects-2020)) and install it. 
@@ -32,6 +32,6 @@ First you have to install the Gitlab Plugin:
 4. Preferred checkout method: `HTTPS`
 5. Press apply and ok, now you are set to go.
 
-## Connect GitHub to PyCharm with https token
-The steps and logic is nearly the same as in the [GitLab-https-Token](#Connect-GitLab-to-PyCharm-with-https-token) section.
+## Connect GitHub with https token
+The steps and logic is nearly the same as in the [GitLab-https-Token](#Connect-GitLab-with-https-token) section.
 Here the official PyCharm guid to [register an existing account](https://www.jetbrains.com/help/pycharm/github.html#register-existing-account). If you don't have an GitHub account, create one first.
