@@ -6,12 +6,12 @@ class FileHandler(BaseFileHandler):
         # TRB_DAQ
         self.daq_frequency_pmt = None
         self.daq_frequency_trigger = None
-        self.daq_pmt = None
+        self.daq_pmt = None  # PMT is; 0: OFF; 1: ON
         self.daq_pulser_readout = None
         self.daq_pulser_trigger = None
-        self.daq_state = None
+        self.daq_state = None  # 0: TRB not ready; 1: TRB ready; 2: TRB takes hld
         self.daq_time = None
-        self.daq_trb = None
+        self.daq_trb = None  # TRB power; 0: OFF; 1: ON
 
         # Gimbal
         self.gimbal_delay = None
