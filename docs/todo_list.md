@@ -61,4 +61,20 @@
     - [ ] pandas + plotly
     - [ ] matplotlib
     - [ ] virtual file support
+
+### LiDAR
+- FileHandler
+  - [x] supports new SDAQ version
+  - [ ] supports older SDAQ version (tested <date> for <module>)
+    
+- [x] Test: [/test/test_lidar.py](/test/test_lidar.py)
+    - [x] basic test
+    - [ ] run test for all files - if it is compatible with all files
+    
+- Examples
+  - [x] [/examples/lidar_basic_notebook.ipynb](/examples/lidar_basic_notebook.ipynb)
+    - [x] camera.FileHandler
+    - [x] pandas + plotly
+    - [ ] matplotlib
+    - [ ] virtual file support
   
