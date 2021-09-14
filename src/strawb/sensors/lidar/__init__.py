@@ -1,5 +1,5 @@
 from .file_handler import FileHandler
 
 
-class Module:
+class Lidar:
     FileHandler = FileHandler
