@@ -1,4 +1,4 @@
-from strawb.config_parser.helper_classes import ConfigParser
+from strawb.config_parser.helper_classes import ConfigParser, ConfigItem
 
 
 class Config:
