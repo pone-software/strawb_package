@@ -20,9 +20,11 @@ Depending on your Python installation adopt python3/pip3 to python/pip, however 
   mkdir /path/to/repros  # adopted the path, be aware that git clone creates a directory with the repro name
   cd /path/to/repros # enter the directory
   
-  git clone https://github.com/FlyingAndrew/api-python-client.git  # downloads the repro
-  cd api-python-client  # enter the repository directory
+  # clone/download the repository
+  git clone https://github.com/pone-software/strawb_package.git  # downloads the repro
+  cd strawb_package  # enter the repository directory
   
+  # install the package
   python3 -m build  # This will create the files located in the folder `.egg-info`
   pip3 install -r requirements.txt  # install the required python packages
   pip3 install -U --user -e .  # install the package in developer mode.
