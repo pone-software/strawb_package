@@ -32,15 +32,22 @@ class FileHandler(BaseFileHandler):
         self.laser_time = None
 
         # PMT TOT (time over threshold), each entry is a separated event. Added to hdf5 ~05.10.2021.
+        # -> File version 2
         self.tot_time = None  # absolute timestamps in seconds for the event
         self.tot_time_ns = None  # timestamps from trb in seconds for the event, not absolut and with overflow
         self.tot_tot = None  # time over threshold (tot) in ns for the event
 
         # Counter, similar to PMTSpectrometer. Added to hdf5 ~05.10.2021.
+        # -> File version 2
         self.counts_ch0 = None  # channel which counts up at a constant frequency -> PMT Spectrometer
         self.counts_ch17 = None  # the xxx channel. TODO: xxx = LiDAR Laser trigger or PMT
         self.counts_ch18 = None  # the xxx channel. TODO: xxx = LiDAR Laser trigger or PMT
         self.counts_time = None  # absolute timestamps in seconds for each counter reading
+
+        # Measurement step log. To store the beginning and end of a measurement step. Introduced at 11.10.2021.
+        # -> File version 3
+        self.measurement_time = None
+        self.measurement_step = None
 
         # holds the file version
         self.file_version = None
@@ -50,8 +57,9 @@ class FileHandler(BaseFileHandler):
 
     def __load_meta_data__(self, ):
         try:
-            self.__load_meta_data_v2__()  # try with file version 2 first
-            return
+            for i in [self.__load_meta_data_v3__, self.__load_meta_data_v2__]:
+                i()  # try file versions
+                return
         except:
             pass
 
@@ -134,6 +142,23 @@ class FileHandler(BaseFileHandler):
 
         self.file_version = 2
 
+    def __load_meta_data_v3__(self, ):
+        """Loads the SDAQ-hdf5 version 2 introduced from 11th of October 2021.
+
+        CHANGES in respect to version 1
+        -------------------------------
+        removed: daq_frequency_pmt and daq_frequency_trigger
+        added: tot_time, tot_time_ns, tot_tot
+        added: tot_time, tot_time_ns, tot_tot
+        added: counts_ch0, counts_ch17, counts_ch18, counts_time
+        """
+        self.measurement_time = self.file['measurement/time']
+        self.measurement_step = self.file['measurement/step']
+
+        self.__load_meta_data_v2__()
+
+        self.file_version = 2
+
     # Define pandas DataFrame export helper
     def get_pandas_daq(self):
         if self.file_version == 1:
@@ -146,7 +171,7 @@ class FileHandler(BaseFileHandler):
                                          state=self.daq_state,
                                          trb=self.daq_trb))
 
-        elif self.file_version == 2:
+        elif self.file_version >= 2:
             return pandas.DataFrame(dict(time=self.daq_time.asdatetime()[:],
                                          pmt=self.daq_pmt,
                                          pulser_readout=self.daq_pulser_readout,
@@ -173,7 +198,7 @@ class FileHandler(BaseFileHandler):
                                 )
 
     def get_pandas_counter(self):
-        if self.file_version == 2:
+        if self.file_version >= 2:
             return pandas.DataFrame(dict(time=self.counts_time.asdatetime()[:],
                                          ch0=self.counts_ch0,
                                          ch17=self.counts_ch17,
@@ -181,9 +206,16 @@ class FileHandler(BaseFileHandler):
                                     )
 
     def get_pandas_tot(self):
-        if self.file_version == 2:
+        if self.file_version >= 2:
             return pandas.DataFrame(dict(time=self.tot_time.asdatetime()[:],
                                          time_ns=self.tot_time_ns,
                                          tot=self.tot_tot,
                                          )
+                                    )
+
+    def get_pandas_measurement(self):
+        if self.file_version == 3:
+            return pandas.DataFrame(dict(time=self.measurement_time.asdatetime()[:],
+                                         step=self.measurement_step,
+                                        )
                                     )
