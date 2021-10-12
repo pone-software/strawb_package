@@ -1,4 +1,4 @@
-from ctypes import Union
+from typing import Union
 
 from strawb.sensors.lidar.LidarProcessedDataStore import LidarProcessedDataStore
 from strawb.sensors.lidar.file_handler import FileHandler
