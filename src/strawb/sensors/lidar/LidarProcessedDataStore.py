@@ -1,3 +1,4 @@
+import numpy as np
 import pandas
 
 from strawb.base_processed_data_store import BaseProcessedDataStore
@@ -35,7 +36,8 @@ class LidarProcessedDataStore(BaseProcessedDataStore, TRBTools):
 
     def get_pandas_rate(self):
         if self.file_handler.file_version >= 2:
-            return pandas.DataFrame(dict(time=self.file_handler.counts_time.asdatetime()[:],
+            t = self.file_handler.counts_time.asdatetime()[:]
+            return pandas.DataFrame(dict(time=(t[:-1] + np.diff(t) * .5),
                                          rate_time=self.rate_time,
                                          rate_pmt=self.rate_pmt,
                                          rate_laser=self.rate_laser)

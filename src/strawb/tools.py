@@ -185,10 +185,13 @@ class TRBTools:
 
         # Calculate Rates
         counter_ch0_time = counter[0] / daq_pulser_readout
-
         rates = np.diff(counter[1:]).astype(float) / np.diff(counter_ch0_time)
 
-        return counter_ch0_time, rates
+        # counter time is the middle of the interval and starts with 0
+        counter_ch0_time = counter_ch0_time[:-1] + np.diff(counter_ch0_time) * .5
+        counter_ch0_time -= counter_ch0_time[0]
+
+        return counter_ch0_time[1:], rates
 
 
 def hdf5_getunsorted(self, index):
