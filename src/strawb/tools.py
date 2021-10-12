@@ -137,17 +137,38 @@ class ShareJobThreads:
 
 class TRBTools:
     @staticmethod
-    def _calculate_counts_(daq_pulser_readout, ch_0, *args, **kwargs):
-        """ Converts the counter readings from the TRB into rates.
+    def _clean_counts_(*args, **kwargs):
+        # Prepare parameter
+        # Check type and shape of counter arrays
+        args = list(args)
+        for i in kwargs:
+            args.append(kwargs[i])
+
+        counter = np.array([*args], dtype=np.int64)
+        # Prepare parameter done
+
+        # TRB use the leading bit to show if the channel is active while reading. Correct it here.
+        counter[counter < 0] += 2 ** 31  # In int32 this leads to negative values.
+
+        # correct overflow; cal. difference, if negative=overflow, add 2 ** 31 and create the counts with cumsum again
+        # prepend to start a 0 and get same shape
+        counter = np.diff(counter, prepend=counter[:, 0].reshape((-1, 1)))
+        counter[counter < 0] += 2 ** 31  # delta<0 when there is an overflow 2**31 (TRBint)
+        return counter.cumsum(dtype=np.int64, axis=-1)
+
+    @staticmethod
+    def _calculate_counts_(daq_pulser_readout, ch_time, *args, **kwargs):
+        """ Converts the cleaned counter readings from the TRB into rates.
         PARAMETER
         ---------
         daq_pulser_readout: Union[int, float, list, np.ndarray, h5py.Dataset]
             the TRB readout frequency in Hz. If a list, np.ndarray, or h5py.Dataset is provided. Cut -1 values
             (TRB inactive) and check if the array is unique. Take the unique value or raise and RuntimeError.
-        ch_0:
-            The counts of channel 0. The TRB counts channel 0 up with the frequency from daq_pulser_readout.
+        ch_time:
+            The cleaned counts (s. _clean_counts_) of channel 0. The TRB counts channel 0 up with the frequency
+            from daq_pulser_readout.
         args or kwargs: Union[list, np.ndarray, h5py.Dataset], optional
-            Each entry is handled as a separated channel of counters.
+            Each entry is handled as a separated channel of cleaned counters (s. _clean_counts_).
 
         RETURN
         ------
@@ -171,27 +192,17 @@ class TRBTools:
         for i in kwargs:
             args.append(kwargs[i])
 
-        counter = np.array([ch_0, *args], dtype=np.int64)
-        # Prepare parameter done
-
-        # TRB use the leading bit to show if the channel is active while reading. Correct it here.
-        counter[counter < 0] += 2 ** 31  # In int32 this leads to negative values.
-
-        # correct overflow; cal. difference, if negative=overflow, add 2 ** 31 and create the counts with cumsum again
-        # prepend to start a 0 and get same shape
-        counter = np.diff(counter, prepend=counter[:, 0].reshape((-1, 1)))
-        counter[counter < 0] += 2 ** 31  # delta<0 when there is an overflow 2**31 (TRBint)
-        counter = counter.cumsum(dtype=np.int64, axis=-1)
+        counter = np.array([ch_time, *args], dtype=np.int64)
 
         # Calculate Rates
-        counter_ch0_time = counter[0] / daq_pulser_readout
-        rates = np.diff(counter[1:]).astype(float) / np.diff(counter_ch0_time)
+        counter_ch_time = counter[0] / daq_pulser_readout
+        rates = np.diff(counter[1:]).astype(float) / np.diff(counter_ch_time)
 
         # counter time is the middle of the interval and starts with 0
-        counter_ch0_time = counter_ch0_time[:-1] + np.diff(counter_ch0_time) * .5
+        counter_ch0_time = counter_ch_time[:-1] + np.diff(counter_ch_time) * .5
         counter_ch0_time -= counter_ch0_time[0]
 
-        return counter_ch0_time, rates
+        return counter_ch_time, rates
 
 
 def hdf5_getunsorted(self, index):
