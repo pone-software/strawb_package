@@ -60,7 +60,8 @@ class FileHandler(BaseFileHandler):
             for i in [self.__load_meta_data_v3__, self.__load_meta_data_v2__]:
                 i()  # try file versions
                 return
-        except:
+        except Exception as a:
+            print(a)
             pass
 
         self.__load_meta_data_v1__()  # try with file default version
@@ -157,7 +158,7 @@ class FileHandler(BaseFileHandler):
 
         self.__load_meta_data_v2__()
 
-        self.file_version = 2
+        self.file_version = 3
 
     # Define pandas DataFrame export helper
     def get_pandas_daq(self):
