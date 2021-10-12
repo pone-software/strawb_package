@@ -15,7 +15,7 @@ class LidarProcessedDataStore(BaseProcessedDataStore, TRBTools):
         self._dcounts_pmt = None  # the readout/PMT channel.
         self._dcounts_laser = None  # the Laser trigger channel.
 
-        # calculated TRB rates from countss
+        # calculated TRB rates from counts
         self._rate_time = None
         self._rate_pmt = None
         self._rate_laser = None

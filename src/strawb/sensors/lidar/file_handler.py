@@ -1,4 +1,3 @@
-import h5py
 import pandas
 
 from strawb.base_file_handler import BaseFileHandler
@@ -218,5 +217,5 @@ class FileHandler(BaseFileHandler):
         if self.file_version == 3:
             return pandas.DataFrame(dict(time=self.measurement_time.asdatetime()[:],
                                          step=self.measurement_step,
-                                        )
+                                         )
                                     )
