@@ -104,11 +104,24 @@ class BaseFileHandler:
 
         if recursive:
             file_list = glob.glob(f'{directory.rstrip("/")}/**/{file_pattern}', recursive=True)
+            file_list.sort()
         else:
             file_list = glob.glob(f'{directory.rstrip("/")}/{file_pattern}')
+            file_list.sort()
 
         if raise_nothing_found and not file_list:
             raise FileNotFoundError(f'No files found for file_pattern: {file_pattern} in {directory}')
 
         return file_list
 
+    @staticmethod
+    def test_load_meta_data(file_name, load_function):
+        class Fake:
+            def __init__(self, file):
+                self.file = file
+
+        with h5py.File(file_name, 'r', libver='latest', swmr=True) as f:
+            fake = Fake(f)
+            load_function(fake)
+
+        return fake

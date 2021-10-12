@@ -56,12 +56,13 @@ class FileHandler(BaseFileHandler):
         BaseFileHandler.__init__(self, *args, **kwargs)
 
     def __load_meta_data__(self, ):
-        try:
-            for i in [self.__load_meta_data_v3__, self.__load_meta_data_v2__]:
+        for i in [self.__load_meta_data_v3__, self.__load_meta_data_v2__]:
+            try:
                 i()  # try file versions
                 return
-        except KeyError:  # version is detected because datasets in the hdf5 aren't present -> i() fails with KeyError
-            pass
+            # version is detected because datasets in the hdf5 aren't present -> i() fails with KeyError
+            except KeyError as a:
+                pass
 
         self.__load_meta_data_v1__()  # try with file default version
 
@@ -105,6 +106,7 @@ class FileHandler(BaseFileHandler):
         added: tot_time, tot_time_ns, tot_tot
         added: counts_ch0, counts_ch17, counts_ch18, counts_time
         """
+
         # TRB_DAQ
         self.daq_pmt = self.file['daq/pmt']
         self.daq_pulser_readout = self.file['daq/pulser_readout']

@@ -184,7 +184,7 @@ class TRBTools:
         RETURN
         ------
         counts_ch0_time: np.ndarray
-            the time from the counts of channel 0 in seconds
+            the timedelta corresponding to each count. Calculated from channel 0 in seconds.
         rate_arr: np.ndarray
             the rates in Hz of the provided channels defined in args or kwargs as one ndarray.
         """
