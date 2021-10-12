@@ -234,7 +234,7 @@ def binned_mean_std(x, y, bins=100, min_count=.1):
 
 
 def plot_binned_mean(x, y, bins=10000, ax=None, *args, **kwargs):
-    """Plot the binned mean as line and the std (standard deviation) as filled aread for the given data."""
+    """Plot the binned mean as line and the std (standard deviation) as filled area for the given data."""
     # cal. moving average with std
     bin_means, bin_std, bin_mid = binned_mean_std(x, y, bins=bins)
 
