@@ -1,5 +1,5 @@
 from strawb.base_processed_data_store import BaseProcessedDataStore
-from strawb.sensors.lidar import FileHandler
+from strawb.sensors.lidar.file_handler import FileHandler
 from strawb.tools import TRBTools
 
 
