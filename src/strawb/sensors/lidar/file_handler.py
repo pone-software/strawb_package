@@ -60,8 +60,7 @@ class FileHandler(BaseFileHandler):
             for i in [self.__load_meta_data_v3__, self.__load_meta_data_v2__]:
                 i()  # try file versions
                 return
-        except Exception as a:
-            print(a)
+        except KeyError:  # version is detected because datasets in the hdf5 aren't present -> i() fails with KeyError
             pass
 
         self.__load_meta_data_v1__()  # try with file default version
