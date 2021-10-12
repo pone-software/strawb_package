@@ -2,6 +2,7 @@ import sys
 import threading
 import time
 
+import h5py
 import numpy as np
 import scipy.stats
 from matplotlib import pyplot as plt
@@ -132,6 +133,62 @@ class ShareJobThreads:
                 return iterable_i
             else:
                 return False
+
+
+class TRBTools:
+    @staticmethod
+    def _calculate_counts_(daq_pulser_readout, ch_0, *args, **kwargs):
+        """ Converts the counter readings from the TRB into rates.
+        PARAMETER
+        ---------
+        daq_pulser_readout: Union[int, float, list, np.ndarray, h5py.Dataset]
+            the TRB readout frequency in Hz. If a list, np.ndarray, or h5py.Dataset is provided. Cut -1 values
+            (TRB inactive) and check if the array is unique. Take the unique value or raise and RuntimeError.
+        ch_0:
+            The counts of channel 0. The TRB counts channel 0 up with the frequency from daq_pulser_readout.
+        args or kwargs: Union[list, np.ndarray, h5py.Dataset], optional
+            Each entry is handled as a separated channel of counters.
+
+        RETURN
+        ------
+        counter_ch0_time: np.ndarray
+            the time from the counters of channel 0 in seconds
+        rates: np.ndarray
+            the rates in Hz of the provided channels defined in args or kwargs as one ndarray.
+        """
+        # Prepare parameter
+        # Check type and shape of counter arrays
+        if isinstance(daq_pulser_readout, (list, np.ndarray, h5py.Dataset)):
+            if np.unique(daq_pulser_readout[daq_pulser_readout[:] != -1]).shape != (1,):
+                raise RuntimeError('More than 1 unique value exits in daq_pulser_readout.')
+            else:
+                daq_pulser_readout = daq_pulser_readout[daq_pulser_readout[:] != -1][0]
+
+        daq_pulser_readout = float(daq_pulser_readout)  # must be a float
+
+        # Check type and shape of counter arrays
+        args = list(args)
+        for i in kwargs:
+            args.append(kwargs[i])
+
+        counter = np.array([ch_0, *args], dtype=np.int64)
+        # Prepare parameter done
+
+        # TRB use the leading bit to show if the channel is active while reading. Correct it here.
+        counter[counter < 0] += 2 ** 31  # In int32 this leads to negative values.
+
+        # correct overflow; cal. difference, if negative=overflow, add 2 ** 31 and create the counts with cumsum again
+        # prepend to start a 0 and get same shape
+        counter = np.diff(counter, prepend=counter[:, 0].reshape((-1, 1)))
+        counter[counter < 0] += 2 ** 31  # delta<0 when there is an overflow 2**31 (TRBint)
+        counter = counter.cumsum(dtype=np.int64, axis=-1)
+
+        # Calculate Rates
+        counter_ch0_time = counter[0] / daq_pulser_readout
+
+        rates = np.diff(counter[1:]).astype(float) / np.diff(counter_ch0_time)
+
+        return counter_ch0_time, rates
 
 
 def hdf5_getunsorted(self, index):
