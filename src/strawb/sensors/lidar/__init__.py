@@ -1,8 +1,8 @@
 from ctypes import Union
 
-from .LidarProcessedDataStore import LidarProcessedDataStore
-from .file_handler import FileHandler
-from ...tools import TRBTools
+from strawb.sensors.lidar.LidarProcessedDataStore import LidarProcessedDataStore
+from strawb.sensors.lidar.file_handler import FileHandler
+from strawb.tools import TRBTools
 
 
 class Lidar(TRBTools):
