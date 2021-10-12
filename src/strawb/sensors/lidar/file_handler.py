@@ -1,3 +1,4 @@
+import h5py
 import pandas
 
 from strawb.base_file_handler import BaseFileHandler
@@ -6,30 +7,30 @@ from strawb.base_file_handler import BaseFileHandler
 class FileHandler(BaseFileHandler):
     def __init__(self, *args, **kwargs):
         # TRB_DAQ
+        self.daq_time = None
         self.daq_frequency_pmt = None  # Removed from hdf5 ~05.10.2021, as moved to counter reading
         self.daq_frequency_trigger = None  # Removed from hdf5 ~05.10.2021, as moved to counter reading
         self.daq_pmt = None  # PMT is; 0: OFF; 1: ON
-        self.daq_pulser_readout = None
-        self.daq_pulser_trigger = None
+        self.daq_pulser_readout = None  # the frequency when the TRB counts up counter channel 0
+        self.daq_pulser_trigger = None  # the frequency of the trigger pin controlled by the TRB
         self.daq_state = None  # 0: TRB not ready; 1: TRB ready; 2: TRB takes hld
-        self.daq_time = None
         self.daq_trb = None  # TRB power; 0: OFF; 1: ON
 
         # Gimbal
-        self.gimbal_delay = None
-        self.gimbal_pos_x = None
-        self.gimbal_pos_y = None
-        self.gimbal_power = None
         self.gimbal_time = None
+        self.gimbal_delay = None  # delay between two steps (TODO: should be checked what it is exactly)
+        self.gimbal_pos_x = None  # TODO: theta or phi
+        self.gimbal_pos_y = None  # TODO: theta or phi
+        self.gimbal_power = None  # if the power is en-/disabled
 
         # Laser
-        self.laser_diode = None
-        self.laser_frequency = None
-        self.laser_power = None
-        self.laser_pulsewidth = None
-        self.laser_set_adjust_x = None
-        self.laser_set_adjust_y = None
         self.laser_time = None
+        self.laser_diode = None  # diode readings to calibrate the intensity. Gimbal is be in calibration position.
+        self.laser_frequency = None  # if the power is en-/disabled
+        self.laser_power = None  # if the laser power is en-/disabled
+        self.laser_pulsewidth = None  # sets the intensity
+        self.laser_set_adjust_x = None  # sets the laser alignment in X with the PMT axis
+        self.laser_set_adjust_y = None  # sets the laser alignment in Y with the PMT axis
 
         # PMT TOT (time over threshold), each entry is a separated event. Added to hdf5 ~05.10.2021.
         # -> File version 2
@@ -39,10 +40,10 @@ class FileHandler(BaseFileHandler):
 
         # Counter, similar to PMTSpectrometer. Added to hdf5 ~05.10.2021.
         # -> File version 2
-        self.counts_ch0 = None  # channel which counts up at a constant frequency -> PMT Spectrometer
-        self.counts_ch17 = None  # the xxx channel. TODO: xxx = LiDAR Laser trigger or PMT
-        self.counts_ch18 = None  # the xxx channel. TODO: xxx = LiDAR Laser trigger or PMT
         self.counts_time = None  # absolute timestamps in seconds for each counter reading
+        self.counts_ch0 = None  # channel which counts up at a constant frequency -> PMT Spectrometer
+        self.counts_ch17 = None  # the readout/PMT channel.
+        self.counts_ch18 = None  # the Laser trigger channel.
 
         # Measurement step log. To store the beginning and end of a measurement step. Introduced at 11.10.2021.
         # -> File version 3
@@ -159,7 +160,7 @@ class FileHandler(BaseFileHandler):
 
         self.file_version = 3
 
-    # Define pandas DataFrame export helper
+    # Define pandas DataFrame export helpers
     def get_pandas_daq(self):
         if self.file_version == 1:
             return pandas.DataFrame(dict(time=self.daq_time.asdatetime()[:],
