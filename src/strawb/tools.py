@@ -191,7 +191,7 @@ class TRBTools:
         counter_ch0_time = counter_ch0_time[:-1] + np.diff(counter_ch0_time) * .5
         counter_ch0_time -= counter_ch0_time[0]
 
-        return counter_ch0_time[1:], rates
+        return counter_ch0_time, rates
 
 
 def hdf5_getunsorted(self, index):
