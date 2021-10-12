@@ -8,10 +8,10 @@ class FileHandler(BaseFileHandler):
     def __init__(self, *args, **kwargs):
         # TRB_DAQ
         self.daq_time = None
-        self.daq_frequency_pmt = None  # Removed from hdf5 ~05.10.2021, as moved to counter reading
-        self.daq_frequency_trigger = None  # Removed from hdf5 ~05.10.2021, as moved to counter reading
+        self.daq_frequency_pmt = None  # Removed from hdf5 ~05.10.2021, as moved to counts reading
+        self.daq_frequency_trigger = None  # Removed from hdf5 ~05.10.2021, as moved to counts reading
         self.daq_pmt = None  # PMT is; 0: OFF; 1: ON
-        self.daq_pulser_readout = None  # the frequency when the TRB counts up counter channel 0
+        self.daq_pulser_readout = None  # the frequency when the TRB counts up counts channel 0
         self.daq_pulser_trigger = None  # the frequency of the trigger pin controlled by the TRB
         self.daq_state = None  # 0: TRB not ready; 1: TRB ready; 2: TRB takes hld
         self.daq_trb = None  # TRB power; 0: OFF; 1: ON
@@ -40,7 +40,7 @@ class FileHandler(BaseFileHandler):
 
         # Counter, similar to PMTSpectrometer. Added to hdf5 ~05.10.2021.
         # -> File version 2
-        self.counts_time = None  # absolute timestamps in seconds for each counter reading
+        self.counts_time = None  # absolute timestamps in seconds for each counts reading
         self.counts_ch0 = None  # channel which counts up at a constant frequency -> PMT Spectrometer
         self.counts_ch17 = None  # the readout/PMT channel.
         self.counts_ch18 = None  # the Laser trigger channel.
@@ -198,7 +198,7 @@ class FileHandler(BaseFileHandler):
                                      set_adjust_y=self.laser_set_adjust_y, )
                                 )
 
-    def get_pandas_counter(self):
+    def get_pandas_counts(self):
         if self.file_version >= 2:
             return pandas.DataFrame(dict(time=self.counts_time.asdatetime()[:],
                                          ch0=self.counts_ch0,

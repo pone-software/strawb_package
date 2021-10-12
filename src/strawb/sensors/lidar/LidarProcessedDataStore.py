@@ -11,50 +11,51 @@ class LidarProcessedDataStore(BaseProcessedDataStore, TRBTools):
         self.file_handler = file_handler
 
         # cleaned Counter, similar to PMTSpectrometer. Added to hdf5 ~05.10.2021. -> File version 2
-        self._counts_ch_time = None  # channel which counts up at a constant frequency -> PMT Spectrometer
-        self._counts_pmt = None  # the readout/PMT channel.
-        self._counts_laser = None  # the Laser trigger channel.
+        self._dcounts_time = None  # channel which counts up at a constant frequency -> PMT Spectrometer
+        self._dcounts_pmt = None  # the readout/PMT channel.
+        self._dcounts_laser = None  # the Laser trigger channel.
 
-        # calculated TRB rates from counters
+        # calculated TRB rates from countss
         self._rate_time = None
         self._rate_pmt = None
         self._rate_laser = None
 
     # ---- cleaned TRB Counters  ----
     @property
-    def counts_ch_time(self):
-        if self._counts_ch_time is None:
-            self.calculate_counts()
-        return self._counts_ch_time
+    def dcounts_time(self):
+        if self._dcounts_time is None:
+            self.diff_counts()
+        return self._dcounts_time
 
     @property
-    def counts_pmt(self):
-        if self._counts_pmt is None:
-            self.calculate_counts()
-        return self._counts_pmt
+    def dcounts_pmt(self):
+        if self._dcounts_pmt is None:
+            self.diff_counts()
+        return self._dcounts_pmt
 
     @property
-    def counts_laser(self):
-        if self._counts_laser is None:
-            self.calculate_counts()
-        return self._counts_laser
+    def dcounts_laser(self):
+        if self._dcounts_laser is None:
+            self.diff_counts()
+        return self._dcounts_laser
 
-    def get_pandas_cleaned_counts(self):
+    def get_pandas_dcounts(self):
         if self.file_handler.file_version >= 2:
-            return pandas.DataFrame(dict(time=self.file_handler.counts_time.asdatetime()[:],
-                                         counters_ch_time=self.counts_ch_time,
-                                         counts_pmt=self.counts_pmt,
-                                         counts_laser=self.counts_laser))
+            t = self.file_handler.counts_time.asdatetime()[:]
+            return pandas.DataFrame(dict(time=(t[:-1] + np.diff(t) * .5),
+                                         dcounts_time=self.dcounts_time,
+                                         dcounts_pmt=self.dcounts_pmt,
+                                         dcounts_laser=self.dcounts_laser))
 
-    def clean_counts(self):
+    def diff_counts(self):
         if self.file_handler.file_version >= 2:
-            data = TRBTools._clean_counts_(self.file_handler.counts_ch0,
-                                           self.file_handler.counts_ch17,
-                                           self.file_handler.counts_ch18)
+            data = TRBTools._diff_counts_(self.file_handler.counts_ch0,
+                                          self.file_handler.counts_ch17,
+                                          self.file_handler.counts_ch18)
 
-            self._counts_ch_time = data[0]
-            self._counts_pmt = data[1]
-            self._counts_laser = data[2]
+            self._dcounts_time = data[0]
+            self._dcounts_pmt = data[1]
+            self._dcounts_laser = data[2]
             return [*data]
         return None
 
@@ -87,11 +88,11 @@ class LidarProcessedDataStore(BaseProcessedDataStore, TRBTools):
 
     def calculate_counts(self):
         if self.file_handler.file_version >= 2:
-            self._rate_time, rate_data = TRBTools._calculate_counts_(
+            self._rate_time, rate_data = TRBTools._calculate_rates_(
                 daq_pulser_readout=self.file_handler.daq_pulser_readout,
-                ch_time=self.counts_ch_time,
-                counts_pmt=self.counts_pmt,
-                counts_laser=self.counts_laser)
+                dcounts_time=self.dcounts_time,
+                dcounts_pmt=self.dcounts_pmt,
+                dcounts_laser=self.dcounts_laser)
 
             self._rate_pmt = rate_data[0]
             self._rate_laser = rate_data[1]
