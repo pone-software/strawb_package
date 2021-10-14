@@ -4,7 +4,7 @@ import shutil
 import cv2
 import numpy as np
 
-from ...config_parser.__init__ import Config
+from ...config_parser import Config
 
 
 class PictureHandler:

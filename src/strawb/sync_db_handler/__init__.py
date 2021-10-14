@@ -5,8 +5,8 @@ import h5py
 import numpy as np
 import pandas
 
-from src.strawb.config_parser import Config
-from src.strawb.onc_downloader import ONCDownloader
+from ..config_parser import Config
+from ..onc_downloader import ONCDownloader
 
 
 class SyncDBHandler:

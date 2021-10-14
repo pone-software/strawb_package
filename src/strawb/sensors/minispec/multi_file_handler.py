@@ -4,7 +4,7 @@ import os
 from datetime import datetime
 from datetime import timedelta
 
-from ...config_parser.config_parser import Config
+from ...config_parser import Config
 from strawb.sensors.minispec.file_handler import FileHandler
 
 class MultiFileHandler:
