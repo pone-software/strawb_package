@@ -2,6 +2,7 @@
 import h5py
 
 from .config_parser import Config
+from .sync_db_handler import SyncDBHandler
 from .onc_downloader import ONCDownloader
 from .sensors import *
 from .tools import AsDatetimeWrapper, hdf5_getunsorted
