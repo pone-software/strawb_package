@@ -1,6 +1,9 @@
 import os
 from unittest import TestCase
 
+import numpy as np
+import pandas
+
 from src.strawb.onc_downloader import ONCDownloader
 from src.strawb import dev_codes_deployed
 
@@ -26,3 +29,41 @@ class TestONCDownload(TestCase):
 
         for i in pd_result[:n_files]['fullPath']:
             self.assertTrue(os.path.exists(i))
+
+    def test_mask_pd_result(self):
+        pd_result = pandas.DataFrame([{'filename': 'TEST_1.txt', 'fileSize': 100, 'synced': True},
+                                      {'filename': 'TEST_2.hdf5', 'fileSize': 3000, 'synced': True},
+                                      {'filename': 'TEST_3.hld', 'fileSize': 81517, 'synced': True},
+                                      {'filename': 'TEST_4.txt', 'fileSize': 6574, 'synced': False},
+                                      {'filename': 'TEST_5.hdf5', 'fileSize': 20000, 'synced': False},
+                                      {'filename': 'TEST_3.hld', 'fileSize': 81517, 'synced': False},
+                                      ])
+
+        # should mask all where synced=False
+        mask = ONCDownloader._mask_pd_results_(pd_result)
+        self.assertTrue(not any(pd_result[mask]['synced']))  # check if all False
+
+        mask = ONCDownloader._mask_pd_results_(pd_result, extensions='txt')
+        self.assertTrue(not any(pd_result[mask]['synced']))  # check if all False
+        self.assertEqual(np.sum(mask[mask]), 1)  # Only 'TEST_4.txt' pass
+
+        mask = ONCDownloader._mask_pd_results_(pd_result, extensions=['txt', 'hdf5'])
+        self.assertTrue(not any(pd_result[mask]['synced']))  # check if all False
+        self.assertEqual(np.sum(mask[mask]), 2)  # 'TEST_5.hdf5' and 'TEST_4.txt' pass
+
+        mask = ONCDownloader._mask_pd_results_(pd_result, min_file_size=10000)
+        self.assertTrue(not any(pd_result[mask]['synced']))  # check if all False
+        self.assertEqual(np.sum(mask[mask]), 2)  # 'TEST_5.hdf5' and 'TEST_3.hld' pass
+
+        mask = ONCDownloader._mask_pd_results_(pd_result, max_file_size=10000)
+        self.assertTrue(not any(pd_result[mask]['synced']))  # check if all False
+        self.assertEqual(np.sum(mask[mask]), 1)  # only 'TEST_4.txt'  pass
+
+        mask = ONCDownloader._mask_pd_results_(pd_result, min_file_size=10000, max_file_size=30000)
+        self.assertTrue(not any(pd_result[mask]['synced']))  # check if all False
+        self.assertEqual(np.sum(mask[mask]), 1)  # only 'TEST_5.hdf5'  pass
+
+        mask = ONCDownloader._mask_pd_results_(pd_result, min_file_size=10000, max_file_size=30000,
+                                               extensions=['txt', 'hld'])
+        self.assertTrue(not any(pd_result[mask]['synced']))  # check if all False
+        self.assertEqual(np.sum(mask[mask]), 0)  # nothing pass

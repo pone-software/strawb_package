@@ -1,11 +1,14 @@
 # Authors: Kilian Holzapfel <kilian.holzapfel@tum.de>
 import datetime
+import os
 
+import numpy as np
 import pandas
 from onc.onc import ONC  # pip install onc; https://pypi.org/project/onc/
 from onc.util.util import add_docs
 
 import strawb
+from strawb.tools import human_size
 
 
 class ONCDownloader(ONC):
@@ -88,7 +91,7 @@ class ONCDownloader(ONC):
         return result
 
     def download_structured(self, dev_codes=None, date_from=None, date_to=None,
-                            extensions=None,  # data_product_names=None,
+                            extensions=None,
                             min_file_size=0, max_file_size=.75e9, download=True):
         """
         This function syncs files from the onc server for the specified dev_codes. The files are organized in different
@@ -148,33 +151,58 @@ class ONCDownloader(ONC):
             date_to = datetime.datetime.fromisoformat(date_to.rstrip('Z'))
 
         # get all possible files from the devices
-        result = self.get_files_for_dev_codes(dev_codes, date_from=date_from, date_to=date_to, print_stats=False)
+        result = self.get_files_for_dev_codes(dev_codes,date_from=date_from, date_to=date_to, print_stats=False)
 
         # convert the list to a DataFrame for easier modifications
-        pd_result = pandas.DataFrame.from_dict(result['files'])
+        pd_result = self._convert_results2dataframe_(result)
 
-        # convert the datetime columns accordingly
-        for key_i in ['archivedDate', 'modifyDate', 'dateFrom', 'dateTo']:
-            pd_result[key_i] = pandas.to_datetime(pd_result[key_i])
+        # create the mask for which files to download
+        mask = self._mask_pd_results_(pd_result,
+                                      min_file_size=min_file_size,
+                                      max_file_size=max_file_size,
+                                      extensions=extensions)
 
-        # add a 'outPath' column, to specify the outPath per file
-        pd_result['outPath'] = strawb.Config.raw_data_dir + '/'
-        pd_result['outPath'] += pd_result['deviceCode'].str.lower() + '/' + pd_result['dateFrom'].dt.strftime('%Y_%m')
+        # mask the results to files which passed the filter, and mask the mask (correct size)
+        pd_result=pd_result[mask]
+        mask = mask[mask]
 
-        # mask by file size
+        # mask also the files which are already downloaded
+        mask &= ~pd_result['synced']
+
+        download_size = (pd_result[mask]['fileSize']).sum()
+        print(f'In total: {pd_result.shape[0]} files; exclude: {len(mask[~mask])}; '
+              f'size to download: {human_size(download_size)}')
+        if download:
+            # reduce it with the mask and the columns to 'filename', 'outPath'
+            pd_result_masked = pd_result[mask][['filename', 'outPath']]
+            filters_or_result = dict(files=pd_result_masked.to_dict(orient='records'))
+            self.getDirectFiles(filters_or_result=filters_or_result)
+
+            # also label the synced files as synced
+            pd_result['synced'] |= mask
+
+        return pd_result
+
+    @staticmethod
+    def _mask_pd_results_(pd_result,
+                          min_file_size=0, max_file_size=.75e9,
+                          extensions=None,  # data_product_names=None
+                          ):
+
+        # mask the by file size
         mask = min_file_size <= pd_result['fileSize']
         mask &= pd_result['fileSize'] <= max_file_size
 
         if extensions is None:
             pass
         else:
-            mask_extensions = mask.copy()*0
+            mask_extensions = np.zeros_like(mask)
             if isinstance(extensions, str):  # extensions must be a list
                 extensions = [extensions]
 
             for i in extensions:
-                mask_extensions += pd_result['filename'].str.endswith(i)
-            mask &= mask_extensions
+                mask_extensions += pd_result['filename'].str.endswith(i).to_numpy()
+            mask &= mask_extensions > 0
 
         # # Select dataProducts
         # if data_product_names is None:
@@ -192,18 +220,26 @@ class ONCDownloader(ONC):
         #     dataProduct_select = [i for i in dataProduct_all if i['dataProductName'] in data_product_names]
         #     mask &= pd_result['dataProduct'] == dataProduct_select
 
-        print(f'In total: {len(result["files"])} files; exclude: {len(mask[~mask])}; ')
-        if download:
-            # reduce it with the mask and the columns to 'filename', 'outPath'
-            pd_result_masked = pd_result[mask][['filename', 'outPath']]
-            filters_or_result = dict(files=pd_result_masked.to_dict(orient='records'))
-            self.getDirectFiles(filters_or_result=filters_or_result)
+        return mask
 
-        # add column of which files are synced
-        pd_result['synced'] = mask
+    @staticmethod
+    def _convert_results2dataframe_(result):
+        # convert the list to a DataFrame for easier modifications
+        pd_result = pandas.DataFrame.from_dict(result['files'])
+
+        # convert the datetime columns accordingly
+        for key_i in ['archivedDate', 'modifyDate', 'dateFrom', 'dateTo']:
+            pd_result[key_i] = pandas.to_datetime(pd_result[key_i])
+
+        # add a 'outPath' column, to specify the outPath per file
+        pd_result['outPath'] = strawb.Config.raw_data_dir + '/'
+        pd_result['outPath'] += pd_result['deviceCode'].str.lower() + '/' + pd_result['dateFrom'].dt.strftime('%Y_%m')
 
         # rename 'outPath' to 'fullPath' and cal. the full path
         # pd_result = pd_result.rename(columns={"outPath": "fullPath"})
         pd_result["fullPath"] = pd_result["outPath"] + '/' + pd_result['filename']
+        pd_result.set_index("fullPath", inplace=True, verify_integrity=True, drop=False)
 
+        # mask the files which are already downloaded
+        pd_result['synced'] = np.array([os.path.exists(i) for i in pd_result["fullPath"]])
         return pd_result

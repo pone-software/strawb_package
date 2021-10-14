@@ -279,3 +279,10 @@ def add_docs(org_func):
         return func
 
     return desc
+
+
+def human_size(size_bytes, units=None):
+    """ Returns a human readable string representation of bytes """
+    if units is None:
+        units = [' bytes', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB']
+    return str(size_bytes) + units[0] if size_bytes < 1024 else human_size(size_bytes >> 10, units[1:])
