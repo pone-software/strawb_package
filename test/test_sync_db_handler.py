@@ -88,7 +88,9 @@ class TestSyncDBHandler(TestCase):
     #     self.fail()
     #
     def test_update_hdf5_attributes(self):
-        pd_result_0 = pandas.DataFrame([{'fullPath': 'TEST_1.hdf5', 'h5_attrs': {'a': 1}, 'synced': True},  # take
+        pd_result_0 = pandas.DataFrame([{'fullPath': 'TEST_0.hdf5', 'h5_attrs': {'previous_file_id': np.nan},
+                                         'synced': True},  # take
+                                        {'fullPath': 'TEST_1.hdf5', 'h5_attrs': {'a': 1}, 'synced': True},  # take
                                         {'fullPath': 'TEST_2.hdf5', 'h5_attrs': None, 'synced': True},  # drop
                                         {'fullPath': 'TEST_3.hdf5', 'h5_attrs': {'a': 1}, 'synced': True},  # drop
                                         {'fullPath': 'TEST_4.hdf5', 'h5_attrs': None, 'synced': False},  # drop
@@ -96,7 +98,8 @@ class TestSyncDBHandler(TestCase):
                                         ])
         SyncDBHandler._check_index_(pd_result_0)
 
-        pd_result_1 = pandas.DataFrame([{'fullPath': 'TEST_1.hdf5', 'synced': True},  # take
+        pd_result_1 = pandas.DataFrame([{'fullPath': 'TEST_0.hdf5', 'synced': True},  # drop
+                                        {'fullPath': 'TEST_1.hdf5', 'synced': True},  # take
                                         {'fullPath': 'TEST_2.hdf5', 'synced': True},  # drop
                                         {'fullPath': 'TEST_3.hdf5', 'synced': True},  # drop
                                         {'fullPath': 'TEST_4.hdf5', 'synced': False},  # drop
@@ -128,13 +131,16 @@ class TestSyncDBHandler(TestCase):
         db_handler.dataframe.loc['TEST_2.hdf5', 'h5_attrs'] = [{'a': 2}]  # attrs doesn't exist
         db_handler.dataframe.loc['TEST_5.hdf5', 'h5_attrs'] = [{'a': 2}]  # file doesn't exist
 
-        db_handler.update_hdf5_attributes()
+        db_handler.update_hdf5_attributes(entries_converter={'previous_file_id':{np.nan: 0}})
+        # 'previous_file_id' has a special roll, therefore np.nan must be converted to 0
+        self.assertTrue(db_handler.dataframe.loc['TEST_0.hdf5', 'h5_attrs'] == {'previous_file_id': 0})
         self.assertTrue(db_handler.dataframe.loc['TEST_1.hdf5', 'h5_attrs'] == {'a': 2})
         self.assertTrue(db_handler.dataframe.loc['TEST_2.hdf5', 'h5_attrs'] == {'a': 2})
         self.assertTrue(db_handler.dataframe.loc['TEST_5.hdf5', 'h5_attrs'] == {'a': 2})
 
         # ---- force exiting values to updated ----
-        db_handler.update_hdf5_attributes(update_existing=True)
+        db_handler.update_hdf5_attributes(update_existing=True, keys_converter={'previous_file_id': 'file_id'})
+        self.assertTrue(db_handler.dataframe.loc['TEST_0.hdf5', 'h5_attrs'] == {'file_id': 0})
         self.assertTrue(db_handler.dataframe.loc['TEST_1.hdf5', 'h5_attrs'] == {'a': 1})  # take 'file' value
         self.assertTrue(db_handler.dataframe.loc['TEST_2.hdf5', 'h5_attrs'] == {})  # take 'file' value
         self.assertTrue(db_handler.dataframe.loc['TEST_5.hdf5', 'h5_attrs'] == {'a': 2})  # take 'old' value
@@ -145,6 +151,31 @@ class TestSyncDBHandler(TestCase):
 
         self.assertTrue('h5_attrs' in db_handler.dataframe)
         self.assertTrue(any(db_handler.dataframe['deviceCode'] == dev_codes_deployed[0]))
+
+    def test__convert_dict_entries_(self):
+        con = {1: {1: 2, 2: 3}, 'a': {'b': 'c'}, 'previous_file_id': {np.nan: 0}}
+        dict_1 = {1: 1, 2: 2}
+        self.assertEqual({1: 2, 2: 2}, SyncDBHandler._convert_dict_entries_(dict_1, con))
+        dict_2 = {1: 2, 2: 2, 'a': 'b', 'previous_file_id': np.nan}
+        self.assertEqual({1: 3, 2: 2, 'a': 'c', 'previous_file_id': 0},
+                         SyncDBHandler._convert_dict_entries_(dict_2, con))
+
+        dict_3 = {'previous_file_id': np.nan}
+        self.assertEqual(SyncDBHandler._convert_dict_entries_(dict_3, con),
+                         {'previous_file_id': 0})
+
+    def test__convert_dict_keys_(self):
+        con = {1: 2, 'a': 'b', np.nan: None, None: 0}
+        dict_1 = {1: 1, 2: 2}
+        self.assertEqual({1: 1, 2: 2}, SyncDBHandler._convert_dict_keys_(dict_1, con))
+
+        dict_2 = {1: 1, 2: 2, np.nan: 3}
+        self.assertEqual({1: 1, 2: 2, None: 3},
+                         SyncDBHandler._convert_dict_keys_(dict_2, con))
+
+        dict_2 = {1: 1, 2: 2, None: 3}
+        self.assertEqual({1: 1, 2: 2, 0: 3},
+                         SyncDBHandler._convert_dict_keys_(dict_2, con))
 
     def tearDown(self):
         hdf5_files = glob.glob('./*.hdf5')

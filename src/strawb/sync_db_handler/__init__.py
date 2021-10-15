@@ -1,3 +1,4 @@
+import ast
 import glob
 import os
 
@@ -63,7 +64,13 @@ class SyncDBHandler:
     def dataframe(self, dataframe):
         if dataframe is not None:
             self._check_index_(dataframe)  # sets column 'fullPath' as index or check that index is 'fullPath'
-            dataframe.sort_index(inplace=True, ignore_index=False)  # and sort it inplace
+            try:
+                dataframe.sort_values(by=['dateFrom', 'dateTo', 'deviceCode', 'dataProductCode'],
+                                      inplace=True,
+                                      ascending=True)  # old first, latest last
+            except KeyError:
+                pass
+            # dataframe.sort_index(inplace=True, ignore_index=False)  # and sort it inplace
         self._dataframe = dataframe
 
     def load_db(self):
@@ -97,6 +104,50 @@ class SyncDBHandler:
             self.dataframe = self.dataframe.append(dataframe,
                                                    ignore_index=False,
                                                    verify_integrity=True)
+
+    def add_new_columns(self, dataframe, overwrite=False):
+        """Adds new columns from a pandas.DataFrame to the internal pandas.DataFrame. If there is no internal
+        pandas.DataFrame it set the provided dataframe as the internal. Otherwise it adds the columns from the provided
+         dataframe to the internal dataframe.
+        PARAMETER
+        ---------
+        dataframe: pandas.DataFrame
+            either the index or the column name have to be 'fullPath' to prevent duplicates.
+        """
+        self._check_index_(dataframe)  # check the new dataframe
+
+        if self.dataframe is None:
+            self.dataframe = dataframe
+
+        if self.dataframe is None:
+            self.dataframe = dataframe
+
+        else:
+            for col_i in dataframe:
+                if col_i not in self.dataframe:
+                    # append the columns at the end: self.dataframe.keys().shape[0]
+                    self.dataframe.insert(self.dataframe.keys().shape[0], col_i, dataframe[col_i])
+                else:
+                    # handle rows with the same indexes
+                    intersection = set(self.dataframe.index).intersection(dataframe.index)
+                    if intersection != set():
+                        if overwrite:
+                            self.dataframe.loc[intersection, col_i] = dataframe.loc[intersection, col_i]
+                        else:
+                            print(f'WARNING: duplicate column {col_i}')
+
+                    # handle rows with the new indexes
+                    difference = set(dataframe.index).difference(self.dataframe.index)
+                    if difference != set():
+                        self.add_new_db(dataframe.loc[difference])
+
+    def get_mask_h5_attrs(self, dataframe=None):
+        """Return a mask which mask all indexes where the column 'h5_attrs' is not 'np.nan' nor '{}'."""
+        if dataframe is None:
+            dataframe = self.dataframe
+
+        mask = dataframe['h5_attrs'].isnull() + (dataframe['h5_attrs'] == {})
+        return ~mask
 
     @staticmethod
     def _check_double_indexes_(a, b):
@@ -141,6 +192,81 @@ class SyncDBHandler:
                                 drop=False,
                                 )
 
+    @staticmethod
+    def _convert_dict_entries_(dictionary, converter):
+        """Converts entries in a dictionary following the converter dict. The converter must be in the shape
+        {<key>: {<value>: <replacement>} where the original dictionary is {<key>: <value>}. It also suports np.nan as
+        <values>, because np.nan == np.nan if False, by default.
+
+        PARAMETER
+        ---------
+        dictionary: dict
+            dictionary to replace the values
+        converter: dict
+            The converter must be in the shape of {<key>: {<value>: <replacement>}
+
+        EXAMPLE
+        -------
+        >>> con = {1: {1: 2, 2: 3}, 'a': {'b': 'c'}, 3: {np.nan: -1}}
+        >>> dict_1 = {1: 1, 2: 2}
+        >>> SyncDBHandler._convert_dict_entries_(dict_1, con)  # {1: 2, 2: 2}
+        >>> dict_2 = {1: 2, np.nan: 2, 'a': 'b', 3: np.nan}
+        >>> SyncDBHandler._convert_dict_entries_(dict_2, con)  # {1: 3, 2: 2,  3: -1, 'a': 'c'}
+        """
+        dictionary_return = dictionary.copy()
+
+        # prepare converter
+        converter_nan = {}
+        for key_i in converter:
+            for key_ii in converter[key_i]:
+                if isinstance(key_ii, float) and np.isnan(key_ii):
+                    converter_nan[key_i] = converter[key_i][key_ii]
+                    break  # there can only be one np.nan per key_i as its a dict
+
+        for key_i in converter:
+            if key_i in dictionary:
+                if dictionary[key_i] in converter[key_i]:
+                    dictionary_return[key_i] = converter[key_i][dictionary[key_i]]
+                elif isinstance(dictionary[key_i], float) and np.isnan(dictionary[key_i]) and key_i in converter_nan:
+                    dictionary_return[key_i] = converter_nan[key_i]
+
+        return dictionary_return
+
+    @staticmethod
+    def _convert_dict_keys_(dictionary, converter, raise_error=False):
+        """Converts entries in a dictionary following the converter dict. The converter must be in the shape
+        {<key>: <replacement>} where the original dictionary is {<key>: <value>}. Flipping keys isn't supported.
+
+        PARAMETER
+        ---------
+        dictionary: dict
+            dictionary to replace the values
+        converter: dict
+            The converter must be in the shape of {<key>: {<value>: <replacement>}
+
+        EXAMPLE
+        -------
+        >>> SyncDBHandler._convert_dict_keys_({1: 1, 2: 2}, {1: 3})  # {3: 1, 2: 2}
+        pay attention if the new key exits
+        >>> SyncDBHandler._convert_dict_keys_({1: 1, 2: 2}, {1: 2})  # no change as key 2 exits -> {1: 1, 2: 2}
+        >>> SyncDBHandler._convert_dict_keys_({1: 1, 2: 2}, {1: 2}, raise_error=True)  # raise an KeyError
+        and flipping keys isn't supported aswell
+        >>> SyncDBHandler._convert_dict_keys_({np.nan: 3, None: 4}, {np.nan: None, None: 0})
+
+        """
+        dictionary_return = dictionary.copy()
+
+        for key_i in converter:
+            if key_i in dictionary:
+                if not converter[key_i] in dictionary:
+                    dictionary_return[converter[key_i]] = dictionary_return.pop(key_i)
+                # elif isinstance(key_i, float) and np.isnan(key_i)
+                else:
+                    if raise_error:
+                        KeyError(f'{converter[key_i]} exists already in dictionary')
+
+        return dictionary_return
+
     def update_sync_state(self, dataframe=None):
         """Checks if the sync state of all items in the dataframe.
         PARAMETER
@@ -155,14 +281,22 @@ class SyncDBHandler:
 
         dataframe['synced'] = np.array([os.path.exists(i) for i in dataframe["fullPath"]])
 
-    def update_hdf5_attributes(self, dataframe=None, update_existing=False):
-        """Get all hdf5 file attributes from the dataframe and adds it as 'h5_attrs' to it.
+    def update_hdf5_attributes(self, dataframe=None, update_existing=False,
+                               entries_converter=None, keys_converter=None):
+        """Get all hdf5 file attributes from the dataframe and adds it as 'h5_attrs' to it. It can also replace keys or
+        entries of the hdf5 attribute dictionary. This is controlled by entries_converter and keys_converter
         PARAMETER
         ---------
         dataframe: pandas.DataFrame
             either the index or the column name have to be 'fullPath' to prevent duplicates.
         update_existing: bool, optional
             if existing attributes should be loaded again (True) or not (False, default)
+        entries_converter: dict or None, optional
+            a dict parsed to _convert_dict_entries_(). If None (default) it uses:
+            {'previous_file_id': {np.nan: 0}, 'following_file_id': {np.nan: 0}}
+        keys_converter: dict or None, optional
+            a dict parsed to _convert_dict_keys_(). If None (default) it uses:
+            {'mes_typ': 'measurement_type', 'mes_duration': 'measurement_duration'}
         """
         if dataframe is None:
             dataframe = self.dataframe
@@ -185,10 +319,9 @@ class SyncDBHandler:
 
         for i in np.argwhere(items_to_check).flatten():
             full_path = dataframe['fullPath'].iloc[i]
-            # if full_path.endswith('hdf5') or full_path.endswith('h5'):
             try:
                 with h5py.File(full_path, 'r') as f:
-                    dataframe.loc[full_path, 'h5_attrs'] = [dict(f.attrs)]  # [] has to be used to set the dict - (why?)
+                    attrs_dict = dict(f.attrs)
 
             except OSError as err:  # file not found or can't load it
                 for err_i in err.args:
@@ -199,6 +332,46 @@ class SyncDBHandler:
 
             except Exception as err:
                 print(f'WARNING: {err}')
+
+            else:
+                # convert file_id's with nan to int. Otherwise pandas interprets the Serias as float and the resolution
+                # of the np.float64 isn't sufficient for a np.unint64.
+                if entries_converter is None:
+                    entries_converter = {'previous_file_id': {np.nan: 0}, 'following_file_id': {np.nan: 0}}
+
+                attrs_dict = self._convert_dict_entries_(attrs_dict, converter=entries_converter)
+
+                if keys_converter is None:
+                    keys_converter = {'mes_typ': 'measurement_type', 'mes_duration': 'measurement_duration',
+                                      'mes_steps': 'measurement_steps'}
+
+                attrs_dict = self._convert_dict_keys_(attrs_dict, converter=keys_converter)
+                dataframe.loc[full_path, 'h5_attrs'] = [attrs_dict]  # [] has to be used to set the dict - (why?)
+
+    def dataframe_from_hdf5_attributes(self):
+        """Generates a dataframe from the SDAQ hdf5 file attributes. There must be at least the keys (columns):
+        'file_start', 'file_end', 'run_start' and 'run_end'.
+
+        RETURNS
+        -------
+        hdf5_dataframe: pandas.DataFrame
+        """
+        mask = self.get_mask_h5_attrs(self.dataframe)
+
+        dataframe = pandas.DataFrame(self.dataframe[mask]['h5_attrs'].to_list(),
+                                     index=self.dataframe[mask]['fullPath'])
+
+        # format the columns
+        dataframe.rollover_interval.apply(lambda x: ast.literal_eval(str(x)))  # is dataframe string like "{'days': 1}"
+        dataframe.file_start = pandas.to_datetime(dataframe.file_start,
+                                                  unit='s', errors='coerce', utc=True, infer_datetime_format=True)
+        dataframe.file_end = pandas.to_datetime(dataframe.file_end,
+                                                unit='s', errors='coerce', utc=True, infer_datetime_format=True)
+        dataframe.run_start = pandas.to_datetime(dataframe.run_start,
+                                                 unit='s', errors='coerce', utc=True, infer_datetime_format=True)
+        dataframe.run_end = pandas.to_datetime(dataframe.run_end,
+                                               unit='s', errors='coerce', utc=True, infer_datetime_format=True)
+        return dataframe
 
     def load_db_from_onc(self, **kwargs):
         """Loads downloads the db directly from the ONC server.
@@ -214,5 +387,5 @@ class SyncDBHandler:
         self.update_hdf5_attributes()
 
     def load_entire_db_from_ONC(self, **kwargs):
-        kwargs.update(dict(date_from='strawb_all', download=False))
+        kwargs.update(dict(date_from='strawb_all'))
         self.load_db_from_onc(**kwargs)
