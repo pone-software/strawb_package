@@ -117,8 +117,9 @@ class ONCDownloader(ONC):
         download: bool, optional
             weather or not to download the files. True (default) downloads the files, and
             False just checks which pass the filter.
-        dev_codes: list, optional
-            List with dev_codes for which the files are downloaded. None (default), takes all deployed STRAWb dev_codes
+        dev_codes: Union[list, str], optional
+            List with dev_codes or str for a single dev_code for which the files are downloaded.
+            None (default), takes all deployed STRAWb dev_codes
         extensions: list[str], optional
             A list of extensions to download. If None, it takes all possible extensions for STRAWb,
             i.e. ['hdf5', 'hld', 'raw', 'png', 'txt'].
