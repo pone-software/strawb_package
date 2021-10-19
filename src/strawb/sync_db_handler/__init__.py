@@ -377,13 +377,18 @@ class SyncDBHandler:
             # add column
             dataframe.insert(dataframe.columns.shape[0], 'h5_attrs', None)
             # take all
-            items_to_check = np.ones_like(dataframe['fullPath'], dtype=bool)
+            items_to_check = np.ones_like(dataframe.fullPath, dtype=bool)
         elif update_existing:
             # take all
-            items_to_check = np.ones_like(dataframe['fullPath'], dtype=bool)
+            items_to_check = np.ones_like(dataframe.fullPath, dtype=bool)
         else:
             # take only the one with missing parameters
-            items_to_check = (dataframe['h5_attrs'].isnull()).to_numpy(dtype=bool)  # takes all None or np.nan
+            items_to_check = (dataframe.h5_attrs.isnull()).to_numpy(dtype=bool)  # takes all None or np.nan
+
+        # include only file which ends with 'hdf5' or 'h5'
+        mask = dataframe.fullPath.str.endswith('hdf5')
+        mask |= dataframe.fullPath.str.endswith('h5')
+        items_to_check &= mask
 
         items_to_check[~dataframe['synced']] = False  # exclude non existing files
 
@@ -398,7 +403,7 @@ class SyncDBHandler:
 
         sjt = ShareJobThreads(thread_n=5)
         sjt.do(self._extract_hdf5_attribute_,
-               np.argwhere(items_to_check).flatten(),
+               np.argwhere(items_to_check.to_numpy(dtype=bool)).flatten(),
                dataframe=dataframe,
                entries_converter=entries_converter,
                keys_converter=keys_converter)
