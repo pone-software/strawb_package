@@ -8,6 +8,7 @@ import pandas
 
 from ..config_parser import Config
 from ..onc_downloader import ONCDownloader
+from ..tools import human_size
 
 
 class SyncDBHandler:
@@ -166,7 +167,8 @@ class SyncDBHandler:
                     mask_null = dataframe.loc[intersection, col_i].isnull()
 
                     if np.sum(mask_null):
-                        dataframe.loc[intersection[mask_null], col_i] = dataframe2add.loc[intersection[mask_null], col_i]
+                        dataframe.loc[intersection[mask_null], col_i] = dataframe2add.loc[
+                            intersection[mask_null], col_i]
 
                     if overwrite:
                         dataframe.loc[intersection[~mask_null], col_i] = \
@@ -320,7 +322,7 @@ class SyncDBHandler:
         if dataframe is None:  # when self.dataframe is None
             return
 
-        dataframe['synced'] = np.array([os.path.exists(i) for i in dataframe["fullPath"]])
+        dataframe['synced'] = np.array([os.path.exists(i) for i in dataframe["fullPath"]], dtype=bool)
 
     def update_hdf5_attributes(self, dataframe=None, update_existing=False,
                                entries_converter=None, keys_converter=None, add_hdf5_attributes2dataframe=True):
@@ -445,12 +447,15 @@ class SyncDBHandler:
                                                   unit='s', errors='coerce', utc=True, infer_datetime_format=True)
         return h5_dataframe
 
-    def load_db_from_onc(self, add_hdf5_attributes=True, add_dataframe=True, **kwargs):
+    def load_db_from_onc(self, download=False, add_hdf5_attributes=True, add_dataframe=True, **kwargs):
         """Loads downloads the db directly from the ONC server.
+
         PARAMETER
         ---------
+        download: bool, optional
+            if the missing files should be downloaded.
         kwargs: dict, optional
-            kwargs are parsed to strawb.ONCDownloader().download_structured. 'download' will be set to False.
+            kwargs are parsed to strawb.ONCDownloader().download_structured to filter the files.
         add_hdf5_attributes: bool, optional
             scan files for hdf5 attributes and adds to the dataframe as new columns
         add_dataframe: bool, optional
@@ -458,7 +463,16 @@ class SyncDBHandler:
         """
         onc_downloader = ONCDownloader()
         dataframe = onc_downloader.get_files_structured(**kwargs)
+
         self.update_sync_state(dataframe=dataframe)
+        download_size = (dataframe[~dataframe['synced']]['fileSize']).sum()
+        print(f'In total: {dataframe.shape[0]} files; skips synced: {dataframe["synced"].sum()}; '
+              f'size to download: {human_size(download_size)}, '
+              f'from deviceCode: {pandas.unique(dataframe["deviceCode"])}')
+        if download:
+            # download the files which passed the filter
+            onc_downloader.getDirectFiles(filters_or_result=dataframe[~dataframe['synced']])
+            self.update_sync_state(dataframe=dataframe)
 
         if add_hdf5_attributes:
             self.update_hdf5_attributes(dataframe=dataframe, add_hdf5_attributes2dataframe=True)
