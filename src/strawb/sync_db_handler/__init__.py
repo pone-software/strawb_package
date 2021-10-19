@@ -386,9 +386,7 @@ class SyncDBHandler:
             items_to_check = (dataframe.h5_attrs.isnull()).to_numpy(dtype=bool)  # takes all None or np.nan
 
         # include only file which ends with 'hdf5' or 'h5'
-        mask = dataframe.fullPath.str.endswith('hdf5')
-        mask |= dataframe.fullPath.str.endswith('h5')
-        items_to_check &= mask
+        items_to_check &= dataframe.fullPath.str.endswith('hdf5') | dataframe.fullPath.str.endswith('h5')
 
         items_to_check[~dataframe['synced']] = False  # exclude non existing files
 
