@@ -96,7 +96,7 @@ class ONCDownloader(ONC):
         Or as a isofromat datetime string."""
         try:
             d_time = datetime.timedelta(days=float(string))
-        except ValueError:
+        except ValueError or TypeError:
             return string
         else:
             return abs(d_time)
