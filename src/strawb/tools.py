@@ -57,6 +57,7 @@ class ShareJobThreads:
 
         self.threads = None  # the _worker_ threads
         self.iterable = None  # the iterable
+        self.kwargs = {}  # kwargs for the f -> f(i, **self.kwargs)
         self.i = None  # the actual index of the next item
         self.i_bar = None  # the actual index of the done items
         self.f = None  # the function
@@ -64,9 +65,10 @@ class ShareJobThreads:
         # formatter for the bar, if not None, the iterable has to be a dict, i.e. {'a':1, 'b':2}, and the fmt: '{a}-{b}'
         self.fmt = fmt  # formatter for the bar
 
-    def do(self, f, iterable, ):
+    def do(self, f, iterable, **kwargs):
         self.active = True
         self.iterable = iterable
+        self.kwargs = kwargs
         self.i = 0
         self.i_bar = 0
         self.f = f
@@ -116,7 +118,7 @@ class ShareJobThreads:
             iterable_i = self._get_next_()
             if iterable_i is not False:
                 try:
-                    buffer = self.f(iterable_i)
+                    buffer = self.f(iterable_i, **self.kwargs)
                 except (RuntimeError, Exception) as err:
                     print(f'Error occurred at {iterable_i}: {err}')
                     buffer = None

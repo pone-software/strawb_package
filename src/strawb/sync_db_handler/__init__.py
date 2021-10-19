@@ -8,7 +8,7 @@ import pandas
 
 from ..config_parser import Config
 from ..onc_downloader import ONCDownloader
-from ..tools import human_size
+from ..tools import human_size, ShareJobThreads
 
 
 class SyncDBHandler:
@@ -324,6 +324,28 @@ class SyncDBHandler:
 
         dataframe['synced'] = np.array([os.path.exists(i) for i in dataframe["fullPath"]], dtype=bool)
 
+    def _extract_hdf5_attribute_(self, i, dataframe, entries_converter, keys_converter):
+        full_path = dataframe['fullPath'].iloc[i]
+        try:
+            with h5py.File(full_path, 'r') as f:
+                attrs_dict = dict(f.attrs)
+
+        except OSError as err:  # file not found or can't load it
+            for err_i in err.args:
+                if isinstance(err_i, str) and 'file signature not found' in err_i:  # no hdf5 file
+                    pass
+                if isinstance(err_i, str) and 'No such file or directory' in err_i:  # filed doesn't exist
+                    pass
+
+        except Exception as err:
+            print(f'WARNING: {err}')
+
+        else:
+            attrs_dict = self._convert_dict_entries_(attrs_dict, converter=entries_converter)
+
+            attrs_dict = self._convert_dict_keys_(attrs_dict, converter=keys_converter)
+            dataframe.loc[full_path, 'h5_attrs'] = [attrs_dict]  # [] has to be used to set the dict - (why?)
+
     def update_hdf5_attributes(self, dataframe=None, update_existing=False,
                                entries_converter=None, keys_converter=None, add_hdf5_attributes2dataframe=True):
         """Get all hdf5 file attributes from the dataframe and adds it as 'h5_attrs' to it. It can also replace keys or
@@ -365,36 +387,21 @@ class SyncDBHandler:
 
         items_to_check[~dataframe['synced']] = False  # exclude non existing files
 
-        for i in np.argwhere(items_to_check).flatten():
-            full_path = dataframe['fullPath'].iloc[i]
-            try:
-                with h5py.File(full_path, 'r') as f:
-                    attrs_dict = dict(f.attrs)
+        # convert file_id's with nan to int. Otherwise pandas interprets the Serias as float and the resolution
+        # of the np.float64 isn't sufficient for a np.unint64.
+        if entries_converter is None:
+            entries_converter = {'previous_file_id': {np.nan: 0}, 'following_file_id': {np.nan: 0}}
 
-            except OSError as err:  # file not found or can't load it
-                for err_i in err.args:
-                    if isinstance(err_i, str) and 'file signature not found' in err_i:  # no hdf5 file
-                        pass
-                    if isinstance(err_i, str) and 'No such file or directory' in err_i:  # filed doesn't exist
-                        pass
+        if keys_converter is None:
+            keys_converter = {'mes_typ': 'measurement_type', 'mes_duration': 'measurement_duration',
+                              'mes_steps': 'measurement_steps'}
 
-            except Exception as err:
-                print(f'WARNING: {err}')
-
-            else:
-                # convert file_id's with nan to int. Otherwise pandas interprets the Serias as float and the resolution
-                # of the np.float64 isn't sufficient for a np.unint64.
-                if entries_converter is None:
-                    entries_converter = {'previous_file_id': {np.nan: 0}, 'following_file_id': {np.nan: 0}}
-
-                attrs_dict = self._convert_dict_entries_(attrs_dict, converter=entries_converter)
-
-                if keys_converter is None:
-                    keys_converter = {'mes_typ': 'measurement_type', 'mes_duration': 'measurement_duration',
-                                      'mes_steps': 'measurement_steps'}
-
-                attrs_dict = self._convert_dict_keys_(attrs_dict, converter=keys_converter)
-                dataframe.loc[full_path, 'h5_attrs'] = [attrs_dict]  # [] has to be used to set the dict - (why?)
+        sjt = ShareJobThreads()
+        sjt.do(self._extract_hdf5_attribute_,
+               np.argwhere(items_to_check).flatten(),
+               dataframe=dataframe,
+               entries_converter=entries_converter,
+               keys_converter=keys_converter)
 
         if add_hdf5_attributes2dataframe:
             h5_dataframe = self.dataframe_from_hdf5_attributes(dataframe=dataframe)
@@ -447,7 +454,7 @@ class SyncDBHandler:
                                                   unit='s', errors='coerce', utc=True, infer_datetime_format=True)
         return h5_dataframe
 
-    def load_db_from_onc(self, download=False, add_hdf5_attributes=True, add_dataframe=True, **kwargs):
+    def load_db_from_onc(self, output=False, download=False, add_hdf5_attributes=True, add_dataframe=True, **kwargs):
         """Loads downloads the db directly from the ONC server.
 
         PARAMETER
@@ -465,19 +472,25 @@ class SyncDBHandler:
         dataframe = onc_downloader.get_files_structured(**kwargs)
 
         self.update_sync_state(dataframe=dataframe)
-        download_size = (dataframe[~dataframe['synced']]['fileSize']).sum()
-        print(f'In total: {dataframe.shape[0]} files; skips synced: {dataframe["synced"].sum()}; '
-              f'size to download: {human_size(download_size)}, '
-              f'from deviceCode: {pandas.unique(dataframe["deviceCode"])}')
+        if output:
+            download_size = (dataframe[~dataframe['synced']]['fileSize']).sum()
+            print(f'In total: {dataframe.shape[0]} files; skips synced: {dataframe["synced"].sum()}; '
+                  f'size to download: {human_size(download_size)}, '
+                  f'from deviceCode: {pandas.unique(dataframe["deviceCode"])}')
+
         if download:
             # download the files which passed the filter
             onc_downloader.getDirectFiles(filters_or_result=dataframe[~dataframe['synced']])
             self.update_sync_state(dataframe=dataframe)
 
         if add_hdf5_attributes:
+            if output:
+                print('update hdf5 attributes')
             self.update_hdf5_attributes(dataframe=dataframe, add_hdf5_attributes2dataframe=True)
 
         if add_dataframe:
+            if output:
+                print('add to db')
             # here 'self.dataframe =' is important as it could be None before and that brakes the inplace
             self.dataframe = self.add_new_columns(dataframe2add=dataframe, dataframe=self.dataframe, overwrite=True)
 
