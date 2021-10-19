@@ -90,13 +90,13 @@ class ONCDownloader(ONC):
 
         return result
 
-    def download_structured(self, dev_codes=None, date_from=None, date_to=None,
-                            extensions=None,
-                            min_file_size=0, max_file_size=.75e9, download=True):
+    def get_files_structured(self, dev_codes=None, date_from=None, date_to=None,
+                             extensions=None, min_file_size=0, max_file_size=.75e9):
         """
-        This function syncs files from the onc server for the specified dev_codes. The files are organized in different
-        directories by <Config.raw_data_dir>/<dev_code>/<year>_<month>/<file_name>.
-        Files can be filtered by the file size, extensions,
+        This function gets the dataframe with all metadata of files from the onc server for the specified dev_code(s).
+        It also adds a path 'fullPath' to each file. The files are organized in different directories by
+        <Config.raw_data_dir>/<dev_code>/<year>_<month>/<file_name>. Files can be filtered by the file size,
+        extensions, and date.
         PARAMETERS
         ----------
         date_from: str, datetime, optional
@@ -104,26 +104,26 @@ class ONCDownloader(ONC):
             - None: takes the today-1day;
             - str in isoformat: '2021-08-31T14:33:25.209715';
             - str in isoformat with Z: '2021-08-31T14:33:25.209715Z';
-            - str: 'strawb_all' to get data since STRAWb went online
-            - timedelta: date_from = now - timedelta
+            - str: 'strawb_all' to get data since STRAWb went online: 01.10.2020
+            - timedelta: date_from = now - abs(timedelta)
             - a datetime
         date_to: str, datetime, timedelta, optional
             Takes on of the following:
             - None: takes the today;
             - str in isoformat: '2021-08-31T14:33:25.209715';
             - str in isoformat with Z: '2021-08-31T14:33:25.209715Z';
-            - timedelta: date_to = date_from + timedelta
+            - timedelta: date_to = date_from + abs(timedelta)
             - a datetime
-        download: bool, optional
-            weather or not to download the files. True (default) downloads the files, and
-            False just checks which pass the filter.
         dev_codes: Union[list, str], optional
             List with dev_codes or str for a single dev_code for which the files are downloaded.
             None (default), takes all deployed STRAWb dev_codes
         extensions: list[str], optional
             A list of extensions to download. If None, it takes all possible extensions for STRAWb,
             i.e. ['hdf5', 'hld', 'raw', 'png', 'txt'].
-        :return:
+        min_file_size: int, float, optional
+            defines the minimum file size
+        max_file_size: int, float, optional
+            defines the maximum file size
         """
         # TODO: finalise commented part `data_product_names`
         if dev_codes is None:
@@ -138,7 +138,7 @@ class ONCDownloader(ONC):
         elif isinstance(date_from, datetime.datetime):
             date_from = date_from
         elif isinstance(date_from, datetime.timedelta):
-            date_from = datetime.datetime.now() - date_from
+            date_from = datetime.datetime.now() - abs(date_from)
         else:
             date_from = datetime.datetime.fromisoformat(date_from.rstrip('Z'))
 
@@ -147,12 +147,12 @@ class ONCDownloader(ONC):
         elif isinstance(date_to, datetime.datetime):
             date_to = date_to
         elif isinstance(date_to, datetime.timedelta):
-            date_to = date_from + date_to
+            date_to = date_from + abs(date_to)
         else:
             date_to = datetime.datetime.fromisoformat(date_to.rstrip('Z'))
 
         # get all possible files from the devices
-        result = self.get_files_for_dev_codes(dev_codes,date_from=date_from, date_to=date_to, print_stats=False)
+        result = self.get_files_for_dev_codes(dev_codes, date_from=date_from, date_to=date_to, print_stats=False)
 
         # convert the list to a DataFrame for easier modifications
         pd_result = self._convert_results2dataframe_(result)
@@ -162,9 +162,46 @@ class ONCDownloader(ONC):
                                       min_file_size=min_file_size,
                                       max_file_size=max_file_size,
                                       extensions=extensions)
+        return pd_result[mask]
+
+    def download_structured(self, pd_result=None, download=True,
+                            extensions=None,
+                            min_file_size=0, max_file_size=.75e9, **kwargs):
+        """
+        This function syncs files from the onc server for the specified dev_codes. The files are organized in different
+        directories by <Config.raw_data_dir>/<dev_code>/<year>_<month>/<file_name>.
+        Files can be filtered by the file size, extensions,
+        PARAMETERS
+        ----------
+        pd_result: None or dataframe, optional
+            If none, it parse the gets the dataframe from get_files_structured(). If it is a dataframe, it should have
+            the columns, get_files_structured() returns.
+        download: bool, optional
+            weather or not to download the files. True (default) downloads the files, and
+            False just checks which pass the filter.
+        extensions: list[str], optional
+            A list of extensions to download. If None, it takes all possible extensions for STRAWb,
+            i.e. ['hdf5', 'hld', 'raw', 'png', 'txt']. Applied to pd_result.
+        min_file_size: int, float, optional
+            defines the minimum file size. Applied to pd_result.
+        max_file_size: int, float, optional
+            defines the maximum file size. Applied to pd_result.
+        kwargs: optional
+            are parsed to get_files_structured(). Valid options are: dev_codes, date_from, date_to
+        """
+
+        if not isinstance(pd_result, pandas.DataFrame):
+            pd_result = self.get_files_structured(min_file_size=min_file_size, max_file_size=max_file_size,
+                                                  extensions=extensions, **kwargs)
+
+        # create the mask for which files to download
+        mask = self._mask_pd_results_(pd_result,
+                                      min_file_size=min_file_size,
+                                      max_file_size=max_file_size,
+                                      extensions=extensions)
 
         # mask the results to files which passed the filter, and mask the mask (correct size)
-        pd_result=pd_result[mask]
+        pd_result = pd_result[mask]
         mask = mask[mask]
 
         # mask also the files which are already downloaded
@@ -189,7 +226,6 @@ class ONCDownloader(ONC):
                           min_file_size=0, max_file_size=.75e9,
                           extensions=None,  # data_product_names=None
                           ):
-
         # mask the by file size
         mask = min_file_size <= pd_result['fileSize']
         mask &= pd_result['fileSize'] <= max_file_size
@@ -242,5 +278,5 @@ class ONCDownloader(ONC):
         pd_result.set_index("fullPath", inplace=True, verify_integrity=True, drop=False)
 
         # mask the files which are already downloaded
-        pd_result['synced'] = np.array([os.path.exists(i) for i in pd_result["fullPath"]])
+        pd_result['synced'] = np.array([os.path.exists(i) for i in pd_result["fullPath"]], dtype=bool)
         return pd_result
