@@ -59,10 +59,12 @@ def main(download=False, dev_codes=None, date_from=None, date_to=None,
           <strawb.Config.raw_data_dir>/<dev_codes[1]>
           ...
 
-    In addition, it saves the metadata from the ONC server for all files under: `strawb.Config.pandas_file_sync_db`
-    This file can be imported again with:
-    >>> import pandas, strawb.Config
-    >>> pandas.read_pickle(strawb.Config.pandas_file_sync_db)
+    In addition, it saves/updateds the metadata to the local data base (DB) with the data from the ONC server for all
+    files under: `strawb.Config.pandas_file_sync_db`
+    This file DB be imported again with:
+    >>> import strawb
+    >>> db = strawb.SyncDBHandler(file_name='Default')
+    >>> db.dataframe
     """
 
     db_handler = strawb.SyncDBHandler(file_name='Default')  # with no dataframe loaded
