@@ -26,7 +26,7 @@ Depending on your Python installation adopt python3/pip3 to python/pip, however 
   
   # install the package
   python3 -m build  # This will create the files located in the folder `.egg-info`
-  pip3 install -r requirements.txt  # install the required python packages
+  pip3 install -U -r requirements.txt  # install the required python packages
   pip3 install -U --user -e .  # install the package in developer mode.
   ```
 
