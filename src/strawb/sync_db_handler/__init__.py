@@ -396,7 +396,7 @@ class SyncDBHandler:
             keys_converter = {'mes_typ': 'measurement_type', 'mes_duration': 'measurement_duration',
                               'mes_steps': 'measurement_steps'}
 
-        sjt = ShareJobThreads()
+        sjt = ShareJobThreads(thread_n=10)
         sjt.do(self._extract_hdf5_attribute_,
                np.argwhere(items_to_check).flatten(),
                dataframe=dataframe,
