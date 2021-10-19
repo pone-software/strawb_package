@@ -117,7 +117,7 @@ class BaseFileHandler:
     @staticmethod
     def find_files(*args, **kwargs):
         print('WARNING: Use find_files_glob() instead of find_files()')
-        BaseFileHandler.find_files_glob(*args, **kwargs)
+        return BaseFileHandler.find_files_glob(*args, **kwargs)
 
     @staticmethod
     def test_load_meta_data(file_name, load_function):
