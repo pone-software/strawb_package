@@ -3,7 +3,7 @@ import pandas
 
 from strawb.base_processed_data_store import BaseProcessedDataStore
 from strawb.sensors.lidar.file_handler import FileHandler
-from strawb.tools import TRBTools
+from strawb.trb_tools import TRBTools
 
 
 class LidarProcessedDataStore(BaseProcessedDataStore, TRBTools):
@@ -49,9 +49,9 @@ class LidarProcessedDataStore(BaseProcessedDataStore, TRBTools):
 
     def diff_counts(self):
         if self.file_handler.file_version >= 2:
-            data = TRBTools._diff_counts_(self.file_handler.counts_ch0,
-                                          self.file_handler.counts_ch17,
-                                          self.file_handler.counts_ch18)
+            data = self._diff_counts_(self.file_handler.counts_ch0,
+                                      self.file_handler.counts_ch17,
+                                      self.file_handler.counts_ch18)
 
             self._dcounts_time = data[0]
             self._dcounts_pmt = data[1]
@@ -88,7 +88,7 @@ class LidarProcessedDataStore(BaseProcessedDataStore, TRBTools):
 
     def calculate_counts(self):
         if self.file_handler.file_version >= 2:
-            self._rate_time, rate_data = TRBTools._calculate_rates_(
+            self._rate_time, rate_data = self._calculate_rates_(
                 daq_pulser_readout=self.file_handler.daq_pulser_readout,
                 dcounts_time=self.dcounts_time,
                 dcounts_pmt=self.dcounts_pmt,
