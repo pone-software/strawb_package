@@ -90,6 +90,17 @@ class ONCDownloader(ONC):
 
         return result
 
+    @staticmethod
+    def _read_str_as_timedelta_(string):
+        """Try to interpret the string as float which will be used as timedelta in unit days.
+        Or as a isofromat datetime string."""
+        try:
+            d_time = datetime.timedelta(days=float(string))
+        except ValueError:
+            return string
+        else:
+            return abs(d_time)
+
     def get_files_structured(self, dev_codes=None, date_from=None, date_to=None,
                              extensions=None, min_file_size=0, max_file_size=.75e9):
         """
@@ -105,6 +116,7 @@ class ONCDownloader(ONC):
             - str in isoformat: '2021-08-31T14:33:25.209715';
             - str in isoformat with Z: '2021-08-31T14:33:25.209715Z';
             - str: 'strawb_all' to get data since STRAWb went online: 01.10.2020
+            - str: a float, interpreted as datetime.timedelta(days=float(string)) and used like 'timedelta'
             - timedelta: date_from = now - abs(timedelta)
             - a datetime
         date_to: str, datetime, timedelta, optional
@@ -112,6 +124,7 @@ class ONCDownloader(ONC):
             - None: takes the today;
             - str in isoformat: '2021-08-31T14:33:25.209715';
             - str in isoformat with Z: '2021-08-31T14:33:25.209715Z';
+            - str: a float, interpreted as datetime.timedelta(days=float(string)) and used like 'timedelta'
             - timedelta: date_to = date_from + abs(timedelta)
             - a datetime
         dev_codes: Union[list, str], optional
@@ -131,6 +144,7 @@ class ONCDownloader(ONC):
         elif isinstance(dev_codes, str):  # dev codes must be a list
             dev_codes = [dev_codes]
 
+        date_from = self._read_str_as_timedelta_(date_from)  # try to read it as float -> timedelta
         if date_from is None:
             date_from = datetime.datetime.now() - datetime.timedelta(days=1)
         elif date_from == 'strawb_all':
@@ -142,6 +156,7 @@ class ONCDownloader(ONC):
         else:
             date_from = datetime.datetime.fromisoformat(date_from.rstrip('Z'))
 
+        date_to = self._read_str_as_timedelta_(date_to)  # try to read it as float -> timedelta
         if date_to is None:
             date_to = datetime.datetime.now()
         elif isinstance(date_to, datetime.datetime):
