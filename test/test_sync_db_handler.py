@@ -1,3 +1,4 @@
+import datetime
 import glob
 import os
 from unittest import TestCase
@@ -6,6 +7,7 @@ import h5py
 import numpy as np
 import pandas
 
+import strawb
 from strawb import SyncDBHandler, dev_codes_deployed
 
 
@@ -131,7 +133,7 @@ class TestSyncDBHandler(TestCase):
         db_handler.dataframe.loc['TEST_2.hdf5', 'h5_attrs'] = [{'a': 2}]  # attrs doesn't exist
         db_handler.dataframe.loc['TEST_5.hdf5', 'h5_attrs'] = [{'a': 2}]  # file doesn't exist
 
-        db_handler.update_hdf5_attributes(entries_converter={'previous_file_id':{np.nan: 0}})
+        db_handler.update_hdf5_attributes(entries_converter={'previous_file_id': {np.nan: 0}})
         # 'previous_file_id' has a special roll, therefore np.nan must be converted to 0
         self.assertTrue(db_handler.dataframe.loc['TEST_0.hdf5', 'h5_attrs'] == {'previous_file_id': 0})
         self.assertTrue(db_handler.dataframe.loc['TEST_1.hdf5', 'h5_attrs'] == {'a': 2})
@@ -146,11 +148,36 @@ class TestSyncDBHandler(TestCase):
         self.assertTrue(db_handler.dataframe.loc['TEST_5.hdf5', 'h5_attrs'] == {'a': 2})  # take 'old' value
 
     def test_load_db_from_onc(self):
+        # ---- Version 1 ----
         db_handler = SyncDBHandler(file_name=None)
-        db_handler.load_db_from_onc(dev_codes=dev_codes_deployed[0])
+        db_handler.load_db_from_onc(dev_codes=dev_codes_deployed[0], add_hdf5_attributes=True, add_dataframe=True)
 
-        self.assertTrue('h5_attrs' in db_handler.dataframe)
         self.assertTrue(any(db_handler.dataframe['deviceCode'] == dev_codes_deployed[0]))
+        self.assertTrue('rollover_interval' in db_handler.dataframe)  # add_hdf5_attributes=True
+        self.assertTrue('h5_attrs' in db_handler.dataframe)  # add_hdf5_attributes=True
+
+        # ---- Version 2 ----
+        db_handler = SyncDBHandler(file_name=None)
+        db_handler.load_db_from_onc(dev_codes=strawb.dev_codes_deployed[:2],
+                                    date_from=datetime.timedelta(days=5),
+                                    add_hdf5_attributes=False,
+                                    add_dataframe=True)
+
+        self.assertTrue(np.unique(db_handler.dataframe['deviceCode'].to_numpy()).shape[0] == 2)  # more than on dev_code
+        self.assertTrue('rollover_interval' not in db_handler.dataframe)  # add_hdf5_attributes=True
+        self.assertTrue('h5_attrs' not in db_handler.dataframe)  # add_hdf5_attributes=False
+
+        # ---- Version 3 ----
+        db_handler = SyncDBHandler(file_name=None)
+        dataframe = db_handler.load_db_from_onc(dev_codes=strawb.dev_codes_deployed[:2],
+                                                date_from=datetime.timedelta(days=5),
+                                                add_hdf5_attributes=False,
+                                                add_dataframe=False)
+
+        self.assertTrue(db_handler.dataframe is None)
+        self.assertTrue(np.unique(dataframe['deviceCode'].to_numpy()).shape[0] == 2)  # more than on dev_code
+        self.assertTrue('rollover_interval' not in dataframe)  # add_hdf5_attributes=True
+        self.assertTrue('h5_attrs' not in dataframe)  # add_hdf5_attributes=False
 
     def test__convert_dict_entries_(self):
         con = {1: {1: 2, 2: 3}, 'a': {'b': 'c'}, 'previous_file_id': {np.nan: 0}}
@@ -176,6 +203,42 @@ class TestSyncDBHandler(TestCase):
         dict_2 = {1: 1, 2: 2, None: 3}
         self.assertEqual({1: 1, 2: 2, 0: 3},
                          SyncDBHandler._convert_dict_keys_(dict_2, con))
+
+    def test_add_new_columns(self):
+        pd_result_00 = pandas.DataFrame([{'fullPath': 'TEST_0.hdf5', 'col_1': 1, 'synced': True},  # take
+                                         {'fullPath': 'TEST_1.hdf5', 'col_1': 2, 'synced': True},  # take
+                                         {'fullPath': 'TEST_2.hdf5', 'col_1': 3, 'synced': True},  # drop
+                                         {'fullPath': 'TEST_3.hdf5', 'col_1': 4, 'synced': None},  # drop
+                                         {'fullPath': 'TEST_4.hdf5', 'col_1': 5, 'synced': False},  # drop
+                                         ])
+        pd_result_0 = pd_result_00.copy()  # as add_new_columns does things inplace
+
+        pd_result_1 = pandas.DataFrame([{'fullPath': 'TEST_0.hdf5', 'col_2': 10, 'synced': True},  # drop
+                                        {'fullPath': 'TEST_1.hdf5', 'col_2': 20, 'synced': True},  # take
+                                        {'fullPath': 'TEST_2.hdf5', 'col_2': 30, 'synced': True},  # drop
+                                        {'fullPath': 'TEST_3.hdf5', 'col_2': 40, 'synced': True},  # drop
+                                        {'fullPath': 'TEST_4.hdf5', 'col_2': 50, 'synced': True},  # drop
+                                        {'fullPath': 'TEST_5.hdf5', 'col_2': 60, 'synced': True},  # (new)
+                                        ])
+
+        SyncDBHandler(file_name=None).add_new_columns(dataframe2add=pd_result_1, dataframe=pd_result_0)
+        self.assertEqual(pd_result_0.loc['TEST_0.hdf5', 'col_2'], pd_result_1.loc['TEST_0.hdf5', 'col_2'])
+        self.assertEqual(pd_result_0.loc['TEST_0.hdf5', 'col_1'], 1)
+        self.assertEqual(pd_result_0.loc['TEST_0.hdf5', 'synced'], True)
+        # as isnull take pd_result_1
+        self.assertEqual(pd_result_0.loc['TEST_3.hdf5', 'synced'], pd_result_1.loc['TEST_3.hdf5', 'synced'])
+        self.assertEqual(pd_result_0.loc['TEST_4.hdf5', 'synced'], False)
+        # added row
+        self.assertEqual(pd_result_0.loc['TEST_5.hdf5', 'col_2'], pd_result_1.loc['TEST_5.hdf5', 'col_2'])
+        self.assertEqual(pd_result_0.loc['TEST_5.hdf5', 'synced'], pd_result_1.loc['TEST_5.hdf5', 'synced'])
+
+        pd_result_0 = pd_result_00.copy()  # as add_new_columns does things inplace
+        SyncDBHandler(file_name=None).add_new_columns(dataframe2add=pd_result_1, dataframe=pd_result_0, overwrite=True)
+        self.assertEqual(pd_result_0.loc['TEST_0.hdf5', 'col_2'], pd_result_1.loc['TEST_0.hdf5', 'col_2'])
+        self.assertEqual(pd_result_0.loc['TEST_0.hdf5', 'col_1'], 1)
+        self.assertEqual(pd_result_0.loc['TEST_0.hdf5', 'synced'], True)
+        self.assertEqual(pd_result_0.loc['TEST_3.hdf5', 'synced'], True)
+        self.assertEqual(pd_result_0.loc['TEST_5.hdf5', 'col_2'], pd_result_1.loc['TEST_5.hdf5', 'col_2'])  # added row
 
     def tearDown(self):
         hdf5_files = glob.glob('./*.hdf5')

@@ -86,60 +86,101 @@ class SyncDBHandler:
                                      protocol=4,  # protocol=4 compatible with python>=3.4
                                      )
 
-    def add_new_db(self, dataframe):
+    def add_new_db(self, dataframe2add, dataframe=None, ):
         """Updates a pandas.DataFrame to the internal pandas.DataFrame. If there is no internal pandas.DataFrame it set
         the provided dataframe as the internal. Otherwise it appends the dataframe to the internal.
+
         PARAMETER
         ---------
-        dataframe: pandas.DataFrame
+        dataframe2add: pandas.DataFrame
             either the index or the column name have to be 'fullPath' to prevent duplicates.
+        dataframe: pandas.DataFrame, optional
+            either the index or the column name have to be 'fullPath' to prevent duplicates. If None (default) it takes
+            the internal database.
+
+        RETURNS
+        -------
+        dataframe: pandas.DataFrame
+            with the added columns. As this happens inplace, the return can be ignored.
+            `dataframe = add_new_columns(dataframe2add, dataframe)` equals to
+            `add_new_columns(dataframe2add, dataframe)`
         """
-        self._check_index_(dataframe)  # check the new dataframe
+        to_self = False
+        if dataframe is None:
+            to_self = True
+            dataframe = self.dataframe
 
         if self.dataframe is None:
-            self.dataframe = dataframe
-        else:
-            # append it
-            self._check_double_indexes_(self.dataframe, dataframe)
-            self.dataframe = self.dataframe.append(dataframe,
-                                                   ignore_index=False,
-                                                   verify_integrity=True)
+            return dataframe2add  # no second dataframe defined -> nothing to add
 
-    def add_new_columns(self, dataframe, overwrite=False):
+        else:
+            self._check_index_(dataframe2add)  # check the new dataframe
+            self._check_index_(dataframe)  # check the new dataframe
+            # append it
+            self._check_double_indexes_(self.dataframe, dataframe2add)
+            dataframe = dataframe.append(dataframe2add,
+                                         ignore_index=False,
+                                         verify_integrity=True)
+            if to_self:
+                self.dataframe = dataframe
+
+        return dataframe
+
+    def add_new_columns(self, dataframe2add, dataframe=None, overwrite=False):
         """Adds new columns from a pandas.DataFrame to the internal pandas.DataFrame. If there is no internal
         pandas.DataFrame it set the provided dataframe as the internal. Otherwise it adds the columns from the provided
          dataframe to the internal dataframe.
+
         PARAMETER
         ---------
-        dataframe: pandas.DataFrame
+        dataframe2add: pandas.DataFrame
             either the index or the column name have to be 'fullPath' to prevent duplicates.
+        dataframe: pandas.DataFrame, optional
+            either the index or the column name have to be 'fullPath' to prevent duplicates. If None (default) it takes
+            the internal database.
+
+        RETURNS
+        -------
+        dataframe: pandas.DataFrame
+            with the added columns. As this happens inplace, the return can be ignored.
+            `dataframe = add_new_columns(dataframe2add, dataframe)` equals to
+            `add_new_columns(dataframe2add, dataframe)`
         """
-        self._check_index_(dataframe)  # check the new dataframe
+        if dataframe is None:
+            dataframe = self.dataframe
 
-        if self.dataframe is None:
-            self.dataframe = dataframe
-
-        if self.dataframe is None:
-            self.dataframe = dataframe
+        if dataframe is None:
+            return dataframe2add  # no second dataframe defined -> nothing to add
 
         else:
-            for col_i in dataframe:
-                if col_i not in self.dataframe:
+            self._check_index_(dataframe2add)  # check the new dataframe
+            self._check_index_(dataframe)  # check the new dataframe
+
+            for col_i in dataframe2add:
+                if col_i not in dataframe:
                     # append the columns at the end: self.dataframe.keys().shape[0]
-                    self.dataframe.insert(self.dataframe.keys().shape[0], col_i, dataframe[col_i])
+                    dataframe.insert(dataframe.keys().shape[0], col_i, dataframe2add[col_i])
                 else:
                     # handle rows with the same indexes
-                    intersection = set(self.dataframe.index).intersection(dataframe.index)
-                    if intersection != set():
-                        if overwrite:
-                            self.dataframe.loc[intersection, col_i] = dataframe.loc[intersection, col_i]
-                        else:
-                            print(f'WARNING: duplicate column {col_i}')
+                    intersection = dataframe.index.intersection(dataframe2add.index)
+                    mask_null = dataframe.loc[intersection, col_i].isnull()
+
+                    if np.sum(mask_null):
+                        dataframe.loc[intersection[mask_null], col_i] = dataframe2add.loc[intersection[mask_null], col_i]
+
+                    if overwrite:
+                        dataframe.loc[intersection[~mask_null], col_i] = \
+                            dataframe2add.loc[intersection[~mask_null], col_i]
+                    elif np.sum(~mask_null) and (dataframe.loc[intersection[~mask_null], col_i] !=
+                                                 dataframe2add.loc[intersection[~mask_null], col_i]).any():
+                        print(f'WARNING: duplicate column with different entries "{col_i}"')
 
                     # handle rows with the new indexes
-                    difference = set(dataframe.index).difference(self.dataframe.index)
-                    if difference != set():
-                        self.add_new_db(dataframe.loc[difference])
+                    difference = dataframe2add.index.difference(dataframe.index)
+                    for i in difference:
+                        dataframe.loc[i, col_i] = dataframe2add.loc[i, col_i]
+
+        return dataframe
 
     def get_mask_h5_attrs(self, dataframe=None):
         """Return a mask which mask all indexes where the column 'h5_attrs' is not 'np.nan' nor '{}'."""
@@ -282,13 +323,14 @@ class SyncDBHandler:
         dataframe['synced'] = np.array([os.path.exists(i) for i in dataframe["fullPath"]])
 
     def update_hdf5_attributes(self, dataframe=None, update_existing=False,
-                               entries_converter=None, keys_converter=None):
+                               entries_converter=None, keys_converter=None, add_hdf5_attributes2dataframe=True):
         """Get all hdf5 file attributes from the dataframe and adds it as 'h5_attrs' to it. It can also replace keys or
         entries of the hdf5 attribute dictionary. This is controlled by entries_converter and keys_converter
         PARAMETER
         ---------
         dataframe: pandas.DataFrame
-            either the index or the column name have to be 'fullPath' to prevent duplicates.
+            either the index or the column name have to be 'fullPath' to prevent duplicates. If None (default) it takes
+            the internal dataframe.
         update_existing: bool, optional
             if existing attributes should be loaded again (True) or not (False, default)
         entries_converter: dict or None, optional
@@ -297,7 +339,11 @@ class SyncDBHandler:
         keys_converter: dict or None, optional
             a dict parsed to _convert_dict_keys_(). If None (default) it uses:
             {'mes_typ': 'measurement_type', 'mes_duration': 'measurement_duration'}
+        add_hdf5_attributes2dataframe: bool, optional
+            if the hdf5_attributes should be added to the dataframe as new columns.
+            A hdf5_attributes={'file_id'=123} will result in a dataframe column 'file_id'.
         """
+
         if dataframe is None:
             dataframe = self.dataframe
         if dataframe is None:  # when self.dataframe is None
@@ -348,44 +394,81 @@ class SyncDBHandler:
                 attrs_dict = self._convert_dict_keys_(attrs_dict, converter=keys_converter)
                 dataframe.loc[full_path, 'h5_attrs'] = [attrs_dict]  # [] has to be used to set the dict - (why?)
 
-    def dataframe_from_hdf5_attributes(self):
+        if add_hdf5_attributes2dataframe:
+            h5_dataframe = self.dataframe_from_hdf5_attributes(dataframe=dataframe)
+            self.add_new_columns(dataframe2add=h5_dataframe, dataframe=dataframe, overwrite=True)
+
+        return dataframe
+
+    def dataframe_from_hdf5_attributes(self, dataframe=None):
         """Generates a dataframe from the SDAQ hdf5 file attributes. There must be at least the keys (columns):
         'file_start', 'file_end', 'run_start' and 'run_end'.
 
-        RETURNS
-        -------
-        hdf5_dataframe: pandas.DataFrame
-        """
-        mask = self.get_mask_h5_attrs(self.dataframe)
+        PARAMETER
+        ---------
+        dataframe: pandas.DataFrame
+            either the index or the column name have to be 'fullPath' to prevent duplicates. If None (default) it takes
+            the internal dataframe. Attention, this does NOT happen inplace.
 
-        dataframe = pandas.DataFrame(self.dataframe[mask]['h5_attrs'].to_list(),
-                                     index=self.dataframe[mask]['fullPath'])
+        RETURN
+        ------
+        h5_dataframe: pandas.DataFrame
+            a pandas.DataFrame from the hdf5 file attributes. This is a new DataFrame and independent from the provided
+            dataframe. Therefore, both DataFrames have to be combined in case this is needed.
+        """
+        if dataframe is None:
+            dataframe = self.dataframe
+        if dataframe is None:  # when self.dataframe is None
+            return
+
+        self._check_index_(dataframe)
+        mask = self.get_mask_h5_attrs(dataframe)
+        h5_dataframe = pandas.DataFrame(dataframe[mask]['h5_attrs'].to_list(),
+                                        index=dataframe[mask]['fullPath'])
+
+        # append the columns needed
+        missing = {'rollover_interval', 'file_start', 'file_end',
+                   'run_start', 'run_end'}.difference(h5_dataframe.columns)
+        for i in missing:
+            h5_dataframe[i] = None
 
         # format the columns
-        dataframe.rollover_interval.apply(lambda x: ast.literal_eval(str(x)))  # is dataframe string like "{'days': 1}"
-        dataframe.file_start = pandas.to_datetime(dataframe.file_start,
+        h5_dataframe.rollover_interval.apply(
+            lambda x: ast.literal_eval(str(x)))  # is dataframe string like "{'days': 1}"
+        h5_dataframe.file_start = pandas.to_datetime(h5_dataframe.file_start,
+                                                     unit='s', errors='coerce', utc=True, infer_datetime_format=True)
+        h5_dataframe.file_end = pandas.to_datetime(h5_dataframe.file_end,
+                                                   unit='s', errors='coerce', utc=True, infer_datetime_format=True)
+        h5_dataframe.run_start = pandas.to_datetime(h5_dataframe.run_start,
+                                                    unit='s', errors='coerce', utc=True, infer_datetime_format=True)
+        h5_dataframe.run_end = pandas.to_datetime(h5_dataframe.run_end,
                                                   unit='s', errors='coerce', utc=True, infer_datetime_format=True)
-        dataframe.file_end = pandas.to_datetime(dataframe.file_end,
-                                                unit='s', errors='coerce', utc=True, infer_datetime_format=True)
-        dataframe.run_start = pandas.to_datetime(dataframe.run_start,
-                                                 unit='s', errors='coerce', utc=True, infer_datetime_format=True)
-        dataframe.run_end = pandas.to_datetime(dataframe.run_end,
-                                               unit='s', errors='coerce', utc=True, infer_datetime_format=True)
-        return dataframe
+        return h5_dataframe
 
-    def load_db_from_onc(self, **kwargs):
+    def load_db_from_onc(self, add_hdf5_attributes=True, add_dataframe=True, **kwargs):
         """Loads downloads the db directly from the ONC server.
         PARAMETER
         ---------
         kwargs: dict, optional
             kwargs are parsed to strawb.ONCDownloader().download_structured. 'download' will be set to False.
+        add_hdf5_attributes: bool, optional
+            scan files for hdf5 attributes and adds to the dataframe as new columns
+        add_dataframe: bool, optional
+            if the dataframe should be added to the internal dataframe or not. Default is True.
         """
-        kwargs.update(dict(download=False))
-
         onc_downloader = ONCDownloader()
-        self.dataframe = onc_downloader.download_structured(**kwargs)
-        self.update_hdf5_attributes()
+        dataframe = onc_downloader.get_files_structured(**kwargs)
+        self.update_sync_state(dataframe=dataframe)
+
+        if add_hdf5_attributes:
+            self.update_hdf5_attributes(dataframe=dataframe, add_hdf5_attributes2dataframe=True)
+
+        if add_dataframe:
+            # here 'self.dataframe =' is important as it could be None before and that brakes the inplace
+            self.dataframe = self.add_new_columns(dataframe2add=dataframe, dataframe=self.dataframe, overwrite=True)
+
+        return dataframe
 
     def load_entire_db_from_ONC(self, **kwargs):
         kwargs.update(dict(date_from='strawb_all'))
-        self.load_db_from_onc(**kwargs)
+        return self.load_db_from_onc(**kwargs)
