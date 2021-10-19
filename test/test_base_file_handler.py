@@ -12,7 +12,7 @@ class TestBaseFileHandlerInit(TestCase):
 
         file_list = []
         for i in search_path_list:
-            file_list.extend(BaseFileHandler.find_files(file_pattern=i, directory=None, recursive=True))
+            file_list.extend(BaseFileHandler.find_files_glob(file_pattern=i, directory=None, recursive=True))
 
         if not file_list:
             raise FileNotFoundError(f'No files found for search_path: {search_path_list} in {Config.raw_data_dir}')

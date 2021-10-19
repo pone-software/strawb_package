@@ -86,8 +86,8 @@ class BaseFileHandler:
         pass
 
     @staticmethod
-    def find_files(file_pattern='*.hdf5', directory=None, recursive=True, raise_nothing_found=False):
-        """ Find files with the given pattern.
+    def find_files_glob(file_pattern='*.hdf5', directory=None, recursive=True, raise_nothing_found=False):
+        """ Find files with the given pattern via glob.glob.
         Parameter
         ---------
         file_pattern: str, optional
@@ -113,6 +113,11 @@ class BaseFileHandler:
             raise FileNotFoundError(f'No files found for file_pattern: {file_pattern} in {directory}')
 
         return file_list
+
+    @staticmethod
+    def find_files(**kwargs):
+        print('WARNING: Use find_files_glob() instead of find_files()')
+        BaseFileHandler.find_files_glob(**kwargs)
 
     @staticmethod
     def test_load_meta_data(file_name, load_function):

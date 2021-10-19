@@ -10,10 +10,10 @@ from src.strawb.sensors.camera import PictureHandler
 
 class TestCameraFileHandlerInit(TestCase):
     def setUp(self):
-        file_list = FileHandler.find_files('*-SDAQ-CAMERA.hdf5',
-                                           directory=Config.raw_data_dir,
-                                           recursive=True,
-                                           raise_nothing_found=True)
+        file_list = FileHandler.find_files_glob('*-SDAQ-CAMERA.hdf5',
+                                                directory=Config.raw_data_dir,
+                                                recursive=True,
+                                                raise_nothing_found=True)
 
         self.full_path = random.choice(file_list)  # select a random file
         self.file_name = os.path.split(self.full_path)[-1]
@@ -38,10 +38,10 @@ class TestCameraFileHandlerInit(TestCase):
 
 class TestPictureHandler(TestCase):
     def setUp(self):
-        file_list = FileHandler.find_files('*-SDAQ-CAMERA.hdf5',
-                                           directory=Config.raw_data_dir,
-                                           recursive=True,
-                                           raise_nothing_found=True)
+        file_list = FileHandler.find_files_glob('*-SDAQ-CAMERA.hdf5',
+                                                directory=Config.raw_data_dir,
+                                                recursive=True,
+                                                raise_nothing_found=True)
 
         self.full_path = random.choice(file_list)  # select a random file
 

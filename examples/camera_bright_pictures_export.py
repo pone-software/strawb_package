@@ -21,10 +21,10 @@ def main(n_files=3, pattern: str = '*-SDAQ-CAMERA.hdf5'):
     """
 
     # get all files which match the pattern
-    file_list = strawb.sensors.Camera.FileHandler.find_files(file_pattern=pattern,
-                                                             directory=strawb.Config.raw_data_dir,
-                                                             recursive=True,
-                                                             raise_nothing_found=False)
+    file_list = strawb.sensors.Camera.FileHandler.find_files_glob(file_pattern=pattern,
+                                                                  directory=strawb.Config.raw_data_dir,
+                                                                  recursive=True,
+                                                                  raise_nothing_found=False)
 
     if file_list is []:
         print(f'No file found for the pattern: {pattern}')
