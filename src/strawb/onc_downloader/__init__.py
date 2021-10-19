@@ -8,7 +8,8 @@ from onc.onc import ONC  # pip install onc; https://pypi.org/project/onc/
 from onc.util.util import add_docs
 
 import strawb
-from strawb.tools import human_size
+from .. import Config
+from ..tools import human_size, ShareJobThreads
 
 
 class ONCDownloader(ONC):
@@ -29,13 +30,13 @@ class ONCDownloader(ONC):
             parsed to ONC package initialisation.
         """
         if outPath is None:
-            outPath = strawb.Config.raw_data_dir
+            outPath = Config.raw_data_dir
 
         if token is None:
-            token = strawb.Config.onc_token
+            token = Config.onc_token
 
         if download_threads is None:
-            download_threads = strawb.Config.onc_download_threads
+            download_threads = Config.onc_download_threads
 
         ONC.__init__(self, token, outPath=outPath, download_threads=download_threads, **kwargs)
 
@@ -46,6 +47,11 @@ class ONCDownloader(ONC):
         self.result = ONC.getDirectFiles(self, filters_or_result=filters_or_result,
                                          overwrite=overwrite,
                                          allPages=allPages)
+
+    def _get_for_dev_code_(self, dev_i, filters):
+        filters['deviceCode'] = dev_i
+        result_i = self.getListByDevice(filters=filters, allPages=True)
+        return result_i
 
     def get_files_for_dev_codes(self, dev_codes: list, date_from: datetime, date_to: datetime,
                                 print_stats: bool = True):
@@ -72,13 +78,16 @@ class ONCDownloader(ONC):
 
         if print_stats:
             print('Obtain files from:')
-        for dev_i in dev_codes:
-            filters = {
-                'deviceCode': dev_i,
-                'dateFrom': date_from.strftime("%Y-%m-%dT%H:%M:%S.000Z"),  # '2020-10-20T00:00:00.000Z',
-                'dateTo': date_to.strftime("%Y-%m-%dT%H:%M:%S.999Z"),  # '2021-10-21T00:00:10.000Z',
-                'returnOptions': 'all'}
-            result_i = self.getListByDevice(filters=filters, allPages=True)
+
+        filters = {
+            'dateFrom': date_from.strftime("%Y-%m-%dT%H:%M:%S.000Z"),  # '2020-10-20T00:00:00.000Z',
+            'dateTo': date_to.strftime("%Y-%m-%dT%H:%M:%S.999Z"),  # '2021-10-21T00:00:10.000Z',
+            'returnOptions': 'all'}
+
+        sjt = ShareJobThreads(thread_n=len(dev_codes))
+        sjt.do(self._get_for_dev_code_, dev_codes, filters=filters)
+
+        for dev_i, result_i in zip(dev_codes, sjt.return_buffer):
             result['files'].extend(result_i['files'])
 
             n_files = len(result_i["files"])
