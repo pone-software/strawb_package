@@ -46,6 +46,16 @@ class ShareJobThreads:
         The above example translates to:
         sjt = ShareJobThreads(4)  # for 4 threads
         sjt.do(f, iterable)
+
+        In addition it provides a progress bar.
+
+        PARAMETER
+        ---------
+        thread_n: int, optional
+            the number of threads which will be used to execute the functions
+        fmt: str, optional
+            formatter for the bar, if not None, the iterable has to be a dict, i.e. iterable=[{'a':1, 'b':2},...], and
+            the fmt: '{a}-{b}'.
         """
         self.thread_n = thread_n
         self.lock = threading.Lock()
@@ -66,6 +76,19 @@ class ShareJobThreads:
         self.fmt = fmt  # formatter for the bar
 
     def do(self, f, iterable, **kwargs):
+        """Start the iterable job defined by a function f, an iterable and **kwargs on multiple threads. Each thread
+        does f(iterable[i], **kwargs) until there is no iterable left. The number of threads is defined at the
+        initialization of ShareJobThreads.
+
+        PARAMETER
+        ---------
+        f: executable
+            the function which is executed simultaneously on several threads. It has to take at least one argument.
+        iterable: iterable
+            the iterable the threads takes the items and execute the function with it
+        kwargs: dict, optional
+            kwargs are parsed to all function calls and don't change. It uses f(iterable[i], **kwargs).
+        """
         self.active = True
         self.iterable = iterable
         self.kwargs = kwargs
@@ -89,6 +112,7 @@ class ShareJobThreads:
             return self.return_buffer
 
     def _update_bar_(self, ):
+        """The function for the thread 'thread_bar' which takes care of the bar updates."""
         last_i = 0
 
         with tqdm(self.iterable,
@@ -110,9 +134,12 @@ class ShareJobThreads:
                 time.sleep(0.1)  # delay a bit
 
     def stop(self, ):
+        """Stop the Job."""
         self.active = False
 
     def _worker_(self, ):
+        """The worker function for the worker threads. It takes care of executing the target function 'f' with the next
+        item of the iterable list and the kwargs. """
         iterable_i = True
         while self.active and iterable_i:
             iterable_i = self._get_next_()
@@ -128,6 +155,7 @@ class ShareJobThreads:
                     self.i_bar += 1
 
     def _get_next_(self, ):
+        """ Get the next item of the iterable with a lock."""
         with self.lock:
             if len(self.iterable) > self.i:
                 iterable_i = self.iterable[self.i]
@@ -135,6 +163,7 @@ class ShareJobThreads:
                 return iterable_i
             else:
                 return False
+
 
 def hdf5_getunsorted(self, index):
     """Access a items of hdf5 dataset in an unsorted way. Indexes can also occur multiple times.
