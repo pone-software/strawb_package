@@ -52,6 +52,7 @@ class BaseFileHandler:
         if self.file is None:
             if self.file_typ in ['h5', 'hdf5']:
                 self.file = h5py.File(self.file_name, 'r', libver='latest', swmr=True)
+                self.file_attributes = dict(self.file.attrs)
             elif self.file_typ in ['txt']:
                 self.file = open(self.file_name, 'r')
             else:
@@ -78,7 +79,6 @@ class BaseFileHandler:
     def load_meta_data(self, ):
         """Opens the file and loads the data defined by __load_meta_data__."""
         self.open()
-        self.file_attributes = dict(self.file.attrs)
         self.__load_meta_data__()
 
     def __load_meta_data__(self, ):
