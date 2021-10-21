@@ -6,7 +6,7 @@ from strawb.config_parser.__init__ import Config
 
 
 class BaseFileHandler:
-    def __init__(self, file_name=None, module=None):
+    def __init__(self, file_name=None, module=None, raise_empty_file=False):
         # get all Meta Data arrays
         self.__members__ = [attr for attr in dir(self) if
                             not callable(getattr(self, attr)) and not attr.startswith("__")]
@@ -15,6 +15,10 @@ class BaseFileHandler:
         self.file_name = None
         self.module = None
         self.file_typ = None  # file type
+
+        # empty file
+        self.raise_empty_file = raise_empty_file
+        self.is_empty = None
 
         self.file_attributes = None  # holds all hdf5-file attributes as dict
 
@@ -53,8 +57,10 @@ class BaseFileHandler:
             if self.file_typ in ['h5', 'hdf5']:
                 self.file = h5py.File(self.file_name, 'r', libver='latest', swmr=True)
                 self.file_attributes = dict(self.file.attrs)
+
             elif self.file_typ in ['txt']:
                 self.file = open(self.file_name, 'r')
+
             else:
                 raise NotImplementedError(f'file_typ not implemented {self.file_typ}')
 
@@ -73,13 +79,24 @@ class BaseFileHandler:
         self.close()
 
     def __del__(self):
-        """ When object is not used anymore."""
+        """When object is not deleted, e.g. when program ends, variable deleted, deleted by the garbage collector."""
         self.close()
 
     def load_meta_data(self, ):
         """Opens the file and loads the data defined by __load_meta_data__."""
         self.open()
-        self.__load_meta_data__()
+        if self.file_typ in ['h5', 'hdf5']:
+            if not list(self.file.keys()):  # no groups inside the file -> empty file
+                self.is_empty = True
+                if self.raise_empty_file:
+                    raise FileExistsError(f'File {self.file.file_name} is empty! Can not load {type(self).__name__}.')
+                else:
+                    print(f'WARNING: HDF5 File {self.file_name} is empty.')
+            else:
+                self.__load_meta_data__()
+
+        elif self.file_typ in ['txt']:
+            self.__load_meta_data__()
 
     def __load_meta_data__(self, ):
         """Placeholder which defines how data are read."""
