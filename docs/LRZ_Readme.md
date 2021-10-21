@@ -88,10 +88,9 @@ For directories, you have to take care to set the source string in the right syn
 
 #### Parameters of hosted VMs and shh_config entries
 
-| Name | STRAW-LRZ-VM (24/7, 1 CPU) |
-| --- | --- |
-| <user_name> | di46lez |
-| <ip-address> | 138.246.233.224 |
+| VM Name | resources | <user_name> | <ip_address> |
+| --- | --- | --- | --- |
+| STRAW-LRZ-VM | Active 24/7, 1 CPU, 4.5GB | di46lez | 138.246.233.224 |
 
 SSH config entry to add to `~/.ssh/config`:
 ```bash
