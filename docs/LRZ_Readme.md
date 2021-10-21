@@ -93,7 +93,7 @@ For directories, you have to take care to set the source string in the right syn
 | <user_name> | di46lez |
 | <ip-address> | 138.246.233.224 |
 
-SSH config entry:
+SSH config entry to add to `~/.ssh/config`:
 ```bash
 Host straw-lrz-vm
     User            di46lez
