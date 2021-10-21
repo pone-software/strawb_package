@@ -4,6 +4,7 @@ import shutil
 import cv2
 import numpy as np
 
+from .file_handler import FileHandler
 from ...config_parser import Config
 
 
@@ -24,8 +25,15 @@ class PictureHandler:
     bayer_pattern = cv2.COLOR_BAYER_BG2RGB_EA  # <- that's what we need as cv2 exports BGR -> BG2 instead of RG2
 
     def __init__(self, file_handler):
-        self.file = file_handler
-        self.integrated_raw = np.sum(self.file.raw,
+        self.file_handler = file_handler
+
+        if not isinstance(file_handler, FileHandler):
+            raise ValueError(f'file_handler is no instance of strawb.sensors.camera.FileHandler')
+        elif self.file_handler.is_empty is None:  # protect against empty file
+            raise ValueError(f'No file defined in file handler.')
+        elif self.file_handler.is_empty:  # protect against empty file
+            raise FileExistsError(f'File {self.file_handler.file_name} is empty! Can not load {type(self).__name__}.')
+        self.integrated_raw = np.sum(self.file_handler.raw,
                                      axis=(1, 2))  # processed but close to raw, sum over all pixels per image
 
         # processed Data - !! have to be set to non after an append in the CameraModuleHandler !!
@@ -61,7 +69,7 @@ class PictureHandler:
     def load_raw(self, index=None, exclude_invalid=True):
         """exclude_invalid only works with index=None"""
         index = self.get_index(index=index, exclude_invalid=exclude_invalid)
-        raw = self.file.raw.getunsorted(index)
+        raw = self.file_handler.raw.getunsorted(index)
         return raw[np.argsort(np.argsort(index))]  # revert sort
 
     def cal_integrated_minus_dark(self, ):
@@ -85,7 +93,7 @@ class PictureHandler:
 
     def get_index(self, index=None, exclude_invalid=True):
         if index is None:
-            index = np.arange(self.file.time.shape[0])
+            index = np.arange(self.file_handler.time.shape[0])
 
         elif type(index) is int:
             index = [index]
@@ -108,13 +116,13 @@ class PictureHandler:
                                             self.bayer_pattern)
 
     def cut2effective_pixel_single(self, rgb):
-        return np.array(rgb)[self.file.EffMargins[0]:-self.file.EffMargins[1],
-                             self.file.EffMargins[2]:-self.file.EffMargins[3]]
+        return np.array(rgb)[self.file_handler.EffMargins[0]:-self.file_handler.EffMargins[1],
+               self.file_handler.EffMargins[2]:-self.file_handler.EffMargins[3]]
 
     def cut2effective_pixel_arr(self, rgb_arr):
         return np.array(rgb_arr)[:,
-                                 self.file.EffMargins[0]:-self.file.EffMargins[1],
-                                 self.file.EffMargins[2]:-self.file.EffMargins[3]]
+               self.file_handler.EffMargins[0]:-self.file_handler.EffMargins[1],
+               self.file_handler.EffMargins[2]:-self.file_handler.EffMargins[3]]
 
     def frame_raw_to_rgb(self, frame_raw):
         """Values have to be from [0...2**16-1] i.e. np.uint16."""
@@ -180,13 +188,13 @@ class PictureHandler:
 
         # prepare directory
         directory = os.path.abspath(directory.format(proc_data_dir=Config.proc_data_dir,
-                                                     module=self.file.module, module_lower=self.file.module.lower()))
+                                                     module=self.file_handler.module, module_lower=self.file_handler.module.lower()))
         os.makedirs(directory, exist_ok=True)
 
         file_name_list = []
         for i, index_i in enumerate(index):
             # prepare file name, get time to correct format
-            date_i = self.file.time.getunsorted([index_i]).astype('datetime64[s]')[0]
+            date_i = self.file_handler.time.getunsorted([index_i]).astype('datetime64[s]')[0]
             str_date_i = str(date_i).replace(':', '_').replace('.', '_').replace('-', '_').replace('T', '_')
 
             formatter_dict = {'datetime': str_date_i, 'index': index_i, 'i': i}
@@ -209,13 +217,13 @@ class PictureHandler:
     def get_lucifer_mask(self, mode_list=None):
         """ mode_list is something like [2, 0, 15, 7] or [1, 1, 15, -125] ([mode, addr, current, duration])"""
         if mode_list is None:
-            mode_list = np.unique(self.file.lucifer_options[:], axis=0)
+            mode_list = np.unique(self.file_handler.lucifer_options[:], axis=0)
             # in the following line, only 'mode_list[:, 0] == -125' without np.argwhere raise an FutureWarning
             mode_list = np.delete(mode_list, np.argwhere(mode_list[:, 0] == -125), axis=0)  # remove lucifer off
 
         mask_list = []
         for i in mode_list:
-            mask_list.append(np.all(self.file.lucifer_options[:] == i, axis=-1))
+            mask_list.append(np.all(self.file_handler.lucifer_options[:] == i, axis=-1))
 
         return mode_list, mask_list
 

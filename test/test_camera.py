@@ -6,17 +6,22 @@ import numpy as np
 from src.strawb.config_parser import Config
 from src.strawb.sensors.camera.file_handler import FileHandler
 from src.strawb.sensors.camera import PictureHandler
+from strawb import SyncDBHandler
 
 
 class TestCameraFileHandlerInit(TestCase):
     def setUp(self):
-        file_list = FileHandler.find_files_glob('*-SDAQ-CAMERA.hdf5',
-                                                directory=Config.raw_data_dir,
-                                                recursive=True,
-                                                raise_nothing_found=True)
+        # Load DB, in case execute db.load_entire_db_from_ONC() to load the entire db, but this takes a bit.
+        db = SyncDBHandler(file_name='Default')  # loads the db
 
-        self.full_path = random.choice(file_list)  # select a random file
-        self.file_name = os.path.split(self.full_path)[-1]
+        # filter the camera files
+        mask = db.dataframe.fullPath.str.endswith('CAMERA.hdf5')  # filter by filename
+        mask &= db.dataframe.synced  # mask unsynced hdf5 files
+        mask &= db.dataframe.fileSize > 11000  # mask empty hdf5 files
+
+        # and take one file randomly
+        self.full_path = random.choice(db.dataframe.fullPath[mask])
+        self.file_name = os.path.basename(self.full_path)
 
     def test_init_full_path(self):
         camera = FileHandler(self.full_path)
@@ -38,13 +43,16 @@ class TestCameraFileHandlerInit(TestCase):
 
 class TestPictureHandler(TestCase):
     def setUp(self):
-        file_list = FileHandler.find_files_glob('*-SDAQ-CAMERA.hdf5',
-                                                directory=Config.raw_data_dir,
-                                                recursive=True,
-                                                raise_nothing_found=True)
+        # Load DB, in case execute db.load_entire_db_from_ONC() to load the entire db, but this takes a bit.
+        db = SyncDBHandler(file_name='Default')  # loads the db
 
-        self.full_path = random.choice(file_list)  # select a random file
+        # filter the camera files
+        mask = db.dataframe.fullPath.str.endswith('CAMERA.hdf5')  # filter by filename
+        mask &= db.dataframe.synced  # mask unsynced hdf5 files
+        mask &= db.dataframe.fileSize > 11000  # mask empty hdf5 files
 
+        # and take one file randomly
+        self.full_path = random.choice(db.dataframe.fullPath[mask])
         cam_run = FileHandler(self.full_path)
         self.picture_handler = PictureHandler(cam_run)
 
