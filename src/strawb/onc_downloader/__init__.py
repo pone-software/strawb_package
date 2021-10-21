@@ -250,6 +250,23 @@ class ONCDownloader(ONC):
                           min_file_size=0, max_file_size=.75e9,
                           extensions=None,  # data_product_names=None
                           ):
+        """Maks the dataframe by file size (min and max), extension (e.g. 'txt').
+        PARAMETER
+        ---------
+        pd_result: pandas.DataFrame
+            the dataframe to mask
+        min_file_size: int or float, optional
+            the minimum file size. Default is 0.
+        max_file_size: int or float, optional
+            the maximum file size. Default is 0.
+        extension: str, list[str] or None, optional
+            the file extension(s) to filter. E.g. a list ['txt', 'hdf5'] or a single string 'txt' or None (defautl)
+
+        RETURNS
+        -------
+        mask: pandas.Series
+            pandas.Series of bools which mask the original DataFrame.
+        """
         # mask the by file size
         mask = min_file_size <= pd_result['fileSize']
         mask &= pd_result['fileSize'] <= max_file_size
