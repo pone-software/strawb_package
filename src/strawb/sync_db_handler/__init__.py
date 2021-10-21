@@ -390,8 +390,8 @@ class SyncDBHandler:
 
         items_to_check[~dataframe['synced']] = False  # exclude non existing files
 
-        # convert file_id's with nan to int. Otherwise pandas interprets the Serias as float and the resolution
-        # of the np.float64 isn't sufficient for a np.unint64.
+        # convert file_id's with nan to int. Otherwise pandas interprets the Series as float and the resolution
+        # of the np.float64 isn't sufficient for a np.uint64.
         if entries_converter is None:
             entries_converter = {'previous_file_id': {np.nan: 0}, 'following_file_id': {np.nan: 0}}
 

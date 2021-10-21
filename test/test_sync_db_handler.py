@@ -152,6 +152,7 @@ class TestSyncDBHandler(TestCase):
         db_handler = SyncDBHandler(file_name=None)
         db_handler.load_db_from_onc(dev_codes=dev_codes_deployed[0], add_hdf5_attributes=True, add_dataframe=True)
 
+        # noinspection PyTypeChecker
         self.assertTrue(any(db_handler.dataframe['deviceCode'] == dev_codes_deployed[0]))
         self.assertTrue('rollover_interval' in db_handler.dataframe)  # add_hdf5_attributes=True
         self.assertTrue('h5_attrs' in db_handler.dataframe)  # add_hdf5_attributes=True

@@ -12,7 +12,6 @@ WHAT THIS SCRIPT DOES
 import argparse
 import datetime
 
-import os
 import strawb
 
 

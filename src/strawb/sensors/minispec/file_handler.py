@@ -133,7 +133,7 @@ class FileHandler(BaseFileHandler):
             for pixel_number in range(self.ADC_shape[1]):
                 for measurement_number in range(self.ADC_shape[0]):
                     single_device.ADC_counts_dark[
-                        measurement_number:pixel_number] = calibration_obj.darkcounts_fit_function(
+                    measurement_number:pixel_number] = calibration_obj.darkcounts_fit_function(
                         single_device.exposure_time[measurement_number],
                         single_device.temperature_after[measurement_number],
                         *opt_parameters.reshape(calibration_obj.len_opt_parameter, 1, -1))

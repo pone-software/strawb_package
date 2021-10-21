@@ -41,4 +41,3 @@ class TestBaseFileHandlerInit(TestCase):
     def test_init_multiple_exiting_file(self):
         file_name = '*.*'
         self.assertRaises(FileExistsError, BaseFileHandler, file_name=file_name)
-

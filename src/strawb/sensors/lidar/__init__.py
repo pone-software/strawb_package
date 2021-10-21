@@ -1,11 +1,10 @@
 from typing import Union
 
-from strawb.sensors.lidar.LidarProcessedDataStore import LidarProcessedDataStore
+from strawb.sensors.lidar.lidar_processed_data_store import LidarProcessedDataStore
 from strawb.sensors.lidar.file_handler import FileHandler
-from strawb.trb_tools import TRBTools
 
 
-class Lidar(TRBTools):
+class Lidar:
     # FileHandler = FileHandler
 
     def __init__(self, name='', file: Union[str, FileHandler] = None):

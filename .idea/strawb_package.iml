@@ -14,7 +14,7 @@
       <excludeFolder url="file://$MODULE_DIR$/.git" />
       <excludeFolder url="file://$MODULE_DIR$/examples/.ipynb_checkpoints" />
     </content>
-    <orderEntry type="jdk" jdkName="Python 3.8 (strawb_package)" jdkType="Python SDK" />
+    <orderEntry type="jdk" jdkName="Python 3.7 (base)" jdkType="Python SDK" />
     <orderEntry type="sourceFolder" forTests="false" />
   </component>
 </module>

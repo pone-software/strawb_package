@@ -18,7 +18,7 @@ class ConfigParser:
     config = ModConfigParser()
     config_path = os.path.expanduser('~/.strawb/config')
 
-    # go back 3 times (the dir. structure in this repro): config_parser + strawb + src
+    # go back 3 times (the dir. structure in this repository): config_parser + strawb + src
     repository_home = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../..'))
 
     # if this path doesn't exist, use the default from the repository

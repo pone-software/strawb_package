@@ -171,17 +171,17 @@ class DatasetsInGroupSameSize:
                     else:
                         path_dict[j.path] = [j.shape[0]]
 
-            invalid_pathes = set()
+            invalid_paths = set()
             for key_i, value_i in path_dict.items():
                 if len(value_i) != len(hdf5_structure_dict[group_i]):
-                    invalid_pathes.update([key_i])
+                    invalid_paths.update([key_i])
                     print(f'Not all datasets in group: "{group_i}"; file: "{key_i}"')
                 elif len(set(value_i)) != 1:
-                    invalid_pathes.update([key_i])
+                    invalid_paths.update([key_i])
                     print(f'More than one shape in group: "{group_i}"; file: "{key_i}"; shapes: {value_i}')
 
-            if invalid_pathes:
-                invalid_dict[group_i] = invalid_pathes
+            if invalid_paths:
+                invalid_dict[group_i] = invalid_paths
 
         return invalid_dict
 
