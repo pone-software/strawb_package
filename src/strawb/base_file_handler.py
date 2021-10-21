@@ -93,9 +93,11 @@ class BaseFileHandler:
                 else:
                     print(f'WARNING: HDF5 File {self.file_name} is empty.')
             else:
+                self.is_empty = False
                 self.__load_meta_data__()
 
         elif self.file_typ in ['txt']:
+            self.is_empty = False  # TODO: detect an empty txt file
             self.__load_meta_data__()
 
     def __load_meta_data__(self, ):
