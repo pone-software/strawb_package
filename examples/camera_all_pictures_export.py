@@ -7,7 +7,7 @@ import strawb
 from strawb.tools import ShareJobThreads
 
 
-def main(n_files=3, pattern: str = '*-SDAQ-CAMERA.hdf5'):
+def main(n_files=3):
     """ Search for files defined by the pattern and select n_files from those files.
     It pars each file to the function `parse_one_file` paralysed with ShareJobThreads.
     PARAMETER
@@ -17,15 +17,20 @@ def main(n_files=3, pattern: str = '*-SDAQ-CAMERA.hdf5'):
     n_files: None, or int.
         The number of files which are processed. None, means all files found.
     """
+    # in case execute db.load_entire_db_from_ONC() to load the entire db
+    db = strawb.SyncDBHandler(file_name='Default')  # loads the db
+
+    ending = 'CAMERA.hdf5'
+    # mask by device
+    mask = db.dataframe.fullPath.str.endswith(ending)  # filter by filename
+    mask &= db.dataframe.synced  # mask un-synced hdf5 files
+    mask &= db.dataframe.fileSize > 11000  # mask empty hdf5 files
 
     # get all files which match the pattern
-    file_list = strawb.sensors.Camera.FileHandler.find_files_glob(file_pattern=pattern,
-                                                                  directory=strawb.Config.raw_data_dir,
-                                                                  recursive=True,
-                                                                  raise_nothing_found=False)
+    file_list = list(db.dataframe.fullPath[mask])
 
     if file_list is []:
-        print(f'No file found for the pattern: {pattern}')
+        print(f'No file found which ends with: {ending}')
         return
     elif n_files is None or len(file_list) <= n_files:
         print(f'Process all {len(file_list)} files.')
@@ -39,11 +44,10 @@ def main(n_files=3, pattern: str = '*-SDAQ-CAMERA.hdf5'):
 
 
 def parse_one_file(full_path):
-    # initialise the FileHandler and PictureHandler
-    cam_run = strawb.sensors.Camera.FileHandler(full_path)
-    picture_handler = strawb.sensors.Camera.PictureHandler(cam_run)
+    # initialise the FileHandler and CameraProcessedDataStore
+    camera = strawb.sensors.Camera(full_path)
 
-    return picture_handler.image2png(exclude_invalid=False)
+    return camera.pds.image2png(exclude_invalid=False)
 
 
 # execute only if run as a script

@@ -5,10 +5,11 @@ import cv2
 import numpy as np
 
 from .file_handler import FileHandler
+from ...base_processed_data_store import BaseProcessedDataStore
 from ...config_parser import Config
 
 
-class PictureHandler:
+class CameraProcessedDataStore(BaseProcessedDataStore):
     """Everything related to a single hdf5 file. The RAW image data is accessed directly
     form the hdf5 file to save RAM. It is capable of determine invalid pictures (property: invalid_mask)
     and takes the n darkest pictures as an average for a dark frame. It also includes the
@@ -28,15 +29,15 @@ class PictureHandler:
         self.file_handler = file_handler
 
         if not isinstance(file_handler, FileHandler):
-            raise ValueError(f'file_handler is no instance of strawb.sensors.camera.FileHandler')
-        elif self.file_handler.is_empty is None:  # protect against empty file
-            raise ValueError(f'No file defined in file handler.')
-        elif self.file_handler.is_empty:  # protect against empty file
-            raise FileExistsError(f'File {self.file_handler.file_name} is empty! Can not load {type(self).__name__}.')
-        self.integrated_raw = np.sum(self.file_handler.raw,
-                                     axis=(1, 2))  # processed but close to raw, sum over all pixels per image
+            raise ValueError(f'file_handler is no instance of strawb.sensors.camera.FileHandler.'
+                             f'{type(file_handler)}')
+        # elif self.file_handler.is_empty is None:  # protect against empty file
+        #     raise ValueError(f'No file defined in file handler.')
+        # elif self.file_handler.is_empty:  # protect against empty file
+        #     raise FileExistsError(f'File {self.file_handler.file_name} is empty! Can not load {type(self).__name__}.')
 
-        # processed Data - !! have to be set to non after an append in the CameraModuleHandler !!
+        # processed Data
+        self._integrated_raw = None
         self._raw_dark_frame = None  # for property
         self._rgb_dark_frame = None  # for property
         self._invalid_mask = None  # for property
@@ -44,6 +45,14 @@ class PictureHandler:
         self._max_value_minus_dark = None
 
     # ---- Properties ----
+    @property
+    def integrated_raw(self):
+        if self._integrated_raw is None:
+            self._integrated_raw = np.sum(self.file_handler.raw,
+                                          axis=(1, 2))  # sum over all pixels per image
+
+        return self._integrated_raw
+
     @property
     def integrated_minus_dark(self, ):
         if self._integrated_minus_dark is None:
@@ -117,12 +126,12 @@ class PictureHandler:
 
     def cut2effective_pixel_single(self, rgb):
         return np.array(rgb)[self.file_handler.EffMargins[0]:-self.file_handler.EffMargins[1],
-               self.file_handler.EffMargins[2]:-self.file_handler.EffMargins[3]]
+                             self.file_handler.EffMargins[2]:-self.file_handler.EffMargins[3]]
 
     def cut2effective_pixel_arr(self, rgb_arr):
         return np.array(rgb_arr)[:,
-               self.file_handler.EffMargins[0]:-self.file_handler.EffMargins[1],
-               self.file_handler.EffMargins[2]:-self.file_handler.EffMargins[3]]
+                                 self.file_handler.EffMargins[0]:-self.file_handler.EffMargins[1],
+                                 self.file_handler.EffMargins[2]:-self.file_handler.EffMargins[3]]
 
     def frame_raw_to_rgb(self, frame_raw):
         """Values have to be from [0...2**16-1] i.e. np.uint16."""
@@ -188,7 +197,8 @@ class PictureHandler:
 
         # prepare directory
         directory = os.path.abspath(directory.format(proc_data_dir=Config.proc_data_dir,
-                                                     module=self.file_handler.module, module_lower=self.file_handler.module.lower()))
+                                                     module=self.file_handler.module,
+                                                     module_lower=self.file_handler.module.lower()))
         os.makedirs(directory, exist_ok=True)
 
         file_name_list = []

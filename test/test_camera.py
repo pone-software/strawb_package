@@ -5,7 +5,7 @@ import numpy as np
 
 from src.strawb.config_parser import Config
 from src.strawb.sensors.camera.file_handler import FileHandler
-from src.strawb.sensors.camera import PictureHandler
+from src.strawb.sensors.camera import CameraProcessedDataStore
 from strawb import SyncDBHandler
 
 
@@ -16,7 +16,7 @@ class TestCameraFileHandlerInit(TestCase):
 
         # filter the camera files
         mask = self.db.dataframe.fullPath.str.endswith('CAMERA.hdf5')  # filter by filename
-        mask &= self.db.dataframe.synced  # mask unsynced hdf5 files
+        mask &= self.db.dataframe.synced  # mask un-synced hdf5 files
         mask &= self.db.dataframe.fileSize > 11000  # mask empty hdf5 files
 
         # and take one file randomly
@@ -41,11 +41,11 @@ class TestCameraFileHandlerInit(TestCase):
         camera = FileHandler(self.file_name)
         # check here only the time
         self.assertFalse(camera.is_empty,
-                        f'camera.is_empty should be False for {camera.file_name}')
+                         f'camera.is_empty should be False for {camera.file_name}')
 
         # filter the camera files
         mask = self.db.dataframe.fullPath.str.endswith('CAMERA.hdf5')  # filter by filename
-        mask &= self.db.dataframe.synced  # mask unsynced hdf5 files
+        mask &= self.db.dataframe.synced  # mask un-synced hdf5 files
         mask &= self.db.dataframe.fileSize > 11000  # mask empty hdf5 files
 
         # and take one file randomly
@@ -53,26 +53,26 @@ class TestCameraFileHandlerInit(TestCase):
         camera = FileHandler(full_path)
         # check here only the time
         self.assertFalse(camera.is_empty,
-                        f'camera.is_empty should be False for {camera.file_name}')
+                         f'camera.is_empty should be False for {camera.file_name}')
 
     def tearDown(self):
         print(self.full_path)
 
 
-class TestPictureHandler(TestCase):
+class TestCameraProcessedDataStore(TestCase):
     def setUp(self):
         # Load DB, in case execute db.load_entire_db_from_ONC() to load the entire db, but this takes a bit.
         db = SyncDBHandler(file_name='Default')  # loads the db
 
         # filter the camera files
         mask = db.dataframe.fullPath.str.endswith('CAMERA.hdf5')  # filter by filename
-        mask &= db.dataframe.synced  # mask unsynced hdf5 files
+        mask &= db.dataframe.synced  # mask un-synced hdf5 files
         mask &= db.dataframe.fileSize > 11000  # mask empty hdf5 files
 
         # and take one file randomly
         self.full_path = random.choice(db.dataframe.fullPath[mask])
         cam_run = FileHandler(self.full_path)
-        self.picture_handler = PictureHandler(cam_run)
+        self.picture_handler = CameraProcessedDataStore(cam_run)
 
     def test_image2png_lucifer(self):
         self.picture_handler.image2png_lucifer()

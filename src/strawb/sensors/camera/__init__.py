@@ -1,9 +1,17 @@
 # Author: Kilian Holzapfel <kilian.holzapfel@tum.de>
+from typing import Union
 
 from .file_handler import FileHandler
-from .picture_handler import PictureHandler
+from .camera_processed_data_store import CameraProcessedDataStore
 
 
 class Camera:
-    FileHandler = FileHandler
-    PictureHandler = PictureHandler
+    def __init__(self, file: Union[str, FileHandler] = None, name=''):
+        self.name = name
+
+        if isinstance(file, str):
+            self.file_handler = FileHandler(file_name=file)
+        else:
+            self.file_handler = file
+
+        self.pds = CameraProcessedDataStore(file_handler=self.file_handler)
