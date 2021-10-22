@@ -44,10 +44,10 @@ def main(n_files=3):
 
 
 def parse_one_file(full_path):
-    # initialise the FileHandler and CameraProcessedDataStore
+    # initialise the FileHandler and Images
     camera = strawb.sensors.Camera(full_path)
 
-    return camera.pds.image2png(exclude_invalid=False)
+    return camera.images.image2png(exclude_invalid=False)
 
 
 # execute only if run as a script

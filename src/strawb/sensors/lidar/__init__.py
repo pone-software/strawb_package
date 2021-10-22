@@ -1,6 +1,6 @@
 from typing import Union
 
-from strawb.sensors.lidar.lidar_processed_data_store import LidarProcessedDataStore
+from strawb.sensors.lidar.lidar_trb_rates import LidarTRBRates
 from strawb.sensors.lidar.file_handler import FileHandler
 
 
@@ -15,4 +15,4 @@ class Lidar:
         else:
             self.file_handler = file
 
-        self.pds = LidarProcessedDataStore(file_handler=self.file_handler)
+        self.trb_rates = LidarTRBRates(file_handler=self.file_handler)

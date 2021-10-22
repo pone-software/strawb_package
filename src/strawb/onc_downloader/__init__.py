@@ -260,12 +260,12 @@ class ONCDownloader(ONC):
         max_file_size: int or float, optional
             the maximum file size. Default is 0.
         extension: str, list[str] or None, optional
-            the file extension(s) to filter. E.g. a list ['txt', 'hdf5'] or a single string 'txt' or None (defautl)
+            the file extension(s) to filter. E.g. a list ['txt', 'hdf5'] or a single string 'txt' or None (default)
 
         RETURNS
         -------
         mask: pandas.Series
-            pandas.Series of bools which mask the original DataFrame.
+            pandas.Series of bool which mask the original DataFrame.
         """
         # mask the by file size
         mask = min_file_size <= pd_result['fileSize']

@@ -5,11 +5,10 @@ import cv2
 import numpy as np
 
 from .file_handler import FileHandler
-from ...base_processed_data_store import BaseProcessedDataStore
 from ...config_parser import Config
 
 
-class CameraProcessedDataStore(BaseProcessedDataStore):
+class Images:
     """Everything related to a single hdf5 file. The RAW image data is accessed directly
     form the hdf5 file to save RAM. It is capable of determine invalid pictures (property: invalid_mask)
     and takes the n darkest pictures as an average for a dark frame. It also includes the

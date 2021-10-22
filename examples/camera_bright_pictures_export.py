@@ -46,18 +46,18 @@ def main(n_files=3):
 
 
 def parse_one_file(full_path, threshold=5e3):
-    # initialise the FileHandler and CameraProcessedDataStore
+    # initialise the FileHandler and Images
     camera = strawb.sensors.Camera(full_path)
 
-    mode_list, mask_list = camera.pds.get_lucifer_mask()
+    mode_list, mask_list = camera.images.get_lucifer_mask()
     mask_lucifer = np.any(mask_list, axis=0)
 
-    mask = (camera.pds.integrated_minus_dark > threshold) & camera.pds.invalid_mask & ~mask_lucifer
-    index = np.argsort(camera.pds.integrated_minus_dark)
+    mask = (camera.images.integrated_minus_dark > threshold) & camera.images.invalid_mask & ~mask_lucifer
+    index = np.argsort(camera.images.integrated_minus_dark)
     index = index[mask[index]]  # remove invalid items  & cam_module.invalid_mask
     index = index[::-1]  # revers the order
 
-    return camera.pds.image2png(index=index, f_name_formatter='{i}_{datetime}.png')
+    return camera.images.image2png(index=index, f_name_formatter='{i}_{datetime}.png')
 
 
 # execute only if run as a script

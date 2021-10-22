@@ -1,12 +1,11 @@
 import numpy as np
 import pandas
 
-from strawb.base_processed_data_store import BaseProcessedDataStore
 from strawb.sensors.lidar.file_handler import FileHandler
 from strawb.trb_tools import TRBTools
 
 
-class LidarProcessedDataStore(BaseProcessedDataStore, TRBTools):
+class LidarTRBRates(TRBTools):
     def __init__(self, file_handler: FileHandler):
         self.file_handler = file_handler
 

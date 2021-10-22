@@ -2,7 +2,7 @@
 from typing import Union
 
 from .file_handler import FileHandler
-from .camera_processed_data_store import CameraProcessedDataStore
+from .images import Images
 
 
 class Camera:
@@ -14,4 +14,4 @@ class Camera:
         else:
             self.file_handler = file
 
-        self.pds = CameraProcessedDataStore(file_handler=self.file_handler)
+        self.images = Images(file_handler=self.file_handler)
