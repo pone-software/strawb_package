@@ -1,6 +1,6 @@
 # LRZ Documentation
 
-This project uses 2 different LRZ tools. The [DSS](#DSS) is the storage backend and the [Compute Cloud](#Compute-Cloud) hosts VMs. (Maybe also the [Linux Cluster](https://doku.lrz.de/display/PUBLIC/Linux+Cluster) in the future.)
+This project uses 2 different LRZ tools. The [DSS](#DSS) is the storage backend and the [Compute Cloud](#compute-cloud---vm-hosting) hosts VMs. (Maybe also the [Linux Cluster](https://doku.lrz.de/display/PUBLIC/Linux+Cluster) in the future.)
 
 ## Overview
 For STRAW and STRAWb, the `STRAW-LRZ-VM` runs 24/7, has 1 CPU with 4.5 GB RAM and therefore takes care of synchronising the module data from the ONC DB and monitoring both detectors. But it can also do some simple calculations. For more power, another VM has to be set up. On the VM the DSS-Storage is mounted to `/dss`. 
@@ -37,9 +37,33 @@ The important part is the *Select the Identity Provider*: LRZ must be selected a
 The registration can take a while until it's transferred to the *Globus* server. Afterwards, you can log in with your LRZ credentials and access the DSS at https://app.globus.org/
 
 
-## Compute Cloud
-The *Compute Cloud* is a VM hosting service of the LRZ. Here are the [official docs](https://doku.lrz.de/display/PUBLIC/Compute+Cloud). By default, a project has 10 CPU cores with 4.5 GB RAM per Core. The RAM ratio is fixed, but the total number of CPU cores can be higher. Therefore, contact the LRZ service desk. The VMs among projects share the same hardware. Once a VM is active, it blocks the resource.
-Therefore, it is important to only activate (un-shelf) the VMs if needed and deactivate (shelf) them afterwards. However, VMs with one Core per project can run constantly. Those VMs can do regular jobs which do not require much computation power and can be an entry point to (un-)shelf other VMs which do more intense jobs. (How this works precisely has to be figured out.)
+## Compute Cloud - VM hosting
+The *Compute Cloud* is a VM hosting service of the LRZ. Here are the [official docs](https://doku.lrz.de/display/PUBLIC/Compute+Cloud). By default, a project has 10 CPU cores with 4.5 GB RAM per Core. The RAM ratio is fixed, but the total number of CPU cores can be higher. Therefore, contact the LRZ service desk.
+
+The VMs among projects share the same hardware. Once a VM is active, it blocks the resource.
+Therefore, it is important to only activate (un-shelf) the VMs if needed and deactivate (shelf) them afterwards. However, VMs with one Core per project can run constantly. Those VMs can do regular jobs which do not require much computation power and can be an entry point to (un-)shelf other VMs which do more intense jobs. (How this works in an automated manner has to be figured out.)
+
+This chapter contains the following sections:
+- a list of [Hosted VMs](#hosted-vms---parameters-and-shh_config-entries)
+- a summary of the [VM management-portal](#vm-management-portal)
+- and how to [access a VM via SSH](#access-a-vm-via-ssh) including ssh basics and 
+
+### Hosted VMs - Parameters and shh_config entries
+
+The list of actual hosted VMs.
+
+| VM Name | resources | <user_name> | <ip_address> |
+| --- | --- | --- | --- |
+| STRAW-LRZ-VM | Active 24/7, 1 CPU, 4.5GB | di46lez | 138.246.233.224 |
+
+#### SSH config entries
+SSH config entries to add to `~/.ssh/config`:
+```bash
+Host straw-lrz-vm
+    User            di46lez
+    HostName        138.246.233.224
+    IdentityFile    ~/.ssh/cloud.key
+```
 
 ### VM management-portal
 The VM management-portal is https://cc.lrz.de. To login there, you need a special LRZ-ID similar to your normal LRZ-ID but different. For the moment this is: `di46lez` (password is posted in Slack, search for the ID).
@@ -55,12 +79,13 @@ In contrast, the `internt_pool` is accessible and exposed to the internet.
 You can add key pairs with [management-portal](https://cc.lrz.de)`-> Project -> Compute -> Key Pairs`. All key pairs are added to new created VMs only. For existing VMs you have to add the keys manually to each machine. For more instructions about the ssh key see the [dedicated section](#Access-a-VM-via-SSH).
 
 ### Access a VM via SSH
+
 The access to a VM is restricted to ssh with key pair only. First create a new key pair. If you don't know how, search the internet for it. In the following the key 
 To add a key, someone with access to the VM has to add your public part (.pub) of the ssh key to the file `~/.ssh/authorized_keys`. Afterwards you can log in with
 ```bash
 ssh -i <your_key.key> <user_name>@<ip-address>
 ```
-Replace `<your_key.key>` with the path to your .key file (not the .pub). The `<user_name>` and `<ip-address>` are in the [table below](#Parameters-of-hosted-VMs-and-shh_config-entries).
+Replace `<your_key.key>` with the path to your .key file (not the .pub). The `<user_name>` and `<ip-address>` are in the [table of hosted VMs](#hosted-vms---parameters-and-shh_config-entries).
 
 #### SSH config
 To make the ssh command easier, you can set parameter pairs in the ssh-config file. The file is located on your computer at `~/.ssh/config` and add the following lines:
@@ -76,7 +101,9 @@ ssh <name_of_the_vm>
 ```
 In addition, the `<name_of_the_vm>` works with `rsync`, and `scp`.
 
-#### Copy files from/to the VM with rsync or scp
+
+## Some examples to use a VM
+### Copy files from/to the VM with rsync or scp
 To sync files between different machines (but also on the same machine) you can use `scp` or `rsync`. The usage, especially with a ssh-config is straight forward, e.g., to download/upload files from/to the VM:
 ```bash
 rsync <name_of_the_vm>:"/path/to/files/*.txt" target/dir  # downloads files all txt-files from /path/to/files/
@@ -85,20 +112,6 @@ rsync <name_of_the_vm>:"/path/to/files" target/dir/files  # download the whole d
 rsync <name_of_the_vm>:"/path/to/files/" target/dir  # equals the line above
 ```
 For directories, you have to take care to set the source string in the right syntax. Without or with a tailing `/` makes the different. Compare the last two lines of the example. Furthermore, there are many documentations - [like](https://linux.die.net/man/1/rsync) - explaining the difference and the various options.
-
-#### Parameters of hosted VMs and shh_config entries
-
-| VM Name | resources | <user_name> | <ip_address> |
-| --- | --- | --- | --- |
-| STRAW-LRZ-VM | Active 24/7, 1 CPU, 4.5GB | di46lez | 138.246.233.224 |
-
-SSH config entry to add to `~/.ssh/config`:
-```bash
-Host straw-lrz-vm
-    User            di46lez
-    HostName        138.246.233.224
-    IdentityFile    ~/.ssh/cloud.key
-```
 
 ### Jupyter Notebook 
 
