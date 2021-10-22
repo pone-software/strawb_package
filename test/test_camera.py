@@ -5,7 +5,7 @@ import numpy as np
 
 from src.strawb.config_parser import Config
 from src.strawb.sensors.camera.file_handler import FileHandler
-from src.strawb.sensors.camera import CameraProcessedDataStore
+from src.strawb.sensors.camera import Images
 from strawb import SyncDBHandler
 
 
@@ -59,7 +59,7 @@ class TestCameraFileHandlerInit(TestCase):
         print(self.full_path)
 
 
-class TestCameraProcessedDataStore(TestCase):
+class TestCameraImages(TestCase):
     def setUp(self):
         # Load DB, in case execute db.load_entire_db_from_ONC() to load the entire db, but this takes a bit.
         db = SyncDBHandler(file_name='Default')  # loads the db
@@ -72,7 +72,7 @@ class TestCameraProcessedDataStore(TestCase):
         # and take one file randomly
         self.full_path = random.choice(db.dataframe.fullPath[mask])
         cam_run = FileHandler(self.full_path)
-        self.picture_handler = CameraProcessedDataStore(cam_run)
+        self.picture_handler = Images(cam_run)
 
     def test_image2png_lucifer(self):
         self.picture_handler.image2png_lucifer()
