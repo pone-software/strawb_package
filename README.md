@@ -31,6 +31,23 @@ Depending on your Python installation adopt python3/pip3 to python/pip, however 
   ```
 
 #### Known issued at installation
+- **Missing hdf5 installation**
+If you see an error like
+```text
+...
+  Loading library to get build settings and version: libhdf5.so
+  error: Unable to load dependency HDF5, make sure HDF5 is installed properly
+  error: libhdf5.so: cannot open shared object file: No such file or directory
+  ----------------------------------------
+  ERROR: Failed building wheel for h5py
+ ...
+```
+hdf5 isn't installed. On Linux/Ubuntu, run
+```commandline
+sudo apt-get install libhdf5-dev
+```
+
+
 - **Anaconda installation**
 
 If you use a Python-Anaconda installation, you have to install `opencv-python` manually as Anaconda hasn't listed `opencv-python` and therefore can install it.
