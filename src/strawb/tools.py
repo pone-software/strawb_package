@@ -231,8 +231,9 @@ def add_docs(org_func):
     return desc
 
 
-def human_size(size_bytes, units=None):
+# From: https://stackoverflow.com/questions/1094841/get-human-readable-version-of-file-size
+def human_size(size_bytes, units=None, precision=2):
     """ Returns a human readable string representation of bytes """
     if units is None:
         units = [' bytes', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB']
-    return str(size_bytes) + units[0] if size_bytes < 1024 else human_size(size_bytes >> 10, units[1:])
+    return f'{size_bytes:.{precision}f} {units[0]}' if size_bytes < 1024 else human_size(size_bytes / 1024, units[1:])
