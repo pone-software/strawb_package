@@ -377,18 +377,17 @@ class SyncDBHandler:
             # add column
             dataframe.insert(dataframe.columns.shape[0], 'h5_attrs', None)
             # take all
-            items_to_check = np.ones_like(dataframe.fullPath, dtype=bool)
+            items_to_check = dataframe['synced'].copy()  # exclude non existing files
         elif update_existing:
             # take all
-            items_to_check = np.ones_like(dataframe.fullPath, dtype=bool)
+            items_to_check = dataframe['synced'].copy()  # exclude non existing files
         else:
             # take only the one with missing parameters
-            items_to_check = (dataframe.h5_attrs.isnull()).to_numpy(dtype=bool)  # takes all None or np.nan
+            items_to_check = dataframe.h5_attrs.isnull()  # takes all None or np.nan
 
         # include only file which ends with 'hdf5' or 'h5'
         items_to_check &= dataframe.fullPath.str.endswith('hdf5') | dataframe.fullPath.str.endswith('h5')
-
-        items_to_check[~dataframe['synced']] = False  # exclude non existing files
+        items_to_check &= dataframe['synced']  # exclude non existing files
 
         # convert file_id's with nan to int. Otherwise pandas interprets the Series as float and the resolution
         # of the np.float64 isn't sufficient for a np.uint64.
