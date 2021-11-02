@@ -7,11 +7,11 @@ class FileHandler(BaseFileHandler):
     def __init__(self, *args, **kwargs):
         # TRB_DAQ
         self.daq_time = None
-        self.daq_frequency_pmt = None  # Removed from hdf5 ~05.10.2021, as moved to counts reading
-        self.daq_frequency_trigger = None  # Removed from hdf5 ~05.10.2021, as moved to counts reading
+        self.daq_measured_frequency_pmt = None  # Removed from hdf5 ~05.10.2021, as moved to counts reading
+        self.daq_measured_frequency_trigger = None  # Removed from hdf5 ~05.10.2021, as moved to counts reading
         self.daq_pmt = None  # PMT is; 0: OFF; 1: ON
-        self.daq_pulser_readout = None  # the frequency when the TRB counts up counts channel 0
-        self.daq_pulser_trigger = None  # the frequency of the trigger pin controlled by the TRB
+        self.daq_frequency_readout = None  # the frequency when the TRB counts up counts channel 0
+        self.daq_frequency_trigger = None  # the frequency of the trigger pin controlled by the TRB
         self.daq_state = None  # 0: TRB not ready; 1: TRB ready; 2: TRB takes hld
         self.daq_trb = None  # TRB power; 0: OFF; 1: ON
 
@@ -56,7 +56,8 @@ class FileHandler(BaseFileHandler):
         BaseFileHandler.__init__(self, *args, **kwargs)
 
     def __load_meta_data__(self, ):
-        for i in [self.__load_meta_data_v3__, self.__load_meta_data_v2__]:
+        # order is important, tries to load newest first and oldest latest.
+        for i in [self.__load_meta_data_v4__, self.__load_meta_data_v3__, self.__load_meta_data_v2__]:
             try:
                 i()  # try file versions
                 return
@@ -66,34 +67,14 @@ class FileHandler(BaseFileHandler):
 
         self.__load_meta_data_v1__()  # try with file default version
 
+    # ---- The functions for different versions ----
     def __load_meta_data_v1__(self, ):
         """Loads the initial SDAQ-hdf5 File Version"""
-        # TRB_DAQ
-        self.daq_frequency_pmt = self.file['daq/frequency_pmt']
-        self.daq_frequency_trigger = self.file['daq/frequency_trigger']
-        self.daq_pmt = self.file['daq/pmt']
-        self.daq_pulser_readout = self.file['daq/pulser_readout']
-        self.daq_pulser_trigger = self.file['daq/pulser_trigger']
-        self.daq_state = self.file['daq/state']
-        self.daq_time = self.file['daq/time']
-        self.daq_trb = self.file['daq/trb']
 
-        # Gimbal
-        self.gimbal_delay = self.file['gimbal/delay']
-        self.gimbal_pos_x = self.file['gimbal/pos_x']
-        self.gimbal_pos_y = self.file['gimbal/pos_y']
-        self.gimbal_power = self.file['gimbal/power']
-        self.gimbal_time = self.file['gimbal/time']
-
-        # Laser
-        self.laser_diode = self.file['laser/diode']
-        self.laser_frequency = self.file['laser/frequency']
-        self.laser_power = self.file['laser/power']
-        self.laser_pulsewidth = self.file['laser/pulsewidth']
-        self.laser_set_adjust_x = self.file['laser/set_adjust_x']
-        self.laser_set_adjust_y = self.file['laser/set_adjust_y']
-        self.laser_time = self.file['laser/time']
-
+        # load the single hdf5 groups
+        self.__load_meta_data_daq_v1__()  # TRB_DAQ
+        self.__load_meta_data_gimbal__()  # Gimbal
+        self.__load_meta_data_laser__()  # Laser
         self.file_version = 1
 
     def __load_meta_data_v2__(self, ):
@@ -101,20 +82,48 @@ class FileHandler(BaseFileHandler):
 
         CHANGES in respect to version 1
         -------------------------------
-        removed: daq_frequency_pmt and daq_frequency_trigger
-        added: tot_time, tot_time_ns, tot_tot
-        added: tot_time, tot_time_ns, tot_tot
-        added: counts_ch0, counts_ch17, counts_ch18, counts_time
+        removed: @TRB_DAQ - 'daq/frequency_pmt' and 'daq/frequency_trigger'
+        added: TOT - tot_time, tot_time_ns, tot_tot
+        added: COUNTS - counts_ch0, counts_ch17, counts_ch18, counts_time
         """
+        # load the single hdf5 groups
+        self.__load_meta_data_daq_v2__()  # TRB_DAQ
+        self.__load_meta_data_gimbal__()  # Gimbal
+        self.__load_meta_data_laser__()  # Laser
+        self.__load_meta_data_counts__()  # counts
+        self.__load_meta_data_tot__()  # TOT
+        self.file_version = 2
 
-        # TRB_DAQ
-        self.daq_pmt = self.file['daq/pmt']
-        self.daq_pulser_readout = self.file['daq/pulser_readout']
-        self.daq_pulser_trigger = self.file['daq/pulser_trigger']
-        self.daq_state = self.file['daq/state']
-        self.daq_time = self.file['daq/time']
-        self.daq_trb = self.file['daq/trb']
+    def __load_meta_data_v3__(self, ):
+        """Loads the SDAQ-hdf5 version 3 introduced from 11th of October 2021.
 
+        CHANGES in respect to version 2
+        -------------------------------
+        added: measurement - measurement_time, measurement_step
+        """
+        self.__load_meta_data_measurement__()
+        self.__load_meta_data_v2__()
+        self.file_version = 3
+
+    def __load_meta_data_v4__(self, ):
+        """Loads the SDAQ-hdf5 version 4 introduced from 25th of October 2021.
+
+        CHANGES in respect to version 3
+        -------------------------------
+        renamed: @TRB_DAQ - 'daq/pulser_readout' -> 'daq/frequency_readout'
+        renamed: @TRB_DAQ - 'daq/pulser_trigger' -> 'daq/frequency_trigger'
+        """
+        # load the single hdf5 groups
+        self.__load_meta_data_daq_v3__()  # TRB_DAQ
+        self.__load_meta_data_gimbal__()  # Gimbal
+        self.__load_meta_data_laser__()  # Laser
+        self.__load_meta_data_counts__()  # counts
+        self.__load_meta_data_tot__()  # TOT
+        self.__load_meta_data_measurement__()
+        self.file_version = 4
+
+    # ---- Helper functions for load ----
+    def __load_meta_data_gimbal__(self):
         # Gimbal
         self.gimbal_delay = self.file['gimbal/delay']
         self.gimbal_pos_x = self.file['gimbal/pos_x']
@@ -122,6 +131,7 @@ class FileHandler(BaseFileHandler):
         self.gimbal_power = self.file['gimbal/power']
         self.gimbal_time = self.file['gimbal/time']
 
+    def __load_meta_data_laser__(self):
         # Laser
         self.laser_diode = self.file['laser/diode']
         self.laser_frequency = self.file['laser/frequency']
@@ -131,53 +141,75 @@ class FileHandler(BaseFileHandler):
         self.laser_set_adjust_y = self.file['laser/set_adjust_y']
         self.laser_time = self.file['laser/time']
 
+    def __load_meta_data_tot__(self):
         # TOT
         self.tot_time = self.file['tot/time']
         self.tot_time_ns = self.file['tot/time_ns']
         self.tot_tot = self.file['tot/tot']
 
+    def __load_meta_data_counts__(self):
         # Counter
         self.counts_ch0 = self.file['counts/ch0']
         self.counts_ch17 = self.file['counts/ch17']
         self.counts_ch18 = self.file['counts/ch18']
         self.counts_time = self.file['counts/time']
 
-        self.file_version = 2
-
-    def __load_meta_data_v3__(self, ):
-        """Loads the SDAQ-hdf5 version 2 introduced from 11th of October 2021.
-
-        CHANGES in respect to version 1
-        -------------------------------
-        removed: daq_frequency_pmt and daq_frequency_trigger
-        added: tot_time, tot_time_ns, tot_tot
-        added: tot_time, tot_time_ns, tot_tot
-        added: counts_ch0, counts_ch17, counts_ch18, counts_time
-        """
+    def __load_meta_data_measurement__(self):
         self.measurement_time = self.file['measurement/time']
         self.measurement_step = self.file['measurement/step']
 
-        self.__load_meta_data_v2__()
+    def __load_meta_data_daq_v1__(self):
+        """Load the data from the TRB_DAQ hdf5 group (DAQJob). Original version."""
+        self.daq_measured_frequency_pmt = self.file['daq/frequency_pmt']
+        self.daq_measured_frequency_trigger = self.file['daq/frequency_trigger']
+        self.daq_pmt = self.file['daq/pmt']
+        self.daq_frequency_readout = self.file['daq/pulser_readout']
+        self.daq_frequency_trigger = self.file['daq/pulser_trigger']
+        self.daq_state = self.file['daq/state']
+        self.daq_time = self.file['daq/time']
+        self.daq_trb = self.file['daq/trb']
 
-        self.file_version = 3
+    def __load_meta_data_daq_v2__(self):
+        """Load the data from the TRB_DAQ hdf5 group (DAQJob).
+        CHANGES to v1: removed - 'daq/frequency_pmt' and 'daq/frequency_trigger'
+        """
+        self.daq_pmt = self.file['daq/pmt']
+        self.daq_frequency_readout = self.file['daq/pulser_readout']
+        self.daq_frequency_trigger = self.file['daq/pulser_trigger']
+        self.daq_state = self.file['daq/state']
+        self.daq_time = self.file['daq/time']
+        self.daq_trb = self.file['daq/trb']
 
-    # Define pandas DataFrame export helpers
+    def __load_meta_data_daq_v3__(self):
+        """Load the data from the TRB_DAQ hdf5 group (DAQJob).
+        CHANGES to v2: renamed
+          - 'daq/pulser_readout' -> 'daq/frequency_readout'
+          - 'daq/pulser_trigger' -> 'daq/frequency_trigger'
+        """
+        self.daq_pmt = self.file['daq/pmt']
+        self.daq_frequency_readout = self.file['daq/frequency_readout']
+        self.daq_frequency_trigger = self.file['daq/frequency_trigger']
+        self.daq_state = self.file['daq/state']
+        self.daq_time = self.file['daq/time']
+        self.daq_trb = self.file['daq/trb']
+
+    # ---- Define pandas DataFrame export helpers ----
     def get_pandas_daq(self):
         if self.file_version == 1:
             return pandas.DataFrame(dict(time=self.daq_time.asdatetime()[:],
-                                         frequency_pmt=self.daq_frequency_pmt,
-                                         frequency_trigger=self.daq_frequency_trigger,
+                                         measured_frequency_pmt=self.daq_measured_frequency_pmt,
+                                         measured_frequency_trigger=self.daq_measured_frequency_trigger,
                                          pmt=self.daq_pmt,
-                                         pulser_readout=self.daq_pulser_readout,
-                                         pulser_trigger=self.daq_pulser_trigger,
+                                         frequency_readout=self.daq_frequency_readout,
+                                         frequency_trigger=self.daq_frequency_trigger,
                                          state=self.daq_state,
                                          trb=self.daq_trb))
 
         elif self.file_version >= 2:
             return pandas.DataFrame(dict(time=self.daq_time.asdatetime()[:],
                                          pmt=self.daq_pmt,
-                                         pulser_readout=self.daq_pulser_readout,
-                                         pulser_trigger=self.daq_pulser_trigger,
+                                         frequency_readout=self.daq_frequency_readout,
+                                         frequency_trigger=self.daq_frequency_trigger,
                                          state=self.daq_state,
                                          trb=self.daq_trb))
 
@@ -216,7 +248,7 @@ class FileHandler(BaseFileHandler):
                                     )
 
     def get_pandas_measurement(self):
-        if self.file_version == 3:
+        if self.file_version >= 3:
             return pandas.DataFrame(dict(time=self.measurement_time.asdatetime()[:],
                                          step=self.measurement_step,
                                          )

@@ -88,7 +88,7 @@ class LidarTRBRates(TRBTools):
     def calculate_counts(self):
         if self.file_handler.file_version >= 2:
             self._rate_time, rate_data = self._calculate_rates_(
-                daq_pulser_readout=self.file_handler.daq_pulser_readout,
+                daq_frequency_readout=self.file_handler.daq_frequency_readout,
                 dcounts_time=self.dcounts_time,
                 dcounts_pmt=self.dcounts_pmt,
                 dcounts_laser=self.dcounts_laser)

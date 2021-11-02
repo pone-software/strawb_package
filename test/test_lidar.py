@@ -48,3 +48,12 @@ class TestLidarHandler(TestCase):
 
     def test_lidar(self):
         pass
+
+
+class TestLidarTRBRates(TestCase):
+    def test_init(self):
+        # lidar.file_handler.counts_ch0[1000:1010],
+        # lidar.file_handler.counts_ch17[1000:1010],
+        # lidar.file_handler.counts_ch18[1000:1010],
+
+        pass

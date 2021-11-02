@@ -35,16 +35,16 @@ class TRBTools:
         return counts_arr.astype(np.int32)
 
     @staticmethod
-    def _calculate_rates_(daq_pulser_readout, dcounts_time, *args, **kwargs):
+    def _calculate_rates_(daq_frequency_readout, dcounts_time, *args, **kwargs):
         """ Converts the cleaned counts readings from the TRB into rates.
         PARAMETER
         ---------
-        daq_pulser_readout: Union[int, float, list, np.ndarray, h5py.Dataset]
+        daq_frequency_readout: Union[int, float, list, np.ndarray, h5py.Dataset]
             the TRB readout frequency in Hz. If a list, np.ndarray, or h5py.Dataset is provided. Cut -1 values
             (TRB inactive) and check if the array is unique. Take the unique value or raise and RuntimeError.
         dcounts_time:
             The delta counts (s. _diff_counts_) of channel 0. The TRB counts channel 0 up with the frequency
-            from daq_pulser_readout.
+            from daq_frequency_readout.
         args or kwargs: Union[list, np.ndarray, h5py.Dataset], optional
             Each entry is handled as a separated channel of dcounts (delta counts, s. _diff_counts_).
 
@@ -57,13 +57,13 @@ class TRBTools:
         """
         # Prepare parameter
         # Check type and shape of counts arrays
-        if isinstance(daq_pulser_readout, (list, np.ndarray, h5py.Dataset)):
-            if np.unique(daq_pulser_readout[daq_pulser_readout[:] != -1]).shape != (1,):
-                raise RuntimeError('More than 1 unique value exits in daq_pulser_readout.')
+        if isinstance(daq_frequency_readout, (list, np.ndarray, h5py.Dataset)):
+            if np.unique(daq_frequency_readout[daq_frequency_readout[:] != -1]).shape != (1,):
+                raise RuntimeError('More than 1 unique value exits in daq_frequency_readout.')
             else:
-                daq_pulser_readout = daq_pulser_readout[daq_pulser_readout[:] != -1][0]
+                daq_frequency_readout = daq_frequency_readout[daq_frequency_readout[:] != -1][0]
 
-        daq_pulser_readout = float(daq_pulser_readout)  # must be a float
+        daq_frequency_readout = float(daq_frequency_readout)  # must be a float
 
         # Check type and shape of counts arrays
         args = list(args)
@@ -73,7 +73,7 @@ class TRBTools:
         dcounts_arr = np.array([*args], dtype=np.int64)
 
         # Calculate Rates
-        delta_time = dcounts_time / daq_pulser_readout
+        delta_time = dcounts_time / daq_frequency_readout
         rate_arr = dcounts_arr.astype(float) / delta_time
 
         # counts time is the middle of the interval and starts with 0
