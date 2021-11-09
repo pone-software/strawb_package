@@ -1,5 +1,5 @@
 import numpy as np
-import scipy
+from scipy.stats import binned_statistic
 import strawb.sensors.lidar
 
 
@@ -69,13 +69,13 @@ class Analysis:
 
         abs_timestamp_middle = (lidar.file_handler.counts_time[:-1] + lidar.file_handler.counts_time[1:]) * 0.5
 
-        bin_counts_pmt, bin_edges, binnumber = scipy.stats.binned_statistic(
+        bin_counts_pmt, bin_edges, binnumber = binned_statistic(
             abs_timestamp_middle,
             lidar.trb_rates.dcounts_pmt,
             statistic='sum',
             bins=lidar.file_handler.measurement_time)
 
-        bin_counts_laser, bin_edges, binnumber = scipy.stats.binned_statistic(
+        bin_counts_laser, bin_edges, binnumber = binned_statistic(
             abs_timestamp_middle,
             lidar.trb_rates.dcounts_laser,
             statistic='sum',
@@ -90,7 +90,6 @@ class Analysis:
 
         pmt_counts_2d = np.zeros((self.steps_length, self.steps_length))
 
-        self.get_steps()
         indices_shifted = self.step_positions + self.steps
 
         bin_counts_pmt = bin_counts_pmt[::2]
@@ -102,7 +101,8 @@ class Analysis:
             pmt_counts_2d[ii, jj] = bin_counts_pmt[i] / bin_counts_laser[i]
 
         self.pmt_counts_2d = pmt_counts_2d
-        return pmt_counts_2d
+
+        return self.pmt_counts_2d
 
     def get_angles(self):
         """
