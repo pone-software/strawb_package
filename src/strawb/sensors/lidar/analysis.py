@@ -4,38 +4,55 @@ import strawb.sensors.lidar
 
 
 class Analysis:
-    def __init__(self, file, lever_long=0.051, lever_short=0.038, rpm=31, delta_t_step=0.5, thread_steepness=0.02,
+    def __init__(self, file, lever_long=0.051, lever_short=0.038, rpm=31, delta_t_step=0.5, thread_steepness=0.002,
                  efficiency=0.5):
         self.steps = None
+        self.steps_length = None
         self.file = file
+        self.step_positions = None
 
-        self.lever_long = lever_long  # [m]; long distance between the fixed screw and the servo axis
-        self.lever_short = lever_short  # [m]; short distance between the fixed screw and the servo axis
         self.rpm = rpm  # [1/min] rotations per minute
         self.rps = self.rpm / 60.  # [1/s] rotations per second
         self.delta_t_step = delta_t_step  # [s] seconds the motor moves per step
         self.thread_steepness = thread_steepness  # [m], thread steepness (distance per rotation)
         self.efficiency = efficiency  # the motor moves slow with friction, e.g. 50% slower -> .5
         self.dx = self.rps * self.delta_t_step * self.thread_steepness * self.efficiency  # [m] distance per rotation
-
+        self.x_1 = np.array([[lever_short, 0, 0]])  # [m]; x Position stepper
+        self.x_2 = np.array([[0, lever_long, 0]])  # [m]; y Position stepper
+        self.v_motor = np.array([[0, 0, self.dx]])  # the vector per motor-step
         self.phi_2d = None
         self.theta_2d = None
         self.pmt_counts_2d = None
 
-    def spiral(self):
-        xx = self.steps * 2 + 1
-        yy = self.steps * 2 + 1
-        steps = np.zeros((xx * yy, 2))
-        x = y = 0
-        dx = 0
-        dy = -1
-        for i in range(max(xx, yy) ** 2):
-            if (-xx / 2 < x <= xx / 2) and (-yy / 2 < y <= yy / 2):
-                steps[i] = (x, y)
-            if x == y or (x < 0 and x == -y) or (x > 0 and x == 1 - y):
-                dx, dy = -dy, dx
-            x, y = x + dx, y + dy
-        return steps
+    def get_steps(self):
+        """
+        Gets the individual steps from the hdf5-file, also sets the maximum steps for one direction, and the length for
+        one direction (so 2*steps+1). Sets the steps that the laser moved steps: it is a 2D array with the absolut
+        steps for the spiral shape=((2*steps+1)**2,2)
+        :return:
+        None
+        """
+        lidar = strawb.sensors.lidar.Lidar(file=self.file)
+        self.steps = lidar.file_handler.file_attributes["mes_steps"]
+        self.steps_length = int(2 * self.steps + 1)
+
+        laser_steps_x = np.array(lidar.file_handler.laser_set_adjust_x)
+        laser_steps_y = np.array(lidar.file_handler.laser_set_adjust_y)
+
+        change_x = np.where(np.diff(laser_steps_x))[0]
+        change_y = np.where(np.diff(laser_steps_y))[0]
+
+        changes_all = np.array(np.sort(np.append(change_x, change_y)))
+
+        steps_x = laser_steps_x[changes_all]
+        steps_y = laser_steps_y[changes_all]
+
+        step_positions = np.zeros((self.steps_length ** 2, 2))
+
+        step_positions[:, 0] = steps_x[:self.steps_length**2]  # cut because laser moves back to (0,0) after last pos
+        step_positions[:, 1] = steps_y[:self.steps_length**2]
+
+        self.step_positions = step_positions
 
     def laser_adjustment_return(self):
         """
@@ -64,18 +81,17 @@ class Analysis:
             statistic='sum',
             bins=lidar.file_handler.measurement_time)
 
-        length = np.sqrt(len(bin_counts_pmt[:-1:2]))
-        if not length % 1 == 0:
+        self.get_steps()
+
+        if not self.steps_length % 1 == 0:
             raise TypeError(
-                f'{length} is not an integer represented as float. Check manually if mask of changes in laser '
-                f'adjustment was set correctly.')
-        length = int(length)
-        self.steps = int((length - 1) / 2)
+                f'{self.steps_length} is not an integer represented as float. Check manually if mask of changes in '
+                f'laser adjustment was set correctly.')
 
-        pmt_counts_2d = np.zeros((length, length))
+        pmt_counts_2d = np.zeros((self.steps_length, self.steps_length))
 
-        indices = self.spiral()
-        indices_shifted = indices + self.steps
+        self.get_steps()
+        indices_shifted = self.step_positions + self.steps
 
         bin_counts_pmt = bin_counts_pmt[::2]
         bin_counts_laser = bin_counts_laser[::2]
@@ -105,22 +121,17 @@ class Analysis:
         phi: array,float, len= (2*steps+1)**2
         theta: array,float, len= (2*steps+1)**2
         """
-        x_1 = np.array([[self.lever_short, 0, 0]])  # [m]; x Position stepper
-        x_2 = np.array([[0, self.lever_long, 0]])  # [m]; y Position stepper
-        v_motor = np.array([[0, 0, self.dx]])  # the vector per motor-step
-        # print(f'Distance per Step: {dx * 1e3:.3f} mm')
-
         # ---- Steps ----
         # get the steps grid, e.g. steps in x and y from [-5,...,5]
-        steps_all = int(2 * self.steps + 1)
-        s_0, s_1 = np.meshgrid(np.arange(steps_all) - steps_all // 2, np.flip(np.arange(steps_all) - steps_all // 2))
+        s_0, s_1 = np.meshgrid(np.arange(self.steps_length) - self.steps_length // 2,
+                               np.flip(np.arange(self.steps_length) - self.steps_length // 2))
         s_0 = s_0.flatten()
         s_1 = s_1.flatten()
 
         # ---- Angles ----
         # calculate the normal
-        n = np.cross(x_1 + v_motor * s_0.reshape(-1, 1),
-                     x_2 + v_motor * s_1.reshape(-1, 1))
+        n = np.cross(self.x_1 + self.v_motor * s_0.reshape(-1, 1),
+                     self.x_2 + self.v_motor * s_1.reshape(-1, 1))
 
         theta = np.arccos(n[:, 2] / np.sqrt(np.sum(n ** 2, axis=-1)))
         phi = np.arctan2(n[:, 1], n[:, 0]) + np.pi
@@ -152,9 +163,9 @@ class Analysis:
         max_phi = self.phi_2d[max_ind]
         max_theta = self.theta_2d[max_ind]
 
-        r = self.lever_long * self.lever_short / np.cos(max_theta)
-        s1 = -r / (self.lever_long * self.dx) * np.cos(max_phi) * np.sin(max_theta)
-        s2 = -r / (self.lever_short * self.dx) * np.sin(max_phi) * np.sin(max_theta)
+        r = self.x_2[0, 1] * self.x_1[0, 0] / np.cos(max_theta)
+        s1 = -r / (self.x_2[0, 1] * self.dx) * np.cos(max_phi) * np.sin(max_theta)
+        s2 = -r / (self.x_1[0, 0] * self.dx) * np.sin(max_phi) * np.sin(max_theta)
         s1 = np.round(s1)
         s2 = np.round(s2)
 
