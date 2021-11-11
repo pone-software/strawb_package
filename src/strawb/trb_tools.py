@@ -57,10 +57,13 @@ class TRBTools:
         """
         # Prepare parameter
         # Check type and shape of counts arrays
-        if isinstance(daq_frequency_readout, (list, np.ndarray, h5py.Dataset)):
+        if isinstance(daq_frequency_readout, list):  # convert to array
+            daq_frequency_readout = np.array(daq_frequency_readout)
+        if isinstance(daq_frequency_readout, (np.ndarray, h5py.Dataset)):
             if np.unique(daq_frequency_readout[daq_frequency_readout[:] != -1]).shape != (1,):
                 raise RuntimeError('More than 1 unique value exits in daq_frequency_readout.')
             else:
+                # if the daq_frequency_readout failed reading from thte TRB it logs -1, correct here
                 daq_frequency_readout = daq_frequency_readout[daq_frequency_readout[:] != -1][0]
 
         daq_frequency_readout = float(daq_frequency_readout)  # must be a float
