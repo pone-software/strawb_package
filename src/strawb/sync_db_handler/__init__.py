@@ -82,7 +82,9 @@ class SyncDBHandler:
     def save_db(self):
         """Saves the DB file into a pandas.DataFrame to the file provided at the initialisation."""
         # store information in a pandas-file
-        if self.file_name is not None and self.dataframe is not None:
+        if self.dataframe is not None:  # only save it, when there is something stored in the dataframe
+            if self.file_name is None:  # in case, set the default file name
+                self.file_name = Config.pandas_file_sync_db
             self.dataframe.to_pickle(self.file_name,
                                      protocol=4,  # protocol=4 compatible with python>=3.4
                                      )
@@ -469,30 +471,36 @@ class SyncDBHandler:
             scan files for hdf5 attributes and adds to the dataframe as new columns
         add_dataframe: bool, optional
             if the dataframe should be added to the internal dataframe or not. Default is True.
+        kwargs: dict, optional
+            parsed to ONCDownloader().get_files_structured(**kwargs)
         """
         onc_downloader = ONCDownloader()
         dataframe = onc_downloader.get_files_structured(**kwargs)
 
+        if output:
+            print('-> Get metadata from ONC DB')
         self.update_sync_state(dataframe=dataframe)
         if output:
             download_size = (dataframe[~dataframe['synced']]['fileSize']).sum()
-            print(f'In total: {dataframe.shape[0]} files; skips synced: {dataframe["synced"].sum()}; '
+            print(f'  In total: {dataframe.shape[0]} files; skips synced: {dataframe["synced"].sum()}; '
                   f'size to download: {human_size(download_size)}, '
                   f'from deviceCode: {pandas.unique(dataframe["deviceCode"])}')
 
         if download:
+            if output:
+                print('\n-> Download the files from the ONC server')
             # download the files which passed the filter
             onc_downloader.getDirectFiles(filters_or_result=dataframe[~dataframe['synced']])
             self.update_sync_state(dataframe=dataframe)
 
         if add_hdf5_attributes:
             if output:
-                print('update hdf5 attributes')
+                print('\n-> Update hdf5 attributes')
             self.update_hdf5_attributes(dataframe=dataframe, add_hdf5_attributes2dataframe=True)
 
         if add_dataframe:
             if output:
-                print('add to db')
+                print('\n-> Add to db')
             # here 'self.dataframe =' is important as it could be None before and that brakes the inplace
             self.dataframe = self.add_new_columns(dataframe2add=dataframe, dataframe=self.dataframe, overwrite=True)
 
