@@ -28,8 +28,10 @@ class FileHandler(BaseFileHandler):
         self.laser_frequency = None  # if the power is en-/disabled
         self.laser_power = None  # if the laser power is en-/disabled
         self.laser_pulsewidth = None  # sets the intensity
-        self.laser_set_adjust_x = None  # sets the laser alignment in X with the PMT axis
-        self.laser_set_adjust_y = None  # sets the laser alignment in Y with the PMT axis
+        self.laser_set_adjust_x = None  # X steps of the laser alignment in respect to the PMT axis
+        self.laser_set_adjust_y = None  # Y steps of the laser alignment in respect to the PMT axis
+        self.laser_set_adjust_x_offset = None  # the offset in X, stores if the 0 point is moved
+        self.laser_set_adjust_y_offset = None  # the offset in Y, stores if the 0 point is moved
 
         # PMT TOT (time over threshold), each entry is a separated event. Added to hdf5 ~05.10.2021.
         # -> File version 2
@@ -74,7 +76,7 @@ class FileHandler(BaseFileHandler):
         # load the single hdf5 groups
         self.__load_meta_data_daq_v1__()  # TRB_DAQ
         self.__load_meta_data_gimbal__()  # Gimbal
-        self.__load_meta_data_laser__()  # Laser
+        self.__load_meta_data_laser_v1__()  # Laser
         self.file_version = 1
 
     def __load_meta_data_v2__(self, ):
@@ -89,7 +91,7 @@ class FileHandler(BaseFileHandler):
         # load the single hdf5 groups
         self.__load_meta_data_daq_v2__()  # TRB_DAQ
         self.__load_meta_data_gimbal__()  # Gimbal
-        self.__load_meta_data_laser__()  # Laser
+        self.__load_meta_data_laser_v1__()  # Laser
         self.__load_meta_data_counts__()  # counts
         self.__load_meta_data_tot__()  # TOT
         self.file_version = 2
@@ -116,11 +118,27 @@ class FileHandler(BaseFileHandler):
         # load the single hdf5 groups
         self.__load_meta_data_daq_v3__()  # TRB_DAQ
         self.__load_meta_data_gimbal__()  # Gimbal
-        self.__load_meta_data_laser__()  # Laser
+        self.__load_meta_data_laser_v1__()  # Laser
         self.__load_meta_data_counts__()  # counts
         self.__load_meta_data_tot__()  # TOT
         self.__load_meta_data_measurement__()
         self.file_version = 4
+
+    def __load_meta_data_v5__(self, ):
+        """Loads the SDAQ-hdf5 version 5 introduced from 12th of November 2021.
+
+        CHANGES in respect to version 4
+        -------------------------------
+        added: @Laser - 'laser/set_adjust_x_offset' and 'laser/set_adjust_y_offset'
+        """
+        # load the single hdf5 groups
+        self.__load_meta_data_daq_v3__()  # TRB_DAQ
+        self.__load_meta_data_gimbal__()  # Gimbal
+        self.__load_meta_data_laser_v2__()  # Laser
+        self.__load_meta_data_counts__()  # counts
+        self.__load_meta_data_tot__()  # TOT
+        self.__load_meta_data_measurement__()
+        self.file_version = 5
 
     # ---- Helper functions for load ----
     def __load_meta_data_gimbal__(self):
@@ -131,7 +149,7 @@ class FileHandler(BaseFileHandler):
         self.gimbal_power = self.file['gimbal/power']
         self.gimbal_time = self.file['gimbal/time']
 
-    def __load_meta_data_laser__(self):
+    def __load_meta_data_laser_v1__(self):
         # Laser
         self.laser_diode = self.file['laser/diode']
         self.laser_frequency = self.file['laser/frequency']
@@ -140,6 +158,12 @@ class FileHandler(BaseFileHandler):
         self.laser_set_adjust_x = self.file['laser/set_adjust_x']
         self.laser_set_adjust_y = self.file['laser/set_adjust_y']
         self.laser_time = self.file['laser/time']
+
+    def __load_meta_data_laser_v2__(self):
+        # Laser
+        self.laser_set_adjust_x_offset = self.file['laser/set_adjust_x_offset']
+        self.laser_set_adjust_y_offset = self.file['laser/set_adjust_y_offset']
+        self.__load_meta_data_laser_v1__()
 
     def __load_meta_data_tot__(self):
         # TOT
@@ -222,14 +246,26 @@ class FileHandler(BaseFileHandler):
                                 )
 
     def get_pandas_laser(self):
-        return pandas.DataFrame(dict(time=self.laser_time.asdatetime()[:],
-                                     diode=self.laser_diode,
-                                     frequency=self.laser_frequency,
-                                     power=self.laser_power,
-                                     pulsewidth=self.laser_pulsewidth,
-                                     set_adjust_x=self.laser_set_adjust_x,
-                                     set_adjust_y=self.laser_set_adjust_y, )
-                                )
+        if self.file_version < 5:
+            return pandas.DataFrame(dict(time=self.laser_time.asdatetime()[:],
+                                         diode=self.laser_diode,
+                                         frequency=self.laser_frequency,
+                                         power=self.laser_power,
+                                         pulsewidth=self.laser_pulsewidth,
+                                         set_adjust_x=self.laser_set_adjust_x,
+                                         set_adjust_y=self.laser_set_adjust_y, )
+                                    )
+        else:
+            return pandas.DataFrame(dict(time=self.laser_time.asdatetime()[:],
+                                         diode=self.laser_diode,
+                                         frequency=self.laser_frequency,
+                                         power=self.laser_power,
+                                         pulsewidth=self.laser_pulsewidth,
+                                         set_adjust_x=self.laser_set_adjust_x,
+                                         set_adjust_y=self.laser_set_adjust_y,
+                                         set_adjust_x_offset=self.laser_set_adjust_x_offset,
+                                         set_adjust_y_offset=self.laser_set_adjust_y_offset,)
+                                    )
 
     def get_pandas_counts(self):
         if self.file_version >= 2:
