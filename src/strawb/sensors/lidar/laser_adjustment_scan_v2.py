@@ -65,8 +65,57 @@ class LaserAdjustmentScan:
         """
         self.rps = value / 60.  # [1/m] -> [1/s] rotations per second
 
-    def extract_measurments(self):
-        lidar = strawb.sensors.lidar.Lidar(file=self.file)
+    def extract_measurements(self, file):
+        lidar = strawb.sensors.lidar.Lidar(file=file)
 
-        #
+        # ---- get data for signal ----
+        abs_timestamp_middle = (lidar.file_handler.counts_time[:-1] + lidar.file_handler.counts_time[1:]) * 0.5
 
+        bin_counts_pmt, bin_edges, binnumber = binned_statistic(
+            abs_timestamp_middle,
+            lidar.trb_rates.dcounts_pmt,
+            statistic='sum',
+            bins=lidar.file_handler.measurement_time)
+
+        bin_counts_laser, bin_edges, binnumber = binned_statistic(
+            abs_timestamp_middle,
+            lidar.trb_rates.dcounts_laser,
+            statistic='sum',
+            bins=lidar.file_handler.measurement_time)
+
+        bin_counts_pmt = bin_counts_pmt[::2]
+        bin_counts_laser = bin_counts_laser[::2]
+
+        self.signal = bin_counts_pmt / bin_counts_laser
+
+        # ---- get data for steps ----
+
+        try:
+            self.steps = lidar.file_handler.file_attributes["mes_steps"]
+        except KeyError:
+            self.steps = lidar.file_handler.file_attributes["measurement_steps"]
+
+        self.steps_length = int(2 * self.steps + 1)
+
+        laser_steps_x = np.array(lidar.file_handler.laser_set_adjust_x)
+        laser_steps_y = np.array(lidar.file_handler.laser_set_adjust_y)
+
+        change_x = np.where(np.diff(laser_steps_x))[0]
+        change_y = np.where(np.diff(laser_steps_y))[0]
+
+        changes_all = np.array(np.sort(np.append(change_x, change_y)))
+
+        steps_x = laser_steps_x[changes_all]
+        steps_y = laser_steps_y[changes_all]
+
+        step_positions = np.zeros((self.steps_length ** 2, 2))
+
+        step_positions[:, 0] = steps_x[:self.steps_length ** 2]  # cut because laser moves back to (0,0) after last pos
+        step_positions[:, 1] = steps_y[:self.steps_length ** 2]
+
+        self.step_positions = step_positions
+
+        return self.step_positions, self.signal
+
+    def convert_to_angles(self):
+        self.extract_measurements(self.file)
