@@ -13,8 +13,7 @@ class LaserAdjustmentScan:
         file: string, absolut filepath to the hdf5-file
         lever_long: float, longer distance from fixed screw to connection point of one of the motors
         lever_short: float, shorter distance from fixed screw to connection point of one of the motors
-        rpm: float, optional
-            [1/min] rotations per minute
+        rpm: float, optional [1/min] rotations per minute
         delta_t_step: float, [s] seconds the motor moves per step
         thread_steepness: float, [m], thread steepness (distance per rotation)
         efficiency: float, the motor moves slow with friction, e.g. 50% slower -> .5
