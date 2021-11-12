@@ -11,8 +11,8 @@ class LidarTRBRates(TRBTools):
 
         # cleaned Counter, similar to PMTSpectrometer. Added to hdf5 ~05.10.2021. -> File version 2
         self._dcounts_time = None  # channel which counts up at a constant frequency -> PMT Spectrometer
-        self._dcounts_pmt = None  # the readout/PMT channel.
-        self._dcounts_laser = None  # the Laser trigger channel.
+        self._dcounts_pmt = None  # the readout/PMT channel. returns number of counted photons per readout interval
+        self._dcounts_laser = None  # returns number of emitted laser pulses per readout interval
 
         # calculated TRB rates from counts
         self._rate_time = None

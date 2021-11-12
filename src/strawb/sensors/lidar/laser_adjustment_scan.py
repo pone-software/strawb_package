@@ -10,14 +10,18 @@ class LaserAdjustmentScan:
         TODO: add doc-string
         PARAMETER
         ---------
-        file
-        lever_long
-        lever_short
-        rpm: float, optional
-            [1/min] rotations per minute
-        delta_t_step
-        thread_steepness
-        efficiency
+        file: string, absolut filepath to the hdf5-file
+        lever_long: float, longer distance from fixed screw to connection point of one of the motors
+        lever_short: float, shorter distance from fixed screw to connection point of one of the motors
+        rpm: float, optional [1/min] rotations per minute
+        delta_t_step: float, [s] seconds the motor moves per step
+        thread_steepness: float, [m], thread steepness (distance per rotation)
+        efficiency: float, the motor moves slow with friction, e.g. 50% slower -> .5
+
+        phi_2d: ndarray(dtype=float, ndim=2, shape(steps_length,steps_length))
+        theta_2d: ndarray(dtype=float, ndim=2, shape(steps_length,steps_length))
+        pmt_counts_2d: ndarray(dtype=float, ndim=2, shape(steps_length,steps_length))
+
         """
         # TODO: add docs for parameters
         self.file = file
@@ -26,9 +30,9 @@ class LaserAdjustmentScan:
         self.step_positions = None
 
         self.rps = rpm / 60.  # [1/s] rotations per second
-        self.delta_t_step = delta_t_step  # [s] seconds the motor moves per step
-        self.thread_steepness = thread_steepness  # [m], thread steepness (distance per rotation)
-        self.efficiency = efficiency  # the motor moves slow with friction, e.g. 50% slower -> .5
+        self.delta_t_step = delta_t_step
+        self.thread_steepness = thread_steepness
+        self.efficiency = efficiency
 
         self.x_1 = np.array([[lever_short, 0, 0]])  # [m]; x Position stepper
         self.x_2 = np.array([[0, lever_long, 0]])  # [m]; y Position stepper
@@ -102,6 +106,12 @@ class LaserAdjustmentScan:
         of these absolute timestamps as integration points in binned_statistics. "lidar.file_handler.measurement_time"
         gives the bins. Larger when hld-files are produced. Therefore use recorded photons/emitted pulses as value to
         counteract this effect.
+        Than get call self.get_steps(), populates the self.step_positions with the steps from the hdf5-file, with
+        additional check if the self.step_length is a integer number, to guarantee that nothing went wrong when
+        retrieving steps.
+        Introduce the 2d-array for the pmt counts and get indices from the step_positions. Needed to be shifted by steps
+        because (0,0) needs to be the center of the 2D array. in the for-loop populate the empty 2D array with
+        bin_counts_pmt[i] / bin_counts_laser[i] and return the result.
         RETURN
         ------
         Returns the correct mapping of the calculated values to the spiral and reshapes it into 2d array
@@ -157,8 +167,7 @@ class LaserAdjustmentScan:
         # TODO: update parameters
         PARAMETER
         ---------
-        steps: int
-            the amount of steps that where went into one direction, default=10
+        None
 
         RETURN
         ------
