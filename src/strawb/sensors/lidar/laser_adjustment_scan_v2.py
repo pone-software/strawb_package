@@ -4,8 +4,8 @@ import strawb.sensors.lidar
 
 
 class LaserAdjustmentScan:
-    def __init__(self, file=None, lever_long=0.051, lever_short=0.038, rpm=31., delta_t_step=0.5, thread_steepness=0.002,
-                 efficiency=0.5):
+    def __init__(self, file=None, lever_long=0.051, lever_short=0.038, rpm=31., delta_t_step=0.5,
+                 thread_steepness=0.002, efficiency=0.5):
         """
         TODO: add doc-string
         PARAMETER
@@ -24,13 +24,15 @@ class LaserAdjustmentScan:
 
         """
         # TODO: add docs for parameters
+        if file is not None:
+            self.lidar = strawb.sensors.lidar.Lidar(file=file)
+            self.extract_measurements()
 
-        self.lidar = strawb.sensors.lidar.Lidar(file=file)
         # ---- Parameters from the hdf5 - file ----
         self.steps = None
         self.steps_length = None
-        self.signal = None
-        self.step_positions = None
+        self._signal = None
+        self._step_positions = None
 
         # ---- Parameters for the Geometry ----
         self.rps = rpm / 60.  # [1/s] rotations per second
@@ -43,7 +45,7 @@ class LaserAdjustmentScan:
 
         # TODO: add docs for parameters
         # ---- Computed variables ----
-        self.offset = None
+        self._max_step_position = None
         self._theta = None
         self._phi = None
 
@@ -71,17 +73,83 @@ class LaserAdjustmentScan:
         """
         self.rps = value / 60.  # [1/m] -> [1/s] rotations per second
 
+    @property
+    def phi(self):
+        """
+        The computed phi angle from the steps
+        :return:
+        self._phi: ndarray(dtype=float, ndim=1, len=variable)
+        """
+        if self._phi is None and self.step_positions is not None:
+            self._phi, self._theta = self.convert_to_angles(step_positions_1=self.step_positions[:, 0],
+                                                            step_positions_2=self.step_positions[:, 1])
+        return self._phi
+
+    @property
+    def theta(self):
+        """
+        The computed theta angle from the steps
+        :return:
+        self._theta: ndarray(dtype=float, ndim=1, len=variable)
+        """
+        if self._theta is None and self.step_positions is not None:
+            self._phi, self._theta = self.convert_to_angles(step_positions_1=self.step_positions[:, 0],
+                                                            step_positions_2=self.step_positions[:, 1])
+        return self._theta
+
+    @property
+    def step_positions(self):
+        """
+        The step positions of the hdf5-file
+        :return:
+        self._step_positions: ndarray(dtype=float, ndim=2, shape(steps_length,2))
+        """
+        if self._step_positions is None:
+            self._step_positions = self.get_step_positions()
+        return self._step_positions
+
+    @step_positions.setter
+    def step_positions(self, value):
+        self._step_positions = value
+
+    @property
+    def signal(self):
+        """
+        The signal from the hdf5-file
+        :return:
+        self._signal: ndarray(dtype=float, ndim=2, shape(steps_length,2))
+        """
+        if self._signal is None:
+            self._signal = self.get_signal()
+        return self._signal
+
+    @signal.setter
+    def signal(self, value):
+        self._signal = value
+
+    @property
+    def max_step_position(self):
+        """
+        Step positions corresponding to the measurement with the highest signal value
+        :return:
+        self._max_step_position: ndarray(dtype=float, ndim=1, shape=(2,))
+        """
+        if self._max_step_position is None:
+            self._max_step_position = self.compute_maximum_position()
+        return self._max_step_position
+
     def extract_measurements(self):
         """
-        calls self.get_signal(), self.get_step_positions(), and assigns it to class variables, also returns the result
+        calls self.signal(), self.step_positions(), and self.max_step_position(), if they are None, their
         :return:
         self.positions: ndarray(dtype=float, ndim=2, shape(steps_length,2))
         self.signal: ndarray(dtype=float, ndim=1, shape(steps_length))
         """
-        self.signal = self.get_signal()
-        self.step_positions = self.get_step_positions()
+        # self.signal  # = self.get_signal()
+        # self.step_positions  # = self.get_step_positions()
+        # self.max_step_position  # = self.compute_maximum_position()
 
-        return self.step_positions, self.signal
+        return self.step_positions, self.signal, self.max_step_position
 
     def get_signal(self):
         """
@@ -154,37 +222,23 @@ class LaserAdjustmentScan:
         :return:
         max_steps: ndarray(dtype=float, ndim=1, len=2)
         """
-        index = np.max(self.signal)
+        index = np.argmax(self.signal)
         max_step_positions = self.step_positions[index]
-        self.offset = max_step_positions
 
         return max_step_positions
 
-    def convert_to_angles(self, step_position, offset=None):
+    def convert_to_angles(self, step_positions_1, step_positions_2):
         """
         gets a step and an offset as an input. Subtracts offset from steps and converts it to angles
-        :param step_position:
-        :param offset:
+        :param step_positions_1: First coordinate of steps ndarray(dtype=float, ndim=1, len=variable)
+        :param step_positions_2: Second coordinate of steps ndarray(dtype=float, ndim=1, len=variable)
         :return:
         """
-        # step_position -= offset
 
-        n = np.cross(self.x_1 + self.v_motor * step_position[:, 0].reshape(-1, 1),
-                     self.x_2 + self.v_motor * step_position[:, 1].reshape(-1, 1))
+        n = np.cross(self.x_1 + self.v_motor * step_positions_1.reshape(-1, 1),
+                     self.x_2 + self.v_motor * step_positions_2.reshape(-1, 1))
 
         theta = np.arccos(n[:, 2] / np.sqrt(np.sum(n ** 2, axis=-1)))
         phi = np.arctan2(n[:, 1], n[:, 0]) + np.pi
 
         return phi, theta
-
-    @property
-    def phi(self):
-        if self._phi is None and self.step_positions is not None:
-            self._phi, self._theta = self.convert_to_angles(step_position=self.step_positions)
-        return self._phi
-
-    @property
-    def theta(self):
-        if self._theta is None and self.step_positions is not None:
-            self._phi, self._theta = self.convert_to_angles(step_position=self.step_positions)
-        return self._theta
