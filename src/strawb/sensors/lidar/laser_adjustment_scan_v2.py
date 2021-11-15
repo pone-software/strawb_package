@@ -4,7 +4,7 @@ import strawb.sensors.lidar
 
 
 class LaserAdjustmentScan:
-    def __init__(self, file, lever_long=0.051, lever_short=0.038, rpm=31., delta_t_step=0.5, thread_steepness=0.002,
+    def __init__(self, file=None, lever_long=0.051, lever_short=0.038, rpm=31., delta_t_step=0.5, thread_steepness=0.002,
                  efficiency=0.5):
         """
         TODO: add doc-string
@@ -44,8 +44,8 @@ class LaserAdjustmentScan:
         # TODO: add docs for parameters
         # ---- Computed variables ----
         self.offset = None
-        self.theta = None
-        self.phi = None
+        self._theta = None
+        self._phi = None
 
         self.phi_2d = None
         self.theta_2d = None
@@ -160,19 +160,31 @@ class LaserAdjustmentScan:
 
         return max_step_positions
 
-    def convert_to_angles(self, step_position, offset):
+    def convert_to_angles(self, step_position, offset=None):
         """
         gets a step and an offset as an input. Subtracts offset from steps and converts it to angles
         :param step_position:
         :param offset:
         :return:
         """
-        step_position -= offset
+        # step_position -= offset
 
         n = np.cross(self.x_1 + self.v_motor * step_position[:, 0].reshape(-1, 1),
                      self.x_2 + self.v_motor * step_position[:, 1].reshape(-1, 1))
 
-        self.theta = np.arccos(n[:, 2] / np.sqrt(np.sum(n ** 2, axis=-1)))
-        self.phi = np.arctan2(n[:, 1], n[:, 0]) + np.pi
+        theta = np.arccos(n[:, 2] / np.sqrt(np.sum(n ** 2, axis=-1)))
+        phi = np.arctan2(n[:, 1], n[:, 0]) + np.pi
 
-        return self.phi, self.theta
+        return phi, theta
+
+    @property
+    def phi(self):
+        if self._phi is None and self.step_positions is not None:
+            self._phi, self._theta = self.convert_to_angles(step_position=self.step_positions)
+        return self._phi
+
+    @property
+    def theta(self):
+        if self._theta is None and self.step_positions is not None:
+            self._phi, self._theta = self.convert_to_angles(step_position=self.step_positions)
+        return self._theta
