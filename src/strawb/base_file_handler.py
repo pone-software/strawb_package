@@ -7,6 +7,23 @@ from strawb.config_parser.__init__ import Config
 
 class BaseFileHandler:
     def __init__(self, file_name=None, module=None, raise_empty_file=False):
+        """The Base File Handler defines the basic file handling for the strawb package.
+
+        PARAMETER
+        ---------
+        file_name: Union[str, None], optional
+            defines the file name. At initialisation, it checks if the file exists. The file name can be one of:
+            - None, to load initialise without an file name specified
+            - an absolut path, e.g. '/path/to/strawb/data/file_1.txt'
+            - a relative path inside the strawb raw_data_dir, e.g. 'module_a/file_1.txt'
+            - a file name which will be searched in the strawb raw_data_dir path, e.g. 'file_1.txt'
+            If the file name is set, it will load the data into the class.
+        module: Union[str, None], optional
+            sets the name of the module which the file belongs to. If None (default) it extract the module name from the
+            file name following the ONC naming scheme.
+        raise_empty_file: bool, optional
+            if an empty file should raise an error or not. Default is False.
+        """
         # get all Meta Data arrays
         self.__members__ = [attr for attr in dir(self) if
                             not callable(getattr(self, attr)) and not attr.startswith("__")]
@@ -48,8 +65,11 @@ class BaseFileHandler:
 
         # in case, extract the module name from the filename
         if module is None and file_name is not None:
-            # '...le_data/TUMMINISPECTROMETER001_202104...' -> 'MINISPECTROMETER001'
-            self.module = file_name.rsplit('/', 1)[-1].split('_', 1)[0].replace('TUM', '')
+            try:
+                # '...le_data/TUMMINISPECTROMETER001_202104...' -> 'MINISPECTROMETER001'
+                self.module = file_name.rsplit('/', 1)[-1].split('_', 1)[0].replace('TUM', '')
+            except (KeyError, ValueError, TypeError):
+                pass
 
     def open(self):
         """Opens the file if it is not open"""
