@@ -5,14 +5,20 @@ import numpy as np
 
 from src.strawb.config_parser import Config
 from src.strawb.sensors.lidar.file_handler import FileHandler
+from strawb import SyncDBHandler
 
 
 class TestLidarFileHandlerInit(TestCase):
     def setUp(self):
-        file_list = FileHandler.find_files_glob('*202109*-SDAQ-LIDAR.hdf5',
-                                                directory=Config.raw_data_dir,
-                                                recursive=True,
-                                                raise_nothing_found=True)
+        db = SyncDBHandler(file_name='Default')  # loads the db
+
+        # mask by device
+        mask = db.dataframe['deviceCode'] == 'TUMLIDAR001'
+        mask |= db.dataframe['deviceCode'] == 'TUMLIDAR002'
+        mask &= db.dataframe.dataProductCode == 'LIDARSD'
+        mask &= db.dataframe.synced  # only downloaded files
+
+        file_list = db.dataframe.fullPath[mask].to_list()
 
         self.full_path = random.choice(file_list)  # select a random file
         self.file_name = os.path.split(self.full_path)[-1]
@@ -37,10 +43,15 @@ class TestLidarFileHandlerInit(TestCase):
 
 class TestLidarHandler(TestCase):
     def setUp(self):
-        file_list = FileHandler.find_files_glob('*202109*-SDAQ-LIDAR.hdf5',
-                                                directory=Config.raw_data_dir,
-                                                recursive=True,
-                                                raise_nothing_found=True)
+        db = SyncDBHandler(file_name='Default')  # loads the db
+
+        # mask by device
+        mask = db.dataframe['deviceCode'] == 'TUMLIDAR001'
+        mask |= db.dataframe['deviceCode'] == 'TUMLIDAR002'
+        mask &= db.dataframe.dataProductCode == 'LIDARSD'
+        mask &= db.dataframe.synced  # only downloaded files
+
+        file_list = db.dataframe.fullPath[mask].to_list()
 
         self.full_path = random.choice(file_list)  # select a random file
 
