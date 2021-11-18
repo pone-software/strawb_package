@@ -13,7 +13,7 @@ from ..tools import human_size, ShareJobThreads
 
 class SyncDBHandler:
     def __init__(self, file_name='Default', update=False):
-        """Handle the DB
+        """Handle the DB, which holds the metadata from the ONC DB and adds quantities like hdf5 attributes.
         PARAMETER
         file_name: Union[str, None], optional
             If None, it doesn't load the DB. If it is a string, it can be:
@@ -38,7 +38,7 @@ class SyncDBHandler:
         elif os.path.exists(os.path.join(Config.raw_data_dir, file_name)):  # maybe with raw_data_dir as path
             path = os.path.join(Config.raw_data_dir, file_name)
             self.file_name = os.path.abspath(path)
-        else:  # try to fine it in raw_data_dir. Fails if more than 1 file is found or non is found
+        else:  # try to find it in raw_data_dir. Fails if more than 1 file is found or non is found
             file_name_list = glob.glob(Config.raw_data_dir + "/**/" + file_name, recursive=True)
             if len(file_name_list) == 1:
                 self.file_name = file_name_list[0]
@@ -459,26 +459,56 @@ class SyncDBHandler:
         return h5_dataframe
 
     def load_db_from_onc(self, output=False, download=False, add_hdf5_attributes=True, add_dataframe=True, **kwargs):
-        """Loads downloads the db directly from the ONC server.
+        """Loads and downloads the db directly from the ONC server.
 
         PARAMETER
         ---------
+        output: bool, optional
+            if information about the progress should be printed
         download: bool, optional
             if the missing files should be downloaded.
-        kwargs: dict, optional
-            kwargs are parsed to strawb.ONCDownloader().download_structured to filter the files.
         add_hdf5_attributes: bool, optional
             scan files for hdf5 attributes and adds to the dataframe as new columns
         add_dataframe: bool, optional
             if the dataframe should be added to the internal dataframe or not. Default is True.
         kwargs: dict, optional
-            parsed to ONCDownloader().get_files_structured(**kwargs)
+            parsed to ONCDownloader().get_files_structured(**kwargs) to filter the files. Parameters are e.g.:
+            dev_codes, date_from, date_to, extensions, min_file_size, and max_file_size.
         """
-        onc_downloader = ONCDownloader()
-        dataframe = onc_downloader.get_files_structured(**kwargs)
-
         if output:
             print('-> Get metadata from ONC DB')
+
+        dataframe = ONCDownloader().get_files_structured(**kwargs)
+        return self.update_db_and_load_files(dataframe,
+                                             output=output,
+                                             download=download,
+                                             add_hdf5_attributes=add_hdf5_attributes,
+                                             add_dataframe=add_dataframe)
+
+    def update_db_and_load_files(self, dataframe, output=False, download=False, add_hdf5_attributes=True,
+                                 add_dataframe=True):
+        """Depending which options are set, this function does any combination of the following three tasks:
+        1. `download=True` -> loads all missing files from the dataframe
+        2. `add_hdf5_attributes=True` -> updates the hdf5 attributes from the files which are present on the disc
+        3. `add_dataframe=True` -> adds the dataframe to the internal stored DB (must be saved separately to disc)
+
+
+        PARAMETER
+        ---------
+        download: bool, optional
+            if the missing files should be downloaded.
+        add_hdf5_attributes: bool, optional
+            scan files for hdf5 attributes and adds to the dataframe as new columns
+        add_dataframe: bool, optional
+            if the dataframe should be added to the internal dataframe or not. Default is True.
+        kwargs: dict, optional
+            parsed to ONCDownloader().get_files_structured(**kwargs) to filter the files. Parameters are e.g.:
+            dev_codes, date_from, date_to, extensions, min_file_size, and max_file_size.
+        """
+        # remove the pointer to the original dataframe,
+        # i.e. if it is a slice <-> update_db_and_load_files(dataframe[mask])
+        dataframe = dataframe.copy()
+
         self.update_sync_state(dataframe=dataframe)
         if output:
             download_size = (dataframe[~dataframe['synced']]['fileSize']).sum()
@@ -490,7 +520,7 @@ class SyncDBHandler:
             if output:
                 print('\n-> Download the files from the ONC server')
             # download the files which passed the filter
-            onc_downloader.getDirectFiles(filters_or_result=dataframe[~dataframe['synced']])
+            ONCDownloader().getDirectFiles(filters_or_result=dataframe[~dataframe['synced']])
             self.update_sync_state(dataframe=dataframe)
 
         if add_hdf5_attributes:
@@ -509,3 +539,35 @@ class SyncDBHandler:
     def load_entire_db_from_ONC(self, **kwargs):
         kwargs.update(dict(date_from='strawb_all'))
         return self.load_db_from_onc(**kwargs)
+
+    def get_files_from_names(self, file_names):
+        """Checks:
+        1. if all files are listed in the DB. If not it raise a ValueError.
+        2. if all files are downloaded. In case load the missing files
+        3. return the masked dataframe with entries to the related file
+
+        PARAMETER
+        ---------
+        file_name: Union(str, list, set)
+            The file_names, it can be multiple file names as a list or set, or one as a str.
+        """
+
+        if isinstance(file_names, str):
+            file_names = {file_names}  # convert to a set
+        else:
+            file_names = set(file_names)
+
+        difference = file_names.difference(set(self.dataframe.filename))
+
+        if difference:
+            raise ValueError(f"The following files can't be found in the DB: {difference}")
+
+        mask = self.dataframe.filename == ''
+        for i in file_names:
+            mask |= self.dataframe.filename == i
+
+        if not all(self.dataframe.synced[mask]):
+            return self.update_db_and_load_files(self.dataframe[mask], download=True)
+
+        else:
+            return self.dataframe[mask]
