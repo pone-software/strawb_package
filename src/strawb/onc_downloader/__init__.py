@@ -64,7 +64,7 @@ class ONCDownloader(ONC):
         date_from: datetime,
             e.g. datetime.date(2020, 10, 1)
         date_to: datetime,
-            e.g. datetime.datetime.now()
+            e.g. datetime.datetime.now(tz=datetime.timezone.utc)
         print_stats: bool, optional
             if the function returns stats
         Returns
@@ -155,19 +155,19 @@ class ONCDownloader(ONC):
 
         date_from = self._read_str_as_timedelta_(date_from)  # try to read it as float -> timedelta
         if date_from is None:
-            date_from = datetime.datetime.now() - datetime.timedelta(days=1)
+            date_from = datetime.datetime.now(tz=datetime.timezone.utc) - datetime.timedelta(days=1)
         elif date_from == 'strawb_all':
             date_from = datetime.date(2020, 10, 1)
         elif isinstance(date_from, datetime.datetime):
             date_from = date_from
         elif isinstance(date_from, datetime.timedelta):
-            date_from = datetime.datetime.now() - abs(date_from)
+            date_from = datetime.datetime.now(tz=datetime.timezone.utc) - abs(date_from)
         else:
             date_from = datetime.datetime.fromisoformat(date_from.rstrip('Z'))
 
         date_to = self._read_str_as_timedelta_(date_to)  # try to read it as float -> timedelta
         if date_to is None:
-            date_to = datetime.datetime.now()
+            date_to = datetime.datetime.now(tz=datetime.timezone.utc)
         elif isinstance(date_to, datetime.datetime):
             date_to = date_to
         elif isinstance(date_to, datetime.timedelta):
