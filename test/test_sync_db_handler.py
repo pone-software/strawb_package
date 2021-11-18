@@ -241,6 +241,26 @@ class TestSyncDBHandler(TestCase):
         self.assertEqual(pd_result_0.loc['TEST_3.hdf5', 'synced'], True)
         self.assertEqual(pd_result_0.loc['TEST_5.hdf5', 'col_2'], pd_result_1.loc['TEST_5.hdf5', 'col_2'])  # added row
 
+    def test_get_files_from_names(self):
+        db_handler = SyncDBHandler()  # load db with default file
+
+        # sync db with ONC if db isn't synced or outdated
+        if db_handler.dataframe is None or \
+                (datetime.datetime.now(tz=datetime.timezone.utc) - db_handler.dataframe.dateFrom.max()).days > 0:
+            db_handler.load_entire_db_from_ONC()
+            db_handler.save_db()
+
+        files = ['TUMPMTSPECTROMETER001_20201001T000000.000Z.txt', 'TUMPMTSPECTROMETER001_20201002T000000.000Z.txt']
+
+        # check with a single str
+        dataframe = db_handler.get_files_from_names(files[0])
+        self.assertTrue(all(dataframe.filename == files[0]))
+
+        # check with a list
+        dataframe = db_handler.get_files_from_names(files)
+        self.assertTrue(all(dataframe.filename == files))
+
+
     def tearDown(self):
         hdf5_files = glob.glob('./*.hdf5')
         for i in hdf5_files:
