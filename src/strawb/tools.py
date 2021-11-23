@@ -13,7 +13,7 @@ from tqdm import tqdm
 
 
 class AsDatetimeWrapper(object):
-    def __init__(self, dset, unit='us'):
+    def __init__(self, dset, precision='us'):
         """Wrapper to convert data on reading from a dataset. 'asdatetime' is similar to asdtype of h5py Datasets for
         and can handle datetime64 when time is given as float in seconds.
         a = np.array([1624751981.4857635], float)  # time in seconds since epoch
@@ -23,18 +23,42 @@ class AsDatetimeWrapper(object):
         self._dset = dset
 
         self.unit_dict = {'s': 1, 'ms': 1e3, 'us': 1e6, 'ns': 1e9}
-        if unit.lower() not in self.unit_dict:
-            raise ValueError(f'unit not in unit_dict (unit_dict), got: {unit}')
+        if precision.lower() not in self.unit_dict:
+            raise ValueError(f'precision not in unit_dict (unit_dict), got: {precision}')
 
-        self._dtype = np.dtype(f'datetime64[{unit.lower()}]')
-        self.scale = float(self.unit_dict[unit.lower()])
+        self._dtype = np.dtype(f'datetime64[{precision.lower()}]')
+        self.scale = float(self.unit_dict[precision.lower()])
 
     def __getitem__(self, args):
         return (self._dset.__getitem__(args, ) * self.scale).astype(self._dtype)
 
     # @staticmethod
     def asdatetime(self, unit='us'):
-        return AsDatetimeWrapper(dset=self, unit=unit)
+        return AsDatetimeWrapper(dset=self, precision=unit)
+
+
+def asdatetime(array, precision='us'):
+    """Converts timestamps of floats with precision seconds to numpy.datetime of the defined precision.
+    PARAMETER
+    ---------
+    array: ndarray
+        input array of timestamp as floats in the precision seconds.
+    precision: str, optional
+        defines the precision of the timestamp. Valid precisions are: 's', 'ms', 'us', 'ns' and 'ps'
+
+    RETURNS
+    -------
+    array: ndarray
+        numpy array with as dtype=datetime64 and the defined precision
+    """
+    unit_dict = {'s': 1, 'ms': 1e3, 'us': 1e6, 'ns': 1e9, 'ps': 1e12}
+    if precision.lower() not in unit_dict:
+        raise ValueError(f'precision not in unit_dict (unit_dict), got: {precision}')
+
+    dtype = np.dtype(f'datetime64[{precision.lower()}]')
+    scale = float(unit_dict[precision.lower()])
+
+    return (array * scale).astype(dtype)
 
 
 class ShareJobThreads:
