@@ -2,6 +2,7 @@
 
 from typing import Union
 
+from strawb.sensors.pmtspec.meta_data import PMTMetaData
 from strawb.sensors.pmtspec.pmtspec_trb_rates import PMTSpecTRBRates
 from strawb.sensors.pmtspec.file_handler import FileHandler
 from strawb.trb_tools import TRBTools
@@ -19,3 +20,5 @@ class PMTSpec(TRBTools):
             self.file_handler = file
 
         self.trb_rates = PMTSpecTRBRates(file_handler=self.file_handler)
+
+        self.pmt_meta_data = PMTMetaData()
