@@ -11,7 +11,7 @@ class PMTSpecTRBRates(TRBTools):
 
         # time the absolute timestamp for the reading, corresponding to the middle of the read interval.
         # It is the absolute time for 'dcounts' and 'rate'
-        self.time = None
+        self._time = None
 
         # cleaned Counter, similar to PMTSpectrometer. Added to hdf5 ~05.10.2021. -> File version 2
         self._dcounts_time = None  # channel which counts up at a constant frequency -> PMT Spectrometer
@@ -115,8 +115,8 @@ class PMTSpecTRBRates(TRBTools):
         """Calculates the diff of the counts for the PMT."""
         if self.file_handler.file_version >= 1:  # 1 is the base file_version, therefore, its all files
             # time the absolute timestamp for the reading, corresponding to the middle of the read interval
-            self.time = (self.file_handler.counts_time[1:] + self.file_handler.counts_time[:-1]) * .5
-            self.time = self.time.astype('datetime64[s]')
+            _time = (self.file_handler.counts_time[1:] + self.file_handler.counts_time[:-1]) * .5
+            self._time = _time.astype('datetime64[s]')
 
             data = self._diff_counts_(self.file_handler.counts_ch0,
                                       self.file_handler.counts_ch1,
