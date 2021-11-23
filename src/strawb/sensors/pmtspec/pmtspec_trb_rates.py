@@ -7,7 +7,10 @@ from strawb.trb_tools import TRBTools
 
 class PMTSpecTRBRates(TRBTools):
     def __init__(self, file_handler: FileHandler):
-        self.file_handler = file_handler
+        if isinstance(file_handler, FileHandler):
+            self.file_handler = file_handler
+        else:
+            raise TypeError(f'Expected pmtspec.FileHandler got: {type(file_handler)}')
 
         # time the absolute timestamp for the reading, corresponding to the middle of the read interval.
         # It is the absolute time for 'dcounts' and 'rate'
@@ -92,7 +95,7 @@ class PMTSpecTRBRates(TRBTools):
 
     def get_pandas_rate(self):
         """Returns a pandas dataframe with the rates, the rate_delta_t, and an absolute timestamp"""
-        if self.file_handler.file_version >= 2:
+        if self.file_handler.file_version >= 1:
             t = self.file_handler.counts_time.asdatetime()[:]
             return pandas.DataFrame(dict(time=(t[:-1] + np.diff(t) * .5),
                                          rate_time=self.rate_delta_t,
@@ -115,9 +118,7 @@ class PMTSpecTRBRates(TRBTools):
         """Calculates the diff of the counts for the PMT."""
         if self.file_handler.file_version >= 1:  # 1 is the base file_version, therefore, its all files
             # time the absolute timestamp for the reading, corresponding to the middle of the read interval
-            _time = (self.file_handler.counts_time[1:] + self.file_handler.counts_time[:-1]) * .5
-            self._time = _time.astype('datetime64[s]')
-
+            self._time = (self.file_handler.counts_time[1:] + self.file_handler.counts_time[:-1]) * .5
             data = self._diff_counts_(self.file_handler.counts_ch0,
                                       self.file_handler.counts_ch1,
                                       self.file_handler.counts_ch3,
