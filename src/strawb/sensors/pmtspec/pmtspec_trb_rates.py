@@ -9,6 +9,8 @@ class PMTSpecTRBRates(TRBTools):
     def __init__(self, file_handler: FileHandler):
         self.file_handler = file_handler
 
+        # time the absolute timestamp for the reading, corresponding to the middle of the read interval.
+        # It is the absolute time for 'dcounts' and 'rate'
         self.time = None
 
         # cleaned Counter, similar to PMTSpectrometer. Added to hdf5 ~05.10.2021. -> File version 2
@@ -21,6 +23,14 @@ class PMTSpecTRBRates(TRBTools):
 
     # Properties
     # ---- cleaned TRB Counters  ----
+    @property
+    def time(self):
+        """The absolute timestamp of the counter reading, corresponding to the middle of the read interval. It is the
+        absolute time for 'dcounts' and 'rate'. 1darray with axis [time_i]"""
+        if self._time is None:
+            self.diff_counts()
+        return self._time
+
     @property
     def dcounts_time(self):
         """The delta of the TRB counts from the TRB channel 0 which counts at a fixed frequency. 1darray with axis
