@@ -32,9 +32,9 @@ class AsDatetimeWrapper(object):
     def __getitem__(self, args):
         return (self._dset.__getitem__(args, ) * self.scale).astype(self._dtype)
 
-    @staticmethod
-    def asdatetime(self, ):
-        return AsDatetimeWrapper(self, )
+    # @staticmethod
+    def asdatetime(self, unit='us'):
+        return AsDatetimeWrapper(dset=self, unit=unit)
 
 
 class ShareJobThreads:
