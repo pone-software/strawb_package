@@ -90,6 +90,10 @@ class FileHandler(BaseFileHandler):
         self.file_version = 1
 
     def __load_meta_data_v2__(self, ):
+        """
+        CHANGES to v1:
+        renamed: '/daq/rate_readout' -> '/daq/frequency_readout'
+        """
         self.__load_counts__()
         self.__load_padiwa__()
         self.__load_hv__()

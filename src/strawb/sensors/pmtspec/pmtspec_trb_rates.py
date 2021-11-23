@@ -9,12 +9,14 @@ class PMTSpecTRBRates(TRBTools):
     def __init__(self, file_handler: FileHandler):
         self.file_handler = file_handler
 
+        self.time = None
+
         # cleaned Counter, similar to PMTSpectrometer. Added to hdf5 ~05.10.2021. -> File version 2
         self._dcounts_time = None  # channel which counts up at a constant frequency -> PMT Spectrometer
         self._dcounts = None  # [ch1, ch3, ch5, ch6, ch7, ch8, ch9, ch10, ch11, ch12, ch13, ch15]
 
         # calculated TRB rates from counts
-        self._rate_time = None
+        self._rate_delta_t = None  # time delta which corresponds to each counter read in seconds.
         self._rate = None  # [ch1, ch3, ch5, ch6, ch7, ch8, ch9, ch10, ch11, ch12, ch13, ch15]
 
     # Properties
@@ -46,9 +48,9 @@ class PMTSpecTRBRates(TRBTools):
         >>> np.cumsum(trb_rates.rate_delta_t)  # gives the time in seconds from the start.
         >>> trb_rates.rate_delta_t.reshape(1,-1) * trb_rates.rate  # are the counts per channel <-> trb_rates.dcounts
         """
-        if self._rate_time is None:
+        if self._rate_delta_t is None:
             self.calculate_rates()
-        return self._rate_time
+        return self._rate_delta_t
 
     @property
     def rate(self):
@@ -101,7 +103,11 @@ class PMTSpecTRBRates(TRBTools):
     # ---- Calculate dcounts and rates ----
     def diff_counts(self):
         """Calculates the diff of the counts for the PMT."""
-        if self.file_handler.file_version >= 1:
+        if self.file_handler.file_version >= 1:  # 1 is the base file_version, therefore, its all files
+            # time the absolute timestamp for the reading, corresponding to the middle of the read interval
+            self.time = (self.file_handler.counts_time[1:] + self.file_handler.counts_time[:-1]) * .5
+            self.time = self.time.astype('datetime64[s]')
+
             data = self._diff_counts_(self.file_handler.counts_ch0,
                                       self.file_handler.counts_ch1,
                                       self.file_handler.counts_ch3,
@@ -123,8 +129,8 @@ class PMTSpecTRBRates(TRBTools):
 
     def calculate_rates(self):
         """Calculates the rates of the PMTs based on the TRB counts."""
-        if self.file_handler.file_version >= 2:
-            self._rate_time, self._rate = self._calculate_rates_(
+        if self.file_handler.file_version >= 1:  # 1 is the base file_version, therefore, its all files
+            self._rate_delta_t, self._rate = self._calculate_rates_(
                 daq_frequency_readout=self.file_handler.daq_frequency_readout,
                 dcounts_time=self.dcounts_time,
                 dcounts_ch1=self.dcounts[0],
@@ -140,5 +146,5 @@ class PMTSpecTRBRates(TRBTools):
                 dcounts_ch13=self.dcounts[10],
                 dcounts_ch15=self.dcounts[11])
 
-            return self._rate_time, self._rate
+            return self._rate_delta_t, self._rate
         return None
