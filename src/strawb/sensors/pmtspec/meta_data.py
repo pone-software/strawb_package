@@ -32,7 +32,7 @@ class PMTMetaData:
         # store in place
         self.channel_meta_array = channel_meta_array
 
-    def add_colors(self, color_map, no_filter_color='gray'):
+    def add_colors(self, color_map, no_filter_color='gray', invisible=None):
         """ Create colors.
         PARAMETERS
         ----------
@@ -43,5 +43,13 @@ class PMTMetaData:
         """
         entries = self.channel_meta_array.shape[0]
         self.channel_meta_array['color'] = [color_map(i / entries) for i in range(entries)]
+        
+        ## not-visible wavelengths
+        if invisible is not None:
+            m = self.channel_meta_array['wavelength'] < 380
+            n_inv = np.count_nonzero(m)
+            for i in np.arange(len(m))[m]:
+                self.channel_meta_array['color'][i] = invisible(i / n_inv)
+        
         if no_filter_color is not None:
             self.channel_meta_array['color'][self.channel_meta_array['wavelength'] == 0] = no_filter_color
