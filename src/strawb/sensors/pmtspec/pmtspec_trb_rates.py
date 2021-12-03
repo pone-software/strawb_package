@@ -1,6 +1,7 @@
 import numpy as np
 import pandas
 
+from strawb import tools
 from strawb.sensors.pmtspec.file_handler import FileHandler
 from strawb.trb_tools import TRBTools
 
@@ -76,8 +77,7 @@ class PMTSpecTRBRates(TRBTools):
     def get_pandas_dcounts(self):
         """Returns a pandas dataframe with the dcounts, and an absolute timestamp"""
         if self.file_handler.file_version >= 1:
-            t = self.file_handler.counts_time.asdatetime()[:]
-            return pandas.DataFrame(dict(time=(t[:-1] + np.diff(t) * .5),
+            return pandas.DataFrame(dict(time=tools.asdatetime(self.time),
                                          dcounts_time=self.dcounts_time,
                                          dcounts_ch1=self.dcounts[0],
                                          dcounts_ch3=self.dcounts[1],
@@ -96,8 +96,7 @@ class PMTSpecTRBRates(TRBTools):
     def get_pandas_rate(self):
         """Returns a pandas dataframe with the rates, the rate_delta_t, and an absolute timestamp"""
         if self.file_handler.file_version >= 1:
-            t = self.file_handler.counts_time.asdatetime()[:]
-            return pandas.DataFrame(dict(time=(t[:-1] + np.diff(t) * .5),
+            return pandas.DataFrame(dict(time=tools.asdatetime(self.time),
                                          rate_time=self.rate_delta_t,
                                          rate_ch1=self.rate[0],
                                          rate_ch3=self.rate[1],
