@@ -3,7 +3,7 @@ import numpy as np
 import datetime
 import h5py
 import time
-from src.strawb.onc_downloader import ONCDownloader
+from strawb.onc_downloader import ONCDownloader
 
 
 # TODO: get this section updated with the feedback from ONC. Now it doesn't work as download from ONC is very slow.

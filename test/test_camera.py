@@ -3,10 +3,9 @@ import random
 from unittest import TestCase
 import numpy as np
 
-from src.strawb.config_parser import Config
 from src.strawb.sensors.camera.file_handler import FileHandler
 from src.strawb.sensors.camera import Images
-from strawb import SyncDBHandler
+from src.strawb import SyncDBHandler
 
 
 class TestCameraFileHandlerInit(TestCase):
