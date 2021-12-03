@@ -9,6 +9,28 @@ from src.strawb.onc_downloader import ONCDownloader
 # TODO: get this section updated with the feedback from ONC. Now it doesn't work as download from ONC is very slow.
 #  `onc_downloader.getDirectByDevice` is the problem.
 
+# # code to execute
+# # define the period a file should cover
+# timedelta = np.timedelta64(3, 'h')
+# time_array = np.arange(np.datetime64('2021-10-10'),
+#                        np.datetime64('2021-10-11'),
+#                        timedelta).astype('datetime64[ms]')
+#
+# # define function to download one file
+# def get_file(np_datetime64):
+#     filters = {'deviceCode': 'ONCMJB016',  # 'NORTEKAQDCM9987', #'NORTEKAQDCM2886',
+#                'dateFrom': np.datetime_as_string(np_datetime64, timezone='UTC'),  # '2021-08-03T00:00:00.000Z',
+#                'dateTo': np.datetime_as_string(np_datetime64 + timedelta - np.timedelta64(1, 'ms'), timezone='UTC'),
+#                # '2021-08-03T23:59:59.000Z',
+#                }
+#     dev = ONCDevice(filters=filters)
+#     dev.to_hdf5()
+#     return dev
+#
+# # download parallel
+# sjt = strawb.tools.ShareJobThreads(thread_n=1)
+# sjt.do(get_file, time_array)
+
 def convert_str2timestamp(value, fmt='%Y-%m-%dT%H:%M:%S.%fZ'):
     return datetime.datetime.strptime(value, fmt).timestamp()
 
