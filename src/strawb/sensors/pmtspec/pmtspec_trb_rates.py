@@ -1,9 +1,9 @@
 import numpy as np
 import pandas
 
-from strawb import tools
-from strawb.sensors.pmtspec.file_handler import FileHandler
-from strawb.trb_tools import TRBTools
+from src.strawb import tools
+from src.strawb.sensors.pmtspec.file_handler import FileHandler
+from src.strawb.trb_tools import TRBTools
 
 
 class PMTSpecTRBRates(TRBTools):

@@ -2,10 +2,10 @@
 
 from typing import Union
 
-from strawb.sensors.pmtspec.meta_data import PMTMetaData
-from strawb.sensors.pmtspec.pmtspec_trb_rates import PMTSpecTRBRates
-from strawb.sensors.pmtspec.file_handler import FileHandler
-from strawb.trb_tools import TRBTools
+from src.strawb.sensors.pmtspec.meta_data import PMTMetaData
+from src.strawb.sensors.pmtspec.pmtspec_trb_rates import PMTSpecTRBRates
+from src.strawb.sensors.pmtspec.file_handler import FileHandler
+from src.strawb.trb_tools import TRBTools
 
 
 class PMTSpec(TRBTools):
