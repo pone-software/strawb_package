@@ -222,7 +222,7 @@ class TestSyncDBHandler(TestCase):
                                         {'fullPath': 'TEST_5.hdf5', 'col_2': 60, 'synced': True},  # (new)
                                         ])
 
-        SyncDBHandler(file_name=None).add_new_columns(dataframe2add=pd_result_1, dataframe=pd_result_0)
+        pd_result_0 = SyncDBHandler(file_name=None).add_new_columns(dataframe2add=pd_result_1, dataframe=pd_result_0)
         self.assertEqual(pd_result_0.loc['TEST_0.hdf5', 'col_2'], pd_result_1.loc['TEST_0.hdf5', 'col_2'])
         self.assertEqual(pd_result_0.loc['TEST_0.hdf5', 'col_1'], 1)
         self.assertEqual(pd_result_0.loc['TEST_0.hdf5', 'synced'], True)
@@ -234,7 +234,7 @@ class TestSyncDBHandler(TestCase):
         self.assertEqual(pd_result_0.loc['TEST_5.hdf5', 'synced'], pd_result_1.loc['TEST_5.hdf5', 'synced'])
 
         pd_result_0 = pd_result_00.copy()  # as add_new_columns does things inplace
-        SyncDBHandler(file_name=None).add_new_columns(dataframe2add=pd_result_1, dataframe=pd_result_0, overwrite=True)
+        pd_result_0 = SyncDBHandler(file_name=None).add_new_columns(dataframe2add=pd_result_1, dataframe=pd_result_0, overwrite=True)
         self.assertEqual(pd_result_0.loc['TEST_0.hdf5', 'col_2'], pd_result_1.loc['TEST_0.hdf5', 'col_2'])
         self.assertEqual(pd_result_0.loc['TEST_0.hdf5', 'col_1'], 1)
         self.assertEqual(pd_result_0.loc['TEST_0.hdf5', 'synced'], True)

@@ -1,6 +1,7 @@
 import ast
 import glob
 import os
+import time
 
 import h5py
 import numpy as np
@@ -132,7 +133,7 @@ class SyncDBHandler:
     def add_new_columns(self, dataframe2add, dataframe=None, overwrite=False):
         """Adds new columns from a pandas.DataFrame to the internal pandas.DataFrame. If there is no internal
         pandas.DataFrame it set the provided dataframe as the internal. Otherwise it adds the columns from the provided
-         dataframe to the internal dataframe.
+         dataframe to the internal dataframe (here in-place).
 
         PARAMETER
         ---------
@@ -149,7 +150,9 @@ class SyncDBHandler:
             `dataframe = add_new_columns(dataframe2add, dataframe)` equals to
             `add_new_columns(dataframe2add, dataframe)`
         """
+        in_place = False
         if dataframe is None:
+            in_place = True
             dataframe = self.dataframe
 
         if dataframe is None:
@@ -159,30 +162,39 @@ class SyncDBHandler:
             self._check_index_(dataframe2add)  # check the new dataframe
             self._check_index_(dataframe)  # check the new dataframe
 
-            for col_i in dataframe2add:
-                if col_i not in dataframe:
-                    # append the columns at the end: self.dataframe.keys().shape[0]
-                    dataframe.insert(dataframe.keys().shape[0], col_i, dataframe2add[col_i])
-                else:
-                    # handle rows with the same indexes
-                    intersection = dataframe.index.intersection(dataframe2add.index)
-                    mask_null = dataframe.loc[intersection, col_i].isnull()
+            # handle rows with the same indexes
+            intersection = dataframe2add.index.intersection(dataframe.index)
+            if intersection.shape[0] != 0:
+                dataframe2add_inter = dataframe2add.loc[intersection]
 
-                    if np.sum(mask_null):
-                        dataframe.loc[intersection[mask_null], col_i] = dataframe2add.loc[
-                            intersection[mask_null], col_i]
+                for col_i in dataframe2add_inter:
+                    if col_i not in dataframe:
+                        # append the columns at the end: self.dataframe.keys().shape[0]
+                        dataframe.insert(dataframe.keys().shape[0], col_i, dataframe2add_inter[col_i])
+                    else:
+                        # handle rows with the same indexes
+                        intersection = dataframe.index.intersection(dataframe2add_inter.index)
+                        mask_null = dataframe.loc[intersection, col_i].isnull()
 
-                    if overwrite:
-                        dataframe.loc[intersection[~mask_null], col_i] = \
-                            dataframe2add.loc[intersection[~mask_null], col_i]
-                    elif np.sum(~mask_null) and (dataframe.loc[intersection[~mask_null], col_i] !=
-                                                 dataframe2add.loc[intersection[~mask_null], col_i]).any():
-                        print(f'WARNING: duplicate column with different entries "{col_i}"')
+                        if np.sum(mask_null):
+                            dataframe.loc[intersection[mask_null], col_i] = dataframe2add_inter.loc[
+                                intersection[mask_null], col_i]
 
-                    # handle rows with the new indexes
-                    difference = dataframe2add.index.difference(dataframe.index)
-                    for i in difference:
-                        dataframe.loc[i, col_i] = dataframe2add.loc[i, col_i]
+                        if overwrite:
+                            dataframe.loc[intersection[~mask_null], col_i] = \
+                                dataframe2add_inter.loc[intersection[~mask_null], col_i]
+                        elif np.sum(~mask_null) and (dataframe.loc[intersection[~mask_null], col_i] !=
+                                                     dataframe2add_inter.loc[intersection[~mask_null], col_i]).any():
+                            print(f'WARNING: duplicate column with different entries "{col_i}"')
+
+            # handle rows with the new indexes
+            difference = dataframe2add.index.difference(dataframe.index)
+            if difference.shape[0] != 0:
+                dataframe2add_diff = dataframe2add.loc[difference]
+                dataframe = dataframe.append(dataframe2add_diff)
+
+        if in_place:
+            self.dataframe = dataframe
 
         return dataframe
 
@@ -409,7 +421,7 @@ class SyncDBHandler:
 
         if add_hdf5_attributes2dataframe:
             h5_dataframe = self.dataframe_from_hdf5_attributes(dataframe=dataframe)
-            self.add_new_columns(dataframe2add=h5_dataframe, dataframe=dataframe, overwrite=True)
+            dataframe = self.add_new_columns(dataframe2add=h5_dataframe, dataframe=dataframe, overwrite=True)
 
         return dataframe
 
