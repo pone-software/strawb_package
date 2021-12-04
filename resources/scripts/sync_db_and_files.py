@@ -72,14 +72,14 @@ def main(download=False, dev_codes=None, date_from=None, date_to=None,
     if db_handler.dataframe is None:
         date_from = 'strawb_all'
 
-    db_handler.load_db_from_onc(output=True,
-                                dev_codes=dev_codes,
-                                date_from=date_from, date_to=date_to,
-                                min_file_size=min_file_size, max_file_size=max_file_size,
-                                add_hdf5_attributes=True,
-                                add_dataframe=True,
-                                download=download,
-                                extensions=extensions)
+    db_handler.load_onc_db(output=True,
+                           dev_codes=dev_codes,
+                           date_from=date_from, date_to=date_to,
+                           min_file_size=min_file_size, max_file_size=max_file_size,
+                           add_hdf5_attributes=True,
+                           add_dataframe=True,
+                           download=download,
+                           extensions=extensions)
 
     db_handler.save_db()
 

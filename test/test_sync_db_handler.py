@@ -12,6 +12,10 @@ from strawb import SyncDBHandler, dev_codes_deployed
 
 
 class TestSyncDBHandler(TestCase):
+    def setUp(self):
+        self.date_dict = {'date_from': datetime.date(2021, 8, 31),
+                          'date_to': datetime.date(2021, 8, 31)}
+
     def test__check_index_(self):
         pd_result_0 = pandas.DataFrame([{'fullPath': 'TEST_1.txt', 'h5_attrs': None, 'synced': True},  # take
                                         {'fullPath': 'TEST_2.txt', 'h5_attrs': None, 'synced': True},
@@ -150,7 +154,17 @@ class TestSyncDBHandler(TestCase):
     def test_load_db_from_onc(self):
         # ---- Version 1 ----
         db_handler = SyncDBHandler(file_name=None)
-        db_handler.load_db_from_onc(dev_codes=dev_codes_deployed[0], add_hdf5_attributes=True, add_dataframe=True)
+        db_handler.load_onc_db(dev_codes=dev_codes_deployed[0],
+                               **self.date_dict,
+                               add_hdf5_attributes=True,
+                               add_dataframe=True)
+
+        # mask hdf5 files
+        mask = db_handler.dataframe.filename.str.endswith('hdf5')
+        if not db_handler.dataframe.synced[mask].any():  # check if a hdf5 file is synced
+            # take the hdf5 files, sort it by fileSize and download the smallest
+            db_handler.update_db_and_load_files(db_handler.dataframe[mask].sort_values('fileSize')[:1],
+                                                download=True)
 
         # noinspection PyTypeChecker
         self.assertTrue(any(db_handler.dataframe['deviceCode'] == dev_codes_deployed[0]))
@@ -159,24 +173,24 @@ class TestSyncDBHandler(TestCase):
 
         # ---- Version 2 ----
         db_handler = SyncDBHandler(file_name=None)
-        db_handler.load_db_from_onc(dev_codes=strawb.dev_codes_deployed[:2],
-                                    date_from=datetime.timedelta(days=5),
-                                    add_hdf5_attributes=False,
-                                    add_dataframe=True)
+        db_handler.load_onc_db(dev_codes=strawb.dev_codes_deployed[:2],
+                               **self.date_dict,
+                               add_hdf5_attributes=False,
+                               add_dataframe=True)
 
-        self.assertTrue(np.unique(db_handler.dataframe['deviceCode'].to_numpy()).shape[0] == 2)  # more than on dev_code
+        self.assertEqual(np.unique(db_handler.dataframe['deviceCode'].to_numpy()).shape[0], 2)  # more than on dev_code
         self.assertTrue('rollover_interval' not in db_handler.dataframe)  # add_hdf5_attributes=True
         self.assertTrue('h5_attrs' not in db_handler.dataframe)  # add_hdf5_attributes=False
 
         # ---- Version 3 ----
         db_handler = SyncDBHandler(file_name=None)
-        dataframe = db_handler.load_db_from_onc(dev_codes=strawb.dev_codes_deployed[:2],
-                                                date_from=datetime.timedelta(days=5),
-                                                add_hdf5_attributes=False,
-                                                add_dataframe=False)
+        dataframe = db_handler.load_onc_db(dev_codes=strawb.dev_codes_deployed[:2],
+                                           **self.date_dict,
+                                           add_hdf5_attributes=False,
+                                           add_dataframe=False)
 
         self.assertTrue(db_handler.dataframe is None)
-        self.assertTrue(np.unique(dataframe['deviceCode'].to_numpy()).shape[0] == 2)  # more than on dev_code
+        self.assertEqual(np.unique(dataframe['deviceCode'].to_numpy()).shape[0], 2)  # more than on dev_code
         self.assertTrue('rollover_interval' not in dataframe)  # add_hdf5_attributes=True
         self.assertTrue('h5_attrs' not in dataframe)  # add_hdf5_attributes=False
 
@@ -247,7 +261,7 @@ class TestSyncDBHandler(TestCase):
         # sync db with ONC if db isn't synced or outdated
         if db_handler.dataframe is None or \
                 (datetime.datetime.now(tz=datetime.timezone.utc) - db_handler.dataframe.dateFrom.max()).days > 0:
-            db_handler.load_entire_db_from_ONC()
+            db_handler.load_onc_db_entirely()
             db_handler.save_db()
 
         files = ['TUMPMTSPECTROMETER001_20201001T000000.000Z.txt', 'TUMPMTSPECTROMETER001_20201002T000000.000Z.txt']

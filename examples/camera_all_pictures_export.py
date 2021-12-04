@@ -17,7 +17,7 @@ def main(n_files=3):
     n_files: None, or int.
         The number of files which are processed. None, means all files found.
     """
-    # in case execute db.load_entire_db_from_ONC() to load the entire db
+    # in case execute db.load_onc_db_entirely() to load the entire db
     db = strawb.SyncDBHandler(file_name='Default')  # loads the db
 
     ending = 'CAMERA.hdf5'

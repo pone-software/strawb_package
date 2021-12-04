@@ -10,7 +10,7 @@ from src.strawb import SyncDBHandler
 
 class TestCameraFileHandlerInit(TestCase):
     def setUp(self):
-        # Load DB, in case execute db.load_entire_db_from_ONC() to load the entire db, but this takes a bit.
+        # Load DB, in case execute db.load_onc_db_entirely() to load the entire db, but this takes a bit.
         self.db = SyncDBHandler(file_name='Default')  # loads the db
 
         # filter the camera files
@@ -60,7 +60,7 @@ class TestCameraFileHandlerInit(TestCase):
 
 class TestCameraImages(TestCase):
     def setUp(self):
-        # Load DB, in case execute db.load_entire_db_from_ONC() to load the entire db, but this takes a bit.
+        # Load DB, in case execute db.load_onc_db_entirely() to load the entire db, but this takes a bit.
         db = SyncDBHandler(file_name='Default')  # loads the db
 
         # filter the camera files

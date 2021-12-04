@@ -119,7 +119,7 @@ class ONCDownloader(ONC):
         extensions, and date.
         PARAMETERS
         ----------
-        date_from: str, datetime, optional
+        date_from: str, datetime, date, timedelta, optional
             Takes on of the following:
             - None: takes the today-1day;
             - str in isoformat: '2021-08-31T14:33:25.209715';
@@ -128,7 +128,7 @@ class ONCDownloader(ONC):
             - str: a float, interpreted as datetime.timedelta(days=float(string)) and used like 'timedelta'
             - timedelta: date_from = now - abs(timedelta)
             - a datetime
-        date_to: str, datetime, timedelta, optional
+        date_to: str, datetime, date, timedelta, optional
             Takes on of the following:
             - None: takes the today;
             - str in isoformat: '2021-08-31T14:33:25.209715';
@@ -160,6 +160,9 @@ class ONCDownloader(ONC):
             date_from = datetime.date(2020, 10, 1)
         elif isinstance(date_from, datetime.datetime):
             date_from = date_from
+        elif isinstance(date_from, datetime.date):
+            date_from = datetime.datetime.combine(date_from,
+                                                  datetime.time(0, 0, 0, 0, datetime.timezone.utc))
         elif isinstance(date_from, datetime.timedelta):
             date_from = datetime.datetime.now(tz=datetime.timezone.utc) - abs(date_from)
         else:
@@ -170,6 +173,9 @@ class ONCDownloader(ONC):
             date_to = datetime.datetime.now(tz=datetime.timezone.utc)
         elif isinstance(date_to, datetime.datetime):
             date_to = date_to
+        elif isinstance(date_to, datetime.date):
+            date_to = datetime.datetime.combine(date_to,
+                                                datetime.time(23, 59, 59, 999, datetime.timezone.utc))
         elif isinstance(date_to, datetime.timedelta):
             date_to = date_from + abs(date_to)
         else:

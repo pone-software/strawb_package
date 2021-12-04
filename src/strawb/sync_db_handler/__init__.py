@@ -1,7 +1,7 @@
 import ast
+import datetime
 import glob
 import os
-import time
 
 import h5py
 import numpy as np
@@ -13,7 +13,7 @@ from ..tools import human_size, ShareJobThreads
 
 
 class SyncDBHandler:
-    def __init__(self, file_name='Default', update=False):
+    def __init__(self, file_name='Default', update=False, **kwargs):
         """Handle the DB, which holds the metadata from the ONC DB and adds quantities like hdf5 attributes.
         PARAMETER
         file_name: Union[str, None], optional
@@ -24,16 +24,15 @@ class SyncDBHandler:
             - a file name which is anywhere located in the strawb.Config.raw_data_dir
         update: bool, optional
             defines if the entries should be checked against existing files
+        kwargs: dict, optional
+            parsed to ONCDownloader(**kwargs), e.g.: token, outPath, download_threads
         """
 
         # find handle file_name and fine it.
         if file_name is None:
             self.file_name = None
         elif file_name == 'Default':  # take the default or None if it doesn't exist
-            if os.path.exists(Config.pandas_file_sync_db):
-                self.file_name = Config.pandas_file_sync_db
-            else:
-                self.file_name = None
+            self.file_name = Config.pandas_file_sync_db
         elif os.path.exists(file_name):  # if the file/path exists
             self.file_name = os.path.abspath(file_name)
         elif os.path.exists(os.path.join(Config.raw_data_dir, file_name)):  # maybe with raw_data_dir as path
@@ -54,7 +53,10 @@ class SyncDBHandler:
 
         self.load_db()  # loads the db if file is valid
 
-        if update and self.dataframe is not None:
+        self.onc_downloader = ONCDownloader(**kwargs)
+
+        # load the DB only if the file exists, i.e. file_name = 'Default'
+        if update and os.path.exists(self.file_name):
             self.update_sync_state()
             self.update_hdf5_attributes()
 
@@ -337,6 +339,7 @@ class SyncDBHandler:
             return
 
         dataframe['synced'] = np.array([os.path.exists(i) for i in dataframe["fullPath"]], dtype=bool)
+        return dataframe['synced']
 
     def _extract_hdf5_attribute_(self, i, dataframe, entries_converter, keys_converter):
         full_path = dataframe['fullPath'].iloc[i]
@@ -470,7 +473,8 @@ class SyncDBHandler:
                                                   unit='s', errors='coerce', utc=True, infer_datetime_format=True)
         return h5_dataframe
 
-    def load_db_from_onc(self, output=False, download=False, add_hdf5_attributes=True, add_dataframe=True, **kwargs):
+    def load_onc_db(self, output=False, download=False, add_hdf5_attributes=True, add_dataframe=True, save_db=False,
+                    **kwargs):
         """Loads and downloads the db directly from the ONC server.
 
         PARAMETER
@@ -483,6 +487,8 @@ class SyncDBHandler:
             scan files for hdf5 attributes and adds to the dataframe as new columns
         add_dataframe: bool, optional
             if the dataframe should be added to the internal dataframe or not. Default is True.
+        save_db: bool, optional
+            if it saves the DB on disc. Default: False
         kwargs: dict, optional
             parsed to ONCDownloader().get_files_structured(**kwargs) to filter the files. Parameters are e.g.:
             dev_codes, date_from, date_to, extensions, min_file_size, and max_file_size.
@@ -490,12 +496,16 @@ class SyncDBHandler:
         if output:
             print('-> Get metadata from ONC DB')
 
-        dataframe = ONCDownloader().get_files_structured(**kwargs)
-        return self.update_db_and_load_files(dataframe,
-                                             output=output,
-                                             download=download,
-                                             add_hdf5_attributes=add_hdf5_attributes,
-                                             add_dataframe=add_dataframe)
+        dataframe = self.onc_downloader.get_files_structured(**kwargs)
+        dataframe = self.update_db_and_load_files(dataframe,
+                                                  output=output,
+                                                  download=download,
+                                                  add_hdf5_attributes=add_hdf5_attributes,
+                                                  add_dataframe=add_dataframe)
+        if save_db:
+            self.save_db()
+
+        return dataframe
 
     def update_db_and_load_files(self, dataframe, output=False, download=False, add_hdf5_attributes=True,
                                  add_dataframe=True):
@@ -532,7 +542,7 @@ class SyncDBHandler:
             if output:
                 print('\n-> Download the files from the ONC server')
             # download the files which passed the filter
-            ONCDownloader().getDirectFiles(filters_or_result=dataframe[~dataframe['synced']])
+            self.onc_downloader.getDirectFiles(filters_or_result=dataframe[~dataframe['synced']])
             self.update_sync_state(dataframe=dataframe)
 
         if add_hdf5_attributes:
@@ -548,9 +558,37 @@ class SyncDBHandler:
 
         return dataframe
 
-    def load_entire_db_from_ONC(self, **kwargs):
+    def load_onc_db_entirely(self, **kwargs):
+        """Load the entire DB from ONC. It takes the date_from=datetime.date(2020, 10, 1), aka. 'strawb_all'.
+        To update only the missing days of the DB, use load_onc_db_update().
+        PARAMETER
+        ---------
+        kwargs: dict, optional
+            parsed to load_onc_db(**kwargs). If 'date_from' in kwargs, it is updated to 'strawb_all'.
+        """
         kwargs.update(dict(date_from='strawb_all'))
-        return self.load_db_from_onc(**kwargs)
+        return self.load_onc_db(**kwargs)
+
+    def load_onc_db_update(self, **kwargs):
+        """Load the newest entries of the ONC DB. If the local DB doesn't exists, it loads the entire db:
+        load_onc_db_entirely(**kwargs). If the local DB exists, it takes the time of the latest entry. If this time is
+        older than a day, it updated the entries from that date incl. the day before. If it is less than a day, it
+        doesn't load something.
+        PARAMETER
+        ---------
+        kwargs: dict, optional
+            parsed to load_onc_db(**kwargs). If 'date_from' in kwargs, it is updated to accordingly.
+        """
+        if self.dataframe is None:
+            return self.load_onc_db_entirely(**kwargs)
+        else:
+            delta_last_entire = datetime.datetime.now(tz=datetime.timezone.utc) - self.dataframe.dateFrom.max()
+            if datetime.timedelta(days=1) < delta_last_entire:
+                # take the latest dateFrom - 1 day
+                kwargs.update(dict(date_from=self.dataframe.dateFrom.max() - datetime.timedelta(days=1)))
+                return self.load_onc_db(**kwargs)
+
+            return None  # nothing loaded
 
     def get_files_from_names(self, file_names):
         """Checks:
