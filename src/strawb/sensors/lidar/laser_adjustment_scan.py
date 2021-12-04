@@ -4,8 +4,8 @@ import strawb.sensors.lidar
 
 
 class LaserAdjustmentScan:
-    def __init__(self, file, lever_long=0.051, lever_short=0.038, rpm=31., delta_t_step=0.5, thread_steepness=0.002,
-                 efficiency=0.5):
+    def __init__(self, file=None, lever_long=0.051, lever_short=0.038, rpm=31., delta_t_step=0.5,
+                 thread_steepness=0.002, efficiency=0.5):
         """
         TODO: add doc-string
         PARAMETER
@@ -18,30 +18,46 @@ class LaserAdjustmentScan:
         thread_steepness: float, [m], thread steepness (distance per rotation)
         efficiency: float, the motor moves slow with friction, e.g. 50% slower -> .5
 
-        phi_2d: ndarray(dtype=float, ndim=2, shape(steps_length,steps_length))
+        phi_2d: ndarray(dtype=float, 11ndim=2, shape(steps_length,steps_length))
         theta_2d: ndarray(dtype=float, ndim=2, shape(steps_length,steps_length))
         pmt_counts_2d: ndarray(dtype=float, ndim=2, shape(steps_length,steps_length))
 
         """
+
         # TODO: add docs for parameters
-        self.file = file
+        # ---- Parameters from the hdf5 - file ----
         self.steps = None
         self.steps_length = None
-        self.step_positions = None
+        self._signal = None
+        self._step_positions = None
 
+        # ---- Parameters for the Geometry ----
         self.rps = rpm / 60.  # [1/s] rotations per second
         self.delta_t_step = delta_t_step
         self.thread_steepness = thread_steepness
         self.efficiency = efficiency
-
         self.x_1 = np.array([[lever_short, 0, 0]])  # [m]; x Position stepper
         self.x_2 = np.array([[0, lever_long, 0]])  # [m]; y Position stepper
         self.v_motor = np.array([[0, 0, self.dx]])  # the vector per motor-step
 
         # TODO: add docs for parameters
+        # ---- Computed variables ----
+        self._max_step_position = None
+        self._theta = None
+        self._phi = None
+
         self.phi_2d = None
         self.theta_2d = None
         self.pmt_counts_2d = None
+
+        if isinstance(file, strawb.sensors.lidar.Lidar):  # if it is a instance of Lidar
+            self.lidar = file  # use the provided Lidar instance
+            self.extract_measurements()
+        elif isinstance(file, (strawb.sensors.lidar.FileHandler, str)):  # if it is a instance of Lidar.FileHandler
+            self.lidar = strawb.sensors.lidar.Lidar(file=file)  # creates a Lidar instance
+            self.extract_measurements()
+        else:
+            self.lidar = None
 
     @property
     def dx(self):
@@ -63,164 +79,175 @@ class LaserAdjustmentScan:
         """
         self.rps = value / 60.  # [1/m] -> [1/s] rotations per second
 
-    def get_steps(self):
+    @property
+    def phi(self):
         """
-        Gets the individual steps from the hdf5-file, also sets the maximum steps for one direction, and the length for
-        one direction (so 2*steps+1). Sets the steps that the laser moved steps: it is a 2D array with the absolut
-        steps for the spiral shape=((2*steps+1)**2,2)
+        The computed phi angle from the steps
         :return:
-        None
+        self._phi: ndarray(dtype=float, ndim=1, len=variable)
         """
-        # TODO: add docs for the whole function
-        lidar = strawb.sensors.lidar.Lidar(file=self.file)
+        if self._phi is None and self.step_positions is not None:
+            self._phi, self._theta = self.convert_to_angles(step_positions_1=self.step_positions[:, 0],
+                                                            step_positions_2=self.step_positions[:, 1])
+        return self._phi
 
-        # "mes_steps" might be renamed to "measurement_steps" for coherent naming in newer versions, support both here
+    @property
+    def theta(self):
+        """
+        The computed theta angle from the steps
+        :return:
+        self._theta: ndarray(dtype=float, ndim=1, len=variable)
+        """
+        if self._theta is None and self.step_positions is not None:
+            self._phi, self._theta = self.convert_to_angles(step_positions_1=self.step_positions[:, 0],
+                                                            step_positions_2=self.step_positions[:, 1])
+        return self._theta
+
+    @property
+    def step_positions(self):
+        """
+        The step positions of the hdf5-file
+        :return:
+        self._step_positions: ndarray(dtype=float, ndim=2, shape(steps_length,2))
+        """
+        if self._step_positions is None:
+            self._step_positions = self.get_step_positions()
+        return self._step_positions
+
+    @step_positions.setter
+    def step_positions(self, value):
+        self._step_positions = value
+
+    @property
+    def signal(self):
+        """
+        The signal from the hdf5-file
+        :return:
+        self._signal: ndarray(dtype=float, ndim=2, shape(steps_length,2))
+        """
+        if self._signal is None:
+            self._signal = self.get_signal()
+        return self._signal
+
+    @signal.setter
+    def signal(self, value):
+        self._signal = value
+
+    @property
+    def max_step_position(self):
+        """
+        Step positions corresponding to the measurement with the highest signal value
+        :return:
+        self._max_step_position: ndarray(dtype=float, ndim=1, shape=(2,))
+        """
+        if self._max_step_position is None:
+            self._max_step_position = self.compute_maximum_position()
+        return self._max_step_position
+
+    def extract_measurements(self):
+        """
+        calls self.signal(), self.step_positions(), and self.max_step_position(), if they are None, their
+        :return:
+        self.positions: ndarray(dtype=float, ndim=2, shape(steps_length,2))
+        self.signal: ndarray(dtype=float, ndim=1, shape(steps_length))
+        """
+        # self.signal  # = self.get_signal()
+        # self.step_positions  # = self.get_step_positions()
+        # self.max_step_position  # = self.compute_maximum_position()
+
+        return self.step_positions, self.signal  # , self.max_step_position
+
+    def get_signal(self):
+        """
+        Get middle of Timestamps of trb readout. than sum the corresponding counts of PMT and laser in
+        binned_statistics, only take every second element, due to bins from measurement_time. assign self.signal
+        counts_pmt/counts_laser.
+        :return:
+        self.signal: ndarray(dtype=float, ndim=1, shape(steps_length))
+        """
+        # ---- get data for signal ----
+        abs_timestamp_middle = (self.lidar.file_handler.counts_time[:-1]
+                                + self.lidar.file_handler.counts_time[1:]) * 0.5
+
+        bin_counts_pmt, bin_edges, binnumber = binned_statistic(
+            abs_timestamp_middle,
+            self.lidar.trb_rates.dcounts_pmt,
+            statistic='sum',
+            bins=self.lidar.file_handler.measurement_time)
+
+        bin_counts_laser, bin_edges, binnumber = binned_statistic(
+            abs_timestamp_middle,
+            self.lidar.trb_rates.dcounts_laser,
+            statistic='sum',
+            bins=self.lidar.file_handler.measurement_time)
+
+        bin_counts_pmt = bin_counts_pmt[::2]  # every second to not count data from between steps
+        bin_counts_laser = bin_counts_laser[::2]
+
+        signal = bin_counts_pmt / bin_counts_laser
+
+        return signal
+
+    def get_step_positions(self):
+        """
+        Gets the steps from the hdf5-file, remove "duplicate" values in the array and returns it as 2d array
+        eg. for 1d array: [0,0,0,1,1,0,0,0,0,-1,-1,-1] => [0,1,0,-1]
+        Is done for both direction separately and combined in the end
+
+        IMPORTANT: Only works for spirals!
+
+        :return:
+        self.positions: ndarray(dtype=float, ndim=2, shape(steps_length,2))
+        """
         try:
-            self.steps = lidar.file_handler.file_attributes["mes_steps"]
+            self.steps = self.lidar.file_handler.file_attributes["mes_steps"]
         except KeyError:
-            self.steps = lidar.file_handler.file_attributes["measurement_steps"]
+            self.steps = self.lidar.file_handler.file_attributes["measurement_steps"]
 
         self.steps_length = int(2 * self.steps + 1)
 
-        laser_steps_x = np.array(lidar.file_handler.laser_set_adjust_x)
-        laser_steps_y = np.array(lidar.file_handler.laser_set_adjust_y)
+        laser_steps_x = np.array(self.lidar.file_handler.laser_set_adjust_x)
+        laser_steps_y = np.array(self.lidar.file_handler.laser_set_adjust_y)
 
         change_x = np.where(np.diff(laser_steps_x))[0]
         change_y = np.where(np.diff(laser_steps_y))[0]
 
-        changes_all = np.array(np.sort(np.append(change_x, change_y)))
+        step_positions = np.array(laser_steps_x[change_x], laser_steps_y[change_y]).T
 
-        steps_x = laser_steps_x[changes_all]
-        steps_y = laser_steps_y[changes_all]
+        steps_x = laser_steps_x[change_x]
+        steps_y = laser_steps_y[change_y]
+        step_positions = np.array(laser_steps_x[change_x], laser_steps_y[change_y]).T
+        # step_positions = np.zeros((self.steps_length ** 2, 2))
 
-        step_positions = np.zeros((self.steps_length ** 2, 2))
+        # # cut because laser moves back to (0,0) after last pos
+        # step_positions[:, 0] = steps_x[:self.steps_length ** 2]
+        # step_positions[:, 1] = steps_y[:self.steps_length ** 2]
 
-        step_positions[:, 0] = steps_x[:self.steps_length**2]  # cut because laser moves back to (0,0) after last pos
-        step_positions[:, 1] = steps_y[:self.steps_length**2]
+        return step_positions
 
-        self.step_positions = step_positions
-
-    def laser_adjustment_return(self):
+    def compute_maximum_position(self):
         """
-        Use direct trb readout. TRB is read out with constant frequency. Both the PMT and the Laser Channel. Use middle
-        of these absolute timestamps as integration points in binned_statistics. "lidar.file_handler.measurement_time"
-        gives the bins. Larger when hld-files are produced. Therefore use recorded photons/emitted pulses as value to
-        counteract this effect.
-        Than get call self.get_steps(), populates the self.step_positions with the steps from the hdf5-file, with
-        additional check if the self.step_length is a integer number, to guarantee that nothing went wrong when
-        retrieving steps.
-        Introduce the 2d-array for the pmt counts and get indices from the step_positions. Needed to be shifted by steps
-        because (0,0) needs to be the center of the 2D array. in the for-loop populate the empty 2D array with
-        bin_counts_pmt[i] / bin_counts_laser[i] and return the result.
-        RETURN
-        ------
-        Returns the correct mapping of the calculated values to the spiral and reshapes it into 2d array
-
+        finds the maximum of the self.signal array, assigns it to an offset variable and returns the corresponding steps
+        :return:
+        max_steps: ndarray(dtype=float, ndim=1, len=2)
         """
-        # TODO: add docs for the whole function
-        lidar = strawb.sensors.lidar.Lidar(file=self.file)
+        index = np.argmax(self.signal)
+        max_step_positions = self.step_positions[index]
 
-        abs_timestamp_middle = (lidar.file_handler.counts_time[:-1] + lidar.file_handler.counts_time[1:]) * 0.5
+        return max_step_positions
 
-        bin_counts_pmt, bin_edges, binnumber = binned_statistic(
-            abs_timestamp_middle,
-            lidar.trb_rates.dcounts_pmt,
-            statistic='sum',
-            bins=lidar.file_handler.measurement_time)
-
-        bin_counts_laser, bin_edges, binnumber = binned_statistic(
-            abs_timestamp_middle,
-            lidar.trb_rates.dcounts_laser,
-            statistic='sum',
-            bins=lidar.file_handler.measurement_time)
-
-        self.get_steps()
-
-        if not self.steps_length % 1 == 0:
-            raise TypeError(
-                f'{self.steps_length} is not an integer represented as float. Check manually if mask of changes in '
-                f'laser adjustment was set correctly.')
-
-        pmt_counts_2d = np.zeros((self.steps_length, self.steps_length))
-
-        indices_shifted = self.step_positions + self.steps
-
-        bin_counts_pmt = bin_counts_pmt[::2]
-        bin_counts_laser = bin_counts_laser[::2]
-
-        for i in range(len(indices_shifted)):
-            ii = int(indices_shifted[i, 0])
-            jj = int(indices_shifted[i, 1])
-            pmt_counts_2d[ii, jj] = bin_counts_pmt[i] / bin_counts_laser[i]
-
-        self.pmt_counts_2d = pmt_counts_2d
-
-        return self.pmt_counts_2d
-
-    def get_angles(self):
+    def convert_to_angles(self, step_positions_1, step_positions_2):
         """
-        Calculates the steps that are taken in the directions s_0,s_1 via meshgrid. Identical to spiral but as the
-        values for a 2D grid. The laser points in the direction to the normal of the plan defined by the two vectors:
-        n1 = [X_1, 0, V_motor * s_1] and n2 = [0, X_2, V_motor * s_1]. The crossproduct of both give the normal the
-        direction of the laser of which theta and phi is calculated.
-
-        # TODO: update parameters
-        PARAMETER
-        ---------
-        None
-
-        RETURN
-        ------
-        phi: ndarray(dtype=float, ndim=1, len=(2*steps+1)**2)
-        theta: ndarray(dtype=float, ndim=1, len=(2*steps+1)**2)
+        gets a step and an offset as an input. Subtracts offset from steps and converts it to angles
+        :param step_positions_1: First coordinate of steps ndarray(dtype=float, ndim=1, len=variable)
+        :param step_positions_2: Second coordinate of steps ndarray(dtype=float, ndim=1, len=variable)
+        :return:
         """
-        # ---- Steps ----
-        # get the steps grid, e.g. steps in x and y from [-5,...,5]
-        s_0, s_1 = np.meshgrid(np.arange(self.steps_length) - self.steps_length // 2,
-                               np.flip(np.arange(self.steps_length) - self.steps_length // 2))
-        s_0 = s_0.flatten()
-        s_1 = s_1.flatten()
 
-        # ---- Angles ----
-        # calculate the normal
-        n = np.cross(self.x_1 + self.v_motor * s_0.reshape(-1, 1),
-                     self.x_2 + self.v_motor * s_1.reshape(-1, 1))
+        n = np.cross(self.x_1 + self.v_motor * step_positions_1.reshape(-1, 1),
+                     self.x_2 + self.v_motor * step_positions_2.reshape(-1, 1))
 
         theta = np.arccos(n[:, 2] / np.sqrt(np.sum(n ** 2, axis=-1)))
         phi = np.arctan2(n[:, 1], n[:, 0]) + np.pi
 
-        self.phi_2d = phi.reshape(2 * self.steps + 1, 2 * self.steps + 1)
-        self.theta_2d = theta.reshape(2 * self.steps + 1, 2 * self.steps + 1)
-
-        return self.phi_2d, self.theta_2d
-
-    def get_steps_from_max_value(self):
-        """
-        np.max() returns index of max value which corresponds to a direction. Can be translated to steps and than
-        returned. s1 = steps in x-direction s2 = steps in y-direction
-        PARAMETER
-        ---------
-        phi_2d: array, float, dim= (2*steps+1,2*steps+1). For 10 steps it has size (21,21)
-        theta2d: array, float, dim= (2*steps+1,2*steps+1). For 10 steps it has size (21,21)
-
-        RETURN
-        ------
-        s1: float, 1. coordinate for steps to the max value
-        s2: float, 2. coordinate for steps to the max value
-        """
-        # TODO: add docs for the whole function
-        self.laser_adjustment_return()
-        self.get_angles()
-
-        max_ind = np.unravel_index(self.pmt_counts_2d.argmax(), self.pmt_counts_2d.shape)
-
-        max_phi = self.phi_2d[max_ind]
-        max_theta = self.theta_2d[max_ind]
-
-        r = self.x_2[0, 1] * self.x_1[0, 0] / np.cos(max_theta)
-        s1 = -r / (self.x_2[0, 1] * self.dx) * np.cos(max_phi) * np.sin(max_theta)
-        s2 = -r / (self.x_1[0, 0] * self.dx) * np.sin(max_phi) * np.sin(max_theta)
-        s1 = np.round(s1)
-        s2 = np.round(s2)
-
-        return s1, s2
+        return phi, theta

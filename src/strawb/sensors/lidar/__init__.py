@@ -1,6 +1,6 @@
 from typing import Union
 
-from strawb.sensors.lidar.laser_adjustment_scan_v2 import LaserAdjustmentScan
+from strawb.sensors.lidar.laser_adjustment_scan import LaserAdjustmentScan
 from strawb.sensors.lidar.lidar_trb_rates import LidarTRBRates
 from strawb.sensors.lidar.file_handler import FileHandler
 
