@@ -62,7 +62,7 @@ def asdatetime(array, precision='us'):
 
 
 class ShareJobThreads:
-    def __init__(self, thread_n=3, fmt=None):
+    def __init__(self, thread_n=3, fmt=None, unit='items'):
         """ A Class which spreads a iterable job defined by a function f to n threads. It is basically a Wrapper for:
         for i in iterable:
             f(i)
@@ -80,6 +80,8 @@ class ShareJobThreads:
         fmt: str, optional
             formatter for the bar, if not None, the iterable has to be a dict, i.e. iterable=[{'a':1, 'b':2},...], and
             the fmt: '{a}-{b}'.
+        unit: str, optional
+            the unit shows up in the progress bar as '<unit>/s'. Default: 'items'
         """
         self.thread_n = thread_n
         self.lock = threading.Lock()
@@ -98,8 +100,9 @@ class ShareJobThreads:
 
         # formatter for the bar, if not None, the iterable has to be a dict, i.e. {'a':1, 'b':2}, and the fmt: '{a}-{b}'
         self.fmt = fmt  # formatter for the bar
+        self.unit = unit
 
-    def do(self, f, iterable, **kwargs):
+    def do(self, f, iterable, unit=None, **kwargs):
         """Start the iterable job defined by a function f, an iterable and **kwargs on multiple threads. Each thread
         does f(iterable[i], **kwargs) until there is no iterable left. The number of threads is defined at the
         initialization of ShareJobThreads.
@@ -112,6 +115,9 @@ class ShareJobThreads:
             the iterable the threads takes the items and execute the function with it
         kwargs: dict, optional
             kwargs are parsed to all function calls and don't change. It uses f(iterable[i], **kwargs).
+        unit: str, optional
+            the unit shows up in the progress bar as '<unit>/s'. Default: None, takes the value from the class
+            initialisation.
         """
         self.active = True
         self.iterable = iterable
@@ -120,6 +126,8 @@ class ShareJobThreads:
         self.i_bar = 0
         self.f = f
         self.return_buffer = []
+        if unit is not None:
+            self.unit = unit
 
         self.threads = []
 
@@ -141,7 +149,7 @@ class ShareJobThreads:
 
         with tqdm(self.iterable,
                   file=sys.stdout,
-                  unit='file') as bar:
+                  unit=self.unit) as bar:
             while any([thread_i.is_alive() for thread_i in self.threads]) or last_i != self.i_bar:
                 with self.lock:
                     # print(self.i, self.active)

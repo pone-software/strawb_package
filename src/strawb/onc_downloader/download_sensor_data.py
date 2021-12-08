@@ -28,7 +28,7 @@ from strawb.onc_downloader import ONCDownloader
 #     return dev
 #
 # # download parallel
-# sjt = strawb.tools.ShareJobThreads(thread_n=1)
+# sjt = strawb.tools.ShareJobThreads(thread_n=1, unit='files')
 # sjt.do(get_file, time_array)
 
 def convert_str2timestamp(value, fmt='%Y-%m-%dT%H:%M:%S.%fZ'):

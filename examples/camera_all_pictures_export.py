@@ -39,7 +39,7 @@ def main(n_files=3):
         file_list_select = random.sample(file_list, n_files)
         print(f'Out of {len(file_list)} files select {n_files} randomly')
 
-    sjt = ShareJobThreads()
+    sjt = ShareJobThreads(unit='files')
     sjt.do(parse_one_file, file_list_select)
 
 

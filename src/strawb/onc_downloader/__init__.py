@@ -84,7 +84,7 @@ class ONCDownloader(ONC):
             'dateTo': date_to.strftime("%Y-%m-%dT%H:%M:%S.999Z"),  # '2021-10-21T00:00:10.000Z',
             'returnOptions': 'all'}
 
-        sjt = ShareJobThreads(thread_n=len(dev_codes))
+        sjt = ShareJobThreads(thread_n=len(dev_codes), unit='devices')
         sjt.do(self._get_for_dev_code_, dev_codes, filters=filters)
 
         for dev_i, result_i in zip(dev_codes, sjt.return_buffer):
