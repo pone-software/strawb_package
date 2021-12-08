@@ -4,8 +4,8 @@ from unittest import TestCase
 import numpy as np
 import pandas
 
-from src.strawb.sensors.pmtspec.file_handler import FileHandler
-from src.strawb.sensors.pmtspec.pmtspec_trb_rates import PMTSpecTRBRates
+from strawb.sensors.pmtspec.file_handler import FileHandler
+from strawb.sensors.pmtspec.pmtspec_trb_rates import PMTSpecTRBRates
 from strawb import SyncDBHandler
 
 

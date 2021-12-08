@@ -8,7 +8,7 @@ from strawb.trb_tools import TRBTools
 
 class PMTSpecTRBRates(TRBTools):
     def __init__(self, file_handler: FileHandler):
-        if isinstance(file_handler, FileHandler):
+        if isinstance(file_handler, (FileHandler)):
             self.file_handler = file_handler
         else:
             raise TypeError(f'Expected pmtspec.FileHandler got: {type(file_handler)}')
