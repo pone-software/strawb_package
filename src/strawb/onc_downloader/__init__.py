@@ -149,7 +149,7 @@ class ONCDownloader(ONC):
         """
         # TODO: finalise commented part `data_product_names`
         if dev_codes is None:
-            dev_codes = strawb.dev_codes_deployed
+            dev_codes = ['ONCMJB016', *strawb.dev_codes_deployed]
         elif isinstance(dev_codes, str):  # dev codes must be a list
             dev_codes = [dev_codes]
 

@@ -29,7 +29,7 @@ def parser_args():
                              " - str in isoformat: '2021-08-31T14:30:00.000' or '2021-08-31T14:30:00.000Z'\n"
                              " - not set (default) today")
     parser.add_argument('-d', '--devcode', type=str,
-                        default=None, nargs='+', choices=list(strawb.dev_codes_deployed),
+                        default=None, nargs='+', choices=['ONCMJB016', *list(strawb.dev_codes_deployed)],
                         help="Defines the or multiple dev_code(s) which should be synced.")
     parser.add_argument('-e', '--extensions', type=str, default=None, nargs='+',
                         help="Defines the file extensions which should be synced,"
