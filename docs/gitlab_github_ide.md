@@ -1,15 +1,25 @@
-# Github 
+# Github
 
 
 ## Download a repository (git clone)
 In order to download an exiting repository, follow the [official GitHub guid](https://docs.github.com/en/github/creating-cloning-and-archiving-repositories/cloning-a-repository-from-github/cloning-a-repository).
 GitLab works nearly the same, only search for the `Clone`(GitLab) instead of the `Code`(GitHub) button. Make sure you select the HTTPS (Token) or SSH link, depending on your setup.
 
+**GitHub or GitLab?**
+It's nearly the same. GitHub is service for developing and sharing software hosted by Microsoft. As an alternative there are open source tools like GitLab. 
+Those open source tools can be self-hosted, e.g. the GitLab at LRZ. Working with both - GitHub or GitLab - is nearly identical. In the terminal, both work with the command `git`.
+
 
 # PyCharm
 PyCharm is a powerful IDE for various coding languages. And it helps to develop python code way faster and more professional.
 
-To start [download the latest PyCharm version](https://www.jetbrains.com/pycharm/download), connect your GitHub or GitLab or booth accounts and clone an existing repository.
+To start [download the latest PyCharm version](https://www.jetbrains.com/pycharm/download), connect your GitHub or GitLab or both accounts. One method per server is enough, either ssh or https/token. 
+And the server, GitHub or GitLab (can be multiple server) depends on where the repository is located. Therefore, you have to select one of the following options:
+- [GitHub or GitLab ssh key](#connect-gitlabgithub---ssh-key)
+- [GitLab with https token](#connect-gitlab-with-https-token)
+- [GitHub with https token](#connect-github-with-https-token)
+
+If successfully, you [can clone an existing repository described in this link](https://www.jetbrains.com/help/pycharm/set-up-a-git-repository.html#clone-repo).
 
 ## Connect GitLab/GitHub - ssh key
 In PyCharm, open `Settings/Preferences -> Version Control -> Subversion -> SSH` and add the path to your `Private Key`.
@@ -26,7 +36,7 @@ First you have to install the Gitlab Plugin:
 
 ### Add a new GitLab Server
 1. Open `Settings/Preferences -> Version Control -> GitLab`, click `Add new GitLab Server` and fill in:
-2. GitLab UI Server Url: https://gitlab.lrz.de/
+2. GitLab UI Server Url: `https://gitlab.lrz.de/`
 3. GitLab Personal Access Token: [Create a new token](https://gitlab.lrz.de/-/profile/personal_access_tokens) and make sure you select `api`.
    1. If the link doesn't work. On [gitlab.lrz.de](https://gitlab.lrz.de): `'Avatar' (upper right corner) -> Edit profil -> Access Tokens`
 4. Preferred checkout method: `HTTPS`

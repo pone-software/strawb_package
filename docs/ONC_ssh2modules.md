@@ -16,7 +16,7 @@ Quite complicated! To make your life easier, use [ssh configs from the next sect
 
 ## SSH Config file
 
-For a fast and easy access to all modules add the lines from the [entries for the config-file](#Entries-for-the-config-file) to your `~/.ssh/config`.
+For a fast and easy access to all modules add the lines from the [entries for the config-file](#Entries-for-the-config-file) to your `~/.ssh/config`. (Open it with a txt editor, e.g. `vim`, add the lines and save it.)
 
 In addition, add the [module ssh key pair](#Module ssh key pair) (`~/.ssh/id_rsa_mctl.pub` and `~/.ssh/id_rsa_mctl`) to your computer for password-less login to the model.
 
@@ -106,7 +106,7 @@ Host standard1
 
 ### Module ssh key pair
 If you don't want to use the password (`odroid`) to log in to the modules, you can create the following key pair (`~/.ssh/id_rsa_mctl.pub` and `~/.ssh/id_rsa_mctl`) with the following commands. Each module has this key already listed as authenticated.
-Adding private keys to repositories is general a bad idea. However, the security comes here from the key to the ONC VM. Important is also to do the `chmod` which is included in the commands, already.
+Adding private keys to repositories is general a bad idea. However, the security comes here from the key to the ONC VM. Important is also to do the `chmod` which is included in the commands, already. Run the commands in the terminal:
 ```bash
 echo 'ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCn3S2f2/TwOGnbT/H4G5buGlNqctmt6ZjZvdrESwgE5jgMsnMeOf1dyrIsBj5ESNM+5N4kZnNya/Gly1eLHdlrJaVD4OjrRsPwaFS6N3G8eq0jVmn/8hnjurWePCyoJeaQ6aFcGB7bJUmmuQccxRptOICC/qYmoxNbETK0XDODklAUHKtUl7AIoFNxBkmvp/nFwxfVotehfEVzzMVJDI47xoBjnTjzU5mhQlYySx3Gb/BjjY8+vgLjDkp2VZKjMqdEc3XeLsxTDh/b88RwXWtJ+PgwCiiNmWz3g7c46CvoEHUsceREAnIxDoEFL7V2eWAvPNLS3ua3Cz3qcLojZqZP odroid@odroidc2' > ~/.ssh/id_rsa_mctl.pub
 # creates and writes the public key to the file

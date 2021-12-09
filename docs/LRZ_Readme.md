@@ -81,7 +81,7 @@ You can add key pairs with [management-portal](https://cc.lrz.de)`-> Project -> 
 ### Access a VM via SSH
 
 The access to a VM is restricted to ssh with key pair only. First create a new key pair. If you don't know how, search the internet for it. In the following the key 
-To add a key, someone with access to the VM has to add your public part (.pub) of the ssh key to the file `~/.ssh/authorized_keys`. Afterwards you can log in with
+To add a key, someone with access to the VM has to add your public part (.pub) of the ssh key to the file `~/.ssh/authorized_keys` on the VM. Afterwards you can log in with
 ```bash
 ssh -i <your_key.key> <user_name>@<ip-address>
 ```
