@@ -183,16 +183,16 @@ class Images:
 
         index = self.get_index(index=index, **kwargs)
 
-        rgb = self.load_rgb(index=index, **kwargs)
+        self._rgb = self.load_rgb(index=index, **kwargs)
 
         # get bit's right, default is 16bit
         bit = int(bit)
         bit_dict = {8: np.uint8, 16: np.uint16}
         if bit == 8:
-            rgb = rgb / 2 ** 16 * 2 ** 8  # - 1
+            self._rgb = self._rgb / 2 ** 16 * 2 ** 8  # - 1
 
-        rgb[rgb == 2 ** bit] = rgb[rgb == 2 ** bit] - 1
-        rgb = rgb.astype(bit_dict[bit])
+        self._rgb[self._rgb == 2 ** bit] = self._rgb[self._rgb == 2 ** bit] - 1
+        self._rgb = self._rgb.astype(bit_dict[bit])
 
         # prepare directory
         directory = os.path.abspath(directory.format(proc_data_dir=Config.proc_data_dir,
@@ -217,7 +217,7 @@ class Images:
                 # print('skip:', f_name_target_i)
             else:
                 # print('save:', f_name_target_i)
-                cv2.imwrite(f_name_i, rgb[i, :, :, ::-1])  # [:,:,::-1] as cv2 takes BGR and not RGB
+                cv2.imwrite(f_name_i, self._rgb[i, :, :, ::-1])  # [:,:,::-1] as cv2 takes BGR and not RGB
                 shutil.move(os.path.join(os.path.abspath('.'), f_name_i), f_name_target_i)  # move file
 
             file_name_list.append(f_name_target_i)

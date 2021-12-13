@@ -18,7 +18,7 @@ Quite complicated! To make your life easier, use [ssh configs from the next sect
 
 For a fast and easy access to all modules add the lines from the [entries for the config-file](#Entries-for-the-config-file) to your `~/.ssh/config`. (Open it with a txt editor, e.g. `vim`, add the lines and save it.)
 
-In addition, add the [module ssh key pair](#Module ssh key pair) (`~/.ssh/id_rsa_mctl.pub` and `~/.ssh/id_rsa_mctl`) to your computer for password-less login to the model.
+In addition, add the [module ssh key pair](#Module-ssh-key-pair) (`~/.ssh/id_rsa_mctl.pub` and `~/.ssh/id_rsa_mctl`) to your computer for password-less login to the model.
 
 Once this is done, commands simplify to (when connecting the first time, you have to accept the fingerprint):
 
