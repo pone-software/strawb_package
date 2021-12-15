@@ -12,3 +12,6 @@ venv/
 **/.DS_Store
 **/*.h5
 **/__pycache__
+Pipfile
+Pipfile.lock
+config-* # personal config files
