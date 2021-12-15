@@ -1,6 +1,6 @@
 # STRAWb
 
-STRAWb is a python module which simplifies and streamlines the work with the STRAWb data. Beside this Readme, there is more documentation in the [docs directory](docs).
+STRAWb is a python module which simplifies and streamlines the work with the STRAWb data. Beside this Readme, there is more documentation at the [repository Wiki page](https://github.com/pone-software/strawb_package/wiki).
 
 ## Installation
 For the installation you have two options.
@@ -8,7 +8,7 @@ For the installation you have two options.
 `Pip` can directly install the package from the repository. As `pip` only compares the version number and not the code, uninstall an existing installation before you install it from the repository. For updating the package just rerun the same commands. You can also specify the branch by changing `master` accordingly. The commands are:
 ```bash
 pip3 uninstall -y strawb  # Uninstall an existing installation
-pip3 install -U git+git://github.com/pone-software/strawb_package.git@master  # Install it from the repro
+pip3 install -U git+git://github.com/pone-software/strawb_package.git@master  # Install it from the repository
 ```
 
 ### Installation for developers
@@ -17,11 +17,11 @@ This installation downloads the source code, and the package loads directly from
 Go to the directory of [this README you are reading](/README.md) is placed (basically, to the directory of the [pyproject.toml](/pyproject.toml) file, but this should be the same).
 Depending on your Python installation adopt python3/pip3 to python/pip, however python3 is required. Run:
   ```bash
-  mkdir /path/to/repros  # adopted the path, be aware that git clone creates a directory with the repro name
+  mkdir /path/to/repros  # adopted the path, be aware that git clone creates a directory with the repository name
   cd /path/to/repros # enter the directory
   
   # clone/download the repository
-  git clone https://github.com/pone-software/strawb_package.git  # downloads the repro
+  git clone https://github.com/pone-software/strawb_package.git  # downloads the repository
   cd strawb_package  # enter the repository directory
   
   # install the package
