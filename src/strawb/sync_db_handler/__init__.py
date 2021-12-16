@@ -33,7 +33,7 @@ class SyncDBHandler:
             self.file_name = None
         elif file_name == 'Default':  # take the default or None if it doesn't exist
             self.file_name = Config.pandas_file_sync_db
-            if not os.path.exists(self.file_name):
+            if not os.path.exists(self.file_name):  # roll back to None if the file doesn't exist or isn't loaded.
                 print(f"File doesn't exist: {self.file_name} -> file_name set to None.")
                 self.file_name = None
         elif os.path.exists(file_name):  # if the file/path exists
@@ -490,6 +490,8 @@ class SyncDBHandler:
             scan files for hdf5 attributes and adds to the dataframe as new columns
         add_dataframe: bool, optional
             if the dataframe should be added to the internal dataframe or not. Default is True.
+        save_db: bool, optional
+            if it saves the DB on disc. Default: False
         kwargs: dict, optional
             parsed to ONCDownloader().get_files_structured(**kwargs) to filter the files. Parameters are e.g.:
             dev_codes, date_from, date_to, extensions, min_file_size, and max_file_size.
