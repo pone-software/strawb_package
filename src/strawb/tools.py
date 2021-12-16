@@ -264,11 +264,23 @@ def add_docs(org_func):
 
 
 # From: https://stackoverflow.com/questions/1094841/get-human-readable-version-of-file-size
-def human_size(size_bytes, units=None, precision=2):
-    """ Returns a human readable string representation of bytes """
+def human_size(size_bytes, units=None, base=1024, precision=2):
+    """ Returns a human readable string representation of bytes
+    PARAMETER
+    ---------
+    size_bytes: int, float
+        the file size as number
+    units: list, optional
+        the units to take as a list starting from small to big. Units are separated by the factor defined in base.
+        Default: [' bytes', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB'].
+    base: float, optional
+        defines the base which defines the factor between units, i.e. base=1024; 1024 -> 1 KB. Default: 1024
+    precision: int, optional
+        the precision the returned string has. I.e.: precision=2 -> `XXX.XX ...`
+    """
     if units is None:
         units = [' bytes', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB']
-    return f'{size_bytes:.{precision}f} {units[0]}' if size_bytes < 1024 else human_size(size_bytes / 1024, units[1:])
+    return f'{size_bytes:.{precision}f} {units[0]}' if size_bytes < base else human_size(size_bytes / base, units[1:])
 
 
 def wavelength_to_rgb(channel, gamma=0.8):
