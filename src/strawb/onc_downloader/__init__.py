@@ -201,7 +201,7 @@ class ONCDownloader(ONC):
         This function syncs files from the onc server for the specified dev_codes. The files are organized in different
         directories by <Config.raw_data_dir>/<dev_code>/<year>_<month>/<file_name>.
         Files can be filtered by the file size, extensions, and date.
-        >>> df_result = self.download_structured
+        >>> df_result = self.download_structured()
         >>> mask = df_result.filename.str.endswith('abc.txt')  # mask to download files which ends with 'abc.txt'
         >>> self.getDirectFiles(df_result[mask])
         PARAMETERS

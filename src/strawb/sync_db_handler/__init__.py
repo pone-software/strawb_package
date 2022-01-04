@@ -33,6 +33,9 @@ class SyncDBHandler:
             self.file_name = None
         elif file_name == 'Default':  # take the default or None if it doesn't exist
             self.file_name = Config.pandas_file_sync_db
+            if not os.path.exists(self.file_name):  # roll back to None if the file doesn't exist or isn't loaded.
+                print(f"File doesn't exist: {self.file_name} -> file_name set to None.")
+                self.file_name = None
         elif os.path.exists(file_name):  # if the file/path exists
             self.file_name = os.path.abspath(file_name)
         elif os.path.exists(os.path.join(Config.raw_data_dir, file_name)):  # maybe with raw_data_dir as path
@@ -501,18 +504,18 @@ class SyncDBHandler:
                                                   output=output,
                                                   download=download,
                                                   add_hdf5_attributes=add_hdf5_attributes,
-                                                  add_dataframe=add_dataframe)
-        if save_db:
-            self.save_db()
+                                                  add_dataframe=add_dataframe,
+                                                  save_db=save_db)
 
         return dataframe
 
     def update_db_and_load_files(self, dataframe, output=False, download=False, add_hdf5_attributes=True,
-                                 add_dataframe=True):
+                                 add_dataframe=True, save_db=False):
         """Depending which options are set, this function does any combination of the following three tasks:
         1. `download=True` -> loads all missing files from the dataframe
         2. `add_hdf5_attributes=True` -> updates the hdf5 attributes from the files which are present on the disc
         3. `add_dataframe=True` -> adds the dataframe to the internal stored DB (must be saved separately to disc)
+        4. `save_db=True' -> stores the new DB on disc. works only if `add_dataframe=True`.
 
 
         PARAMETER
@@ -523,6 +526,8 @@ class SyncDBHandler:
             scan files for hdf5 attributes and adds to the dataframe as new columns
         add_dataframe: bool, optional
             if the dataframe should be added to the internal dataframe or not. Default is True.
+        save_db: bool, optional
+            if it saves the DB on disc. Default: False
         kwargs: dict, optional
             parsed to ONCDownloader().get_files_structured(**kwargs) to filter the files. Parameters are e.g.:
             dev_codes, date_from, date_to, extensions, min_file_size, and max_file_size.
@@ -555,6 +560,14 @@ class SyncDBHandler:
                 print('\n-> Add to db')
             # here 'self.dataframe =' is important as it could be None before and that brakes the inplace
             self.dataframe = self.add_new_columns(dataframe2add=dataframe, dataframe=self.dataframe, overwrite=True)
+
+        if save_db:
+            if output:
+                print('\n-> save DB to disc')
+            if add_dataframe:
+                self.save_db()
+            else:
+                print('\n WARNING: can only save the DB if add_dataframe=True.')
 
         return dataframe
 
