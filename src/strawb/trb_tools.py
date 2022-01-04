@@ -76,10 +76,7 @@ class TRBTools:
         dcounts_arr = np.array([*args], dtype=np.int64)
 
         # Calculate Rates
-        delta_time = dcounts_time / daq_frequency_readout
+        delta_time = dcounts_time / daq_frequency_readout # seconds
         rate_arr = dcounts_arr.astype(float) / delta_time
 
-        # counts time is the middle of the interval and starts with 0
-        counts_time = np.cumsum(delta_time) - delta_time * .5
-
-        return counts_time, rate_arr
+        return delta_time, rate_arr
