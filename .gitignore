@@ -16,3 +16,5 @@ Pipfile
 Pipfile.lock
 config-* # personal config files
 no_git/
+.vscode/settings.json
+settings.py
