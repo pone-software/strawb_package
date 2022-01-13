@@ -29,10 +29,10 @@ class TestLidarTRBTools(TestCase):
         dcounts_time = np.ones(10) * 10
         steps = 3
         counts = np.ones(10) * steps
-        counts_time, rate_arr = TRBTools._calculate_rates_(daq_frequency_readout=daq_frequency_readout,
+        delta_time, rate_arr = TRBTools._calculate_rates_(daq_frequency_readout=daq_frequency_readout,
                                                            dcounts_time=dcounts_time,
-                                                           counts=counts)
+                                                           dcounts_arr=counts)
 
-        self.assertEqual(np.array([counts]).shape, rate_arr.shape)
-        self.assertEqual(counts_time.shape, dcounts_time.shape)
+        self.assertEqual(counts.shape, rate_arr.shape)
+        self.assertEqual(delta_time.shape, dcounts_time.shape)
         self.assertEqual(np.unique(rate_arr).shape, (1,))  # specific for the given parameters
