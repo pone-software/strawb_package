@@ -90,5 +90,7 @@ class TestPMTSpecTRBRates(TestCase):
 
         self.assertIsInstance(trb_rates.time, np.ndarray)
         self.assertGreater(trb_rates.time.shape[0], 1)
+        self.assertIsInstance(trb_rates.time_middle, np.ndarray)
+        self.assertGreater(trb_rates.time_middle.shape[0], 1)
         self.assertIsInstance(trb_rates.rate, np.ndarray)
         self.assertEqual(trb_rates.rate.shape[0], 12)
