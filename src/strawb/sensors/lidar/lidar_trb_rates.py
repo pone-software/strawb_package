@@ -26,11 +26,11 @@ class LidarTRBRates(TRBTools):
     # ---- cleaned TRB Counters  ----
     @property
     def dcounts_pmt(self):
-        return self.dcounts[1]
+        return self.dcounts[0]
 
     @property
     def dcounts_laser(self):
-        return self.dcounts[2]
+        return self.dcounts[1]
 
     @property
     def rate_pmt(self):
