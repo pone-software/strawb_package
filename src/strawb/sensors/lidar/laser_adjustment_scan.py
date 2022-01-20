@@ -50,10 +50,10 @@ class LaserAdjustmentScan:
         self.theta_2d = None
         self.pmt_counts_2d = None
 
-        if isinstance(file, strawb.sensors.lidar.Lidar):  # if it is a instance of Lidar
+        if isinstance(file, strawb.sensors.lidar.Lidar):  # if it is an instance of Lidar
             self.lidar = file  # use the provided Lidar instance
             self.extract_measurements()
-        elif isinstance(file, (strawb.sensors.lidar.FileHandler, str)):  # if it is a instance of Lidar.FileHandler
+        elif isinstance(file, (strawb.sensors.lidar.FileHandler, str)):  # if it is an instance of Lidar.FileHandler
             self.lidar = strawb.sensors.lidar.Lidar(file=file)  # creates a Lidar instance
             self.extract_measurements()
         else:
@@ -159,7 +159,7 @@ class LaserAdjustmentScan:
 
     def get_signal(self):
         """
-        Get middle of Timestamps of trb readout. than sum the corresponding counts of PMT and laser in
+        Get middle of Timestamps of trb readout. Then sum the corresponding counts of PMT and laser in
         binned_statistics, only take every second element, due to bins from measurement_time. assign self.signal
         counts_pmt/counts_laser.
         :return:
@@ -206,22 +206,34 @@ class LaserAdjustmentScan:
 
         self.steps_length = int(2 * self.steps + 1)
 
-        laser_steps_x = np.array(self.lidar.file_handler.laser_set_adjust_x)
-        laser_steps_y = np.array(self.lidar.file_handler.laser_set_adjust_y)
+        # laser_steps_x = np.array(self.lidar.file_handler.laser_set_adjust_x)
+        # laser_steps_y = np.array(self.lidar.file_handler.laser_set_adjust_y)
 
-        change_x = np.where(np.diff(laser_steps_x))[0]
-        change_y = np.where(np.diff(laser_steps_y))[0]
+        # change_x = np.where(np.diff(laser_steps_x))[0]
+        # change_y = np.where(np.diff(laser_steps_y))[0]
 
-        step_positions = np.array([laser_steps_x[change_x], laser_steps_y[change_y]]).T
+        # step_positions = np.array([laser_steps_x[change_x], laser_steps_y[change_y]]).T
 
-        steps_x = laser_steps_x[change_x]
-        steps_y = laser_steps_y[change_y]
-        step_positions = np.array([laser_steps_x[change_x], laser_steps_y[change_y]]).T
+        # steps_x = laser_steps_x[change_x]
+        # steps_y = laser_steps_y[change_y]
+        # step_positions = np.array([laser_steps_x[change_x], laser_steps_y[change_y]]).T
         # step_positions = np.zeros((self.steps_length ** 2, 2))
 
         # # cut because laser moves back to (0,0) after last pos
         # step_positions[:, 0] = steps_x[:self.steps_length ** 2]
         # step_positions[:, 1] = steps_y[:self.steps_length ** 2]
+
+        # take the middle of the measurement step-time and get the corresponding adjust_x/y values
+
+        measurement_adjust_x = np.interp(self.lidar.file_handler.measurement_time,
+                                         self.lidar.file_handler.laser_time,
+                                         self.lidar.file_handler.laser_set_adjust_x)
+
+        measurement_adjust_y = np.interp(self.lidar.file_handler.measurement_time,
+                                         self.lidar.file_handler.laser_time,
+                                         self.lidar.file_handler.laser_set_adjust_y)
+
+        step_positions = np.array([measurement_adjust_x, measurement_adjust_y]).T
 
         return step_positions
 
