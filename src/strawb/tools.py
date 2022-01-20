@@ -62,7 +62,7 @@ def asdatetime(array, precision='us'):
 
 
 class ShareJobThreads:
-    def __init__(self, thread_n=3, fmt=None, unit='items'):
+    def __init__(self, thread_n=3, fmt=None, unit='items', buffer_type=list):
         """ A Class which spreads a iterable job defined by a function f to n threads. It is basically a Wrapper for:
         for i in iterable:
             f(i)
@@ -82,6 +82,9 @@ class ShareJobThreads:
             the fmt: '{a}-{b}'.
         unit: str, optional
             the unit shows up in the progress bar as '<unit>/s'. Default: 'items'
+        buffer_type: type, optional
+            defines the buffer type which stores the return of f(iterable[i]). Either a list (default) or a dict. The
+            dict stores in the format: {iterable[i]: f(iterable[i])}.
         """
         self.thread_n = thread_n
         self.lock = threading.Lock()
@@ -89,6 +92,10 @@ class ShareJobThreads:
         self.active = False
         self.event = threading.Event()
 
+        if buffer_type in [list, dict]:
+            self.buffer_type = buffer_type
+        else:
+            raise TypeError(f"buffer_type must be 'list' or 'dict'. Got: {buffer_type}")
         self.return_buffer = None  # to store all returns from the functions
 
         self.threads = None  # the _worker_ threads
@@ -125,7 +132,9 @@ class ShareJobThreads:
         self.i = 0
         self.i_bar = 0
         self.f = f
-        self.return_buffer = []
+
+        self.return_buffer = self.buffer_type()
+
         if unit is not None:
             self.unit = unit
 
@@ -140,7 +149,7 @@ class ShareJobThreads:
         self.thread_bar.start()
         self.thread_bar.join()
 
-        if self.return_buffer is not []:
+        if self.return_buffer not in [list(), dict()]:
             return self.return_buffer
 
     def _update_bar_(self, ):
