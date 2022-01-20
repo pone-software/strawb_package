@@ -233,6 +233,9 @@ class LaserAdjustmentScan:
                                          self.lidar.file_handler.laser_time,
                                          self.lidar.file_handler.laser_set_adjust_y)
 
+        measurement_adjust_x = measurement_adjust_x[::2]
+        measurement_adjust_y = measurement_adjust_y[::2]
+
         step_positions = np.array([measurement_adjust_x, measurement_adjust_y]).T
 
         return step_positions
