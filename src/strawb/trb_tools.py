@@ -19,6 +19,7 @@ class TRBTools:
         self.__time__ = None  # array with absolute time stamps
 
         self._dcounts_arr_ = None  # stores result of self.diff_counts()
+        self._active_read_arr_ = None  # stores if the counter read happens at a event (1) or not (0)
         self._rate_delta_time = None
         self._rate = None  # stores result of self.calculate_counts() (needs `self._dcounts_arr_`)
 
@@ -93,9 +94,17 @@ class TRBTools:
             self.calculate_counts()
         return self._rate
 
+    @property
+    def active_read(self):
+        """A bool array which signalise, that the TRB read a counter when there was a event ongoing at this channel.
+        """
+        if self._active_read_arr_ is None:
+            self.diff_counts()
+        return self._active_read_arr_
+
     def diff_counts(self):
         if self.__counts_arr__ is not None:
-            self._dcounts_arr_ = self._diff_counts_(*self.__counts_arr__)
+            self._dcounts_arr_, self._active_read_arr_ = self._diff_counts_(*self.__counts_arr__)
             return self._dcounts_arr_
         return None
 
@@ -113,13 +122,20 @@ class TRBTools:
         """
         Calculates the delta counts of the raw counts readings, similar to np.diff with overflow correction and it
         takes care of the special TRB integer type. To calculate the absolute counts readings, do
-        >>> counts = TRBTools._diff_counts_(*args, **kwargs)
+        >>> counts, active_read = TRBTools._diff_counts_(*args, **kwargs)
         >>> np.cumsum(counts.astype(np.int64))
 
         PARAMETER
         ---------
         *args, **kwargs: ndarray, Datasets
-            1d raw counts arrays with the same length
+            1d raw counts arrays with the same length. It does something like: np.array([*args, *kwargs.values()]).
+
+        RETURNS
+        -------
+        counts: ndarray[int32]
+            the counts as a 2d array, with the shape of np.array([*args, *kwargs.values()])
+        active_read: ndarray[bool]
+            the active reads of the counters as the 2d array with the same shape as `counts`
         """
         # Prepare parameter
         # Check type and shape of counts arrays
@@ -131,7 +147,8 @@ class TRBTools:
         # Prepare parameter done
 
         # TRB use the leading bit to show if the channel is active while reading. Correct it here.
-        counts_arr[counts_arr < 0] += 2 ** 31  # In int32 this leads to negative values.
+        mask_active_read = counts_arr < 0
+        counts_arr[mask_active_read] += 2 ** 31  # In int32 this leads to negative values.
 
         # correct overflow; cal. difference, if negative=overflow, add 2 ** 31
         # prepend to start a 0 and get same shape
@@ -139,7 +156,7 @@ class TRBTools:
         counts_arr[counts_arr < 0] += (
             2 ** 31
         )  # delta<0 when there is an overflow 2**31 (TRBint)
-        return counts_arr.astype(np.int32)
+        return counts_arr.astype(np.int32), mask_active_read
 
     @staticmethod
     def _calculate_rates_(daq_frequency_readout, dcounts_time, dcounts_arr):
