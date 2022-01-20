@@ -212,11 +212,11 @@ class LaserAdjustmentScan:
         change_x = np.where(np.diff(laser_steps_x))[0]
         change_y = np.where(np.diff(laser_steps_y))[0]
 
-        step_positions = np.array(laser_steps_x[change_x], laser_steps_y[change_y]).T
+        step_positions = np.array([laser_steps_x[change_x], laser_steps_y[change_y]]).T
 
         steps_x = laser_steps_x[change_x]
         steps_y = laser_steps_y[change_y]
-        step_positions = np.array(laser_steps_x[change_x], laser_steps_y[change_y]).T
+        step_positions = np.array([laser_steps_x[change_x], laser_steps_y[change_y]]).T
         # step_positions = np.zeros((self.steps_length ** 2, 2))
 
         # # cut because laser moves back to (0,0) after last pos
