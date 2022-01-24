@@ -137,8 +137,8 @@ class DatasetsInGroupSameSize:
     """A Filter class which takes a obj_dict from VirtualHDF5 and checks if a group across all files have the same
     datasets and if the datasets in that group have the same shape along the first axis inside each file.
     In case it removes all datasets of the effected group for this file. In other words, a non consistent dataset in a
-    cause that all datasets of its group and for this file aren't added to the virtual HDF5 File. Other groups for the
-    same file or the group for other files aren't effected."""
+    group cause that all datasets of its group and for this file aren't added to the virtual HDF5 File. Other groups for
+    the same file or the group for other files aren't effected."""
     @staticmethod
     def filter(obj_dict):
         hdf5_structure_dict = DatasetsInGroupSameSize.get_hdf5_structure(obj_dict)
