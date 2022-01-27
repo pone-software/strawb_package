@@ -13,38 +13,22 @@ from strawb.sensors.minispec.minispec_calibration import DarkCountFit
 # There are 5 devices on MINISPECTROMETER001  module, to handle them all, check multi_files_handler.py
 
 class FileHandler(BaseFileHandler):
-    def __init__(self, darkcount_cal=False, wavelength_cal=False, *args, **kwargs):
-        # time_step, which is useful when combine multiple files
-        self.start_time = None
-        self.end_time = None
-        self.module = None
-        self.device_number = None
-        self.data_array = None
-        self.ADC_shape = None
-
-        self.if_wavecal = None
-        self.if_darksub = None
-
-        # calibration status
-        if darkcount_cal:
-            self.calibrate_adc_counts()
-            self.if_darksub = True
-        else:
-            self.if_darksub = False
-
-        if wavelength_cal:
-            self.calculate_wavelength()
-            self.if_wavecal = True
-        else:
-            self.if_wavecal = False
-
-        self.all_attributes = None  # holds all hdf5-file attributes as dict
+    def __init__(self, *args, **kwargs):
+        self.mini_spectrometer_list = None
 
         # comes last to load the data in case file_name is set
         BaseFileHandler.__init__(self, *args, **kwargs)
 
     # auxiliary functions
-    def load_meta_data(self):
+    def __load_meta_data__(self):
+        # create lucifer instances, depending on which are available in the file, Lucifer(ID) from hdf5 group lucifer_ID
+        self.mini_spectrometer_list = []
+        for i in self.file:
+            if i.isnumeric() and int(i) in [1, 2, 3, 4, 5]:
+                mini_spectrometer = SingleMiniSpectrometer(int(i.replace('lucifer_', '')))
+                mini_spectrometer.__load_meta_data__(self.file)
+                self.mini_spectrometer_list.append(mini_spectrometer)
+
         # from which module is this minispec device? generate an array to store data from each device
         # if it is from pmtspec/minispec module, it has 1/5 devices
         if self.module == "MINISPECTROMETER001":
@@ -57,66 +41,26 @@ class FileHandler(BaseFileHandler):
         # generate an object array to store data
         self.data_array = np.empty(shape=(self.device_number,), dtype=object)
 
-        # start_time
-        hdf5_name = self.file_name.rsplit('/', 1)[-1]
-        datetime_str = hdf5_name.split("_")[1][0:15]
-        print(datetime_str)
-        self.start_time = datetime.strptime(datetime_str, "%Y%m%dT%H%M%S")
-
         # other data
-        with h5py.File(self.file_name, 'r') as file:
-            for i in range(1, self.device_number + 1):
-                channel = i
-                dset = file[str(channel)]
+        for i in range(1, self.device_number + 1):
+            channel = i
+            dset = self.file[str(channel)]
 
-                get_ADC_counts_shape = dset['ADCcounts'][:]
-                self.ADC_shape = np.shape(get_ADC_counts_shape)
-                temp_spectrum = Spectrum(self.ADC_shape)
+            get_ADC_counts_shape = dset['ADCcounts'][:]
+            self.ADC_shape = np.shape(get_ADC_counts_shape)
+            temp_spectrum = Spectrum(self.ADC_shape)
 
-                temp_spectrum.CAL_ARR = dset.attrs['CAL.ARR']
-                temp_spectrum.W1_UID = dset.attrs['W1 UID']
-                temp_spectrum.WAVELENGTH_ARR = dset.attrs['WAVELENGTH.ARR']
+            temp_spectrum.CAL_ARR = dset.attrs['CAL.ARR']
+            temp_spectrum.W1_UID = dset.attrs['W1 UID']
+            temp_spectrum.WAVELENGTH_ARR = dset.attrs['WAVELENGTH.ARR']
 
-                temp_spectrum.exposure_time = (dset['exposure_time'][:]) / 1e6  # convert us to s
-                temp_spectrum.temperature_after = dset['temperature_after'][:]
-                temp_spectrum.temperature_before = dset['temperature_before'][:]
-                temp_spectrum.time = dset['time'][:]
-                temp_spectrum.trigger_counter = dset['trigger_counter'][:]
+            temp_spectrum.exposure_time = (dset['exposure_time'][:]) / 1e6  # convert us to s
+            temp_spectrum.temperature_after = dset['temperature_after'][:]
+            temp_spectrum.temperature_before = dset['temperature_before'][:]
+            temp_spectrum.time = dset['time'][:]
+            temp_spectrum.trigger_counter = dset['trigger_counter'][:]
 
-                self.data_array[channel - 1] = temp_spectrum
-
-        # this part check if this file is 24 hours complete
-        with h5py.File(self.file_name, 'r') as file:
-            dset = file['1']
-            start = dset['time'][0]
-            end = dset['time'][-1]
-            if (86400 - (end - start)) <= 120:  # allow 2 min time gap
-                # endtime
-                self.end_time = self.start_time + timedelta(seconds=abs(end - start))
-            else:
-                print("be careful, this file is not 24 hours complete")
-        file.close()
-
-    def calculate_wavelength(self):
-        """"takes wavelength calibration parameters
-        and returns calibrated wavelength (w_i) for all 288 pixel
-        from a_0 + b_1*pix_id**1 + b_2*pix_id**2 + b_3*pix_id**3 + b_4*pix_id**4 + b_5*pix_id**5
-        example usage:
-        # wavelength(*get_param(0xe300000b18ef6228))
-        """
-        if self.if_wavecal is True:
-            print("wavelength is already calibrated")
-        elif self.if_wavecal is False:
-            for n in range(len(self.data_array)):
-                pix = np.arange(288.)
-                single_device = self.data_array[n]
-                new_wavelength_array = single_device.CAL_ARR[0] + single_device.CAL_ARR[1] * pix + \
-                                       single_device.CAL_ARR[2] * pix ** 2 + \
-                                       single_device.CAL_ARR[3] * pix ** 3 + single_device.CAL_ARR[4] * pix ** 4 + \
-                                       single_device.CAL_ARR[5] * pix ** 5
-                print(new_wavelength_array)
-                self.data_array[n].WAVELENGTH_ARR = new_wavelength_array
-        self.if_wavecal = True
+            self.data_array[channel - 1] = temp_spectrum
 
     def calibrate_adc_counts(self):
         """ subtract calculated dark counts
@@ -155,24 +99,76 @@ class FileHandler(BaseFileHandler):
 #                                       measurement_number:pixel_number] - self.calibration_obj.darkcounts_fit_function(
 #                     self.exposure_time[measurement_number,],
 #                     self.temperature_after[measurement_number,],
-#                     *opt_parameters.reshape(calibration_obj.len_opt_parameter, 1, -1))      
+#                     *opt_parameters.reshape(calibration_obj.len_opt_parameter, 1, -1))
 
 
-class Spectrum:
+class SingleMiniSpectrometer:
     # the object fill into FileHandler.data_array, each one represent a bridgette channel
-    def __init__(self, input_shape):
-        # initial device fixed data
-        self.CAL_ARR = None  # calibration array
-        self.W1_UID = None  # device series number: int
-        self.WAVELENGTH_ARR = None  # wavelength array
+    def __init__(self, index):
+        """This class holds the parameters and measurements of one MiniSpectrometer.
+        Parameter
+        ---------
+        index: int, str
+            Index to identify the MiniSpectrometer. It corresponds to the port on the Brigette (SPI-Multiplexer).
+        """
+        # device specific parameters
+        self.index = int(index)  # index to identify the MiniSpectrometer. It corresponds to the port on the Brigette.
+        self.w1_uid = None  # device series number: int
+        self.cal_arr = None  # wavelength calibration parameters
+        self.wavelength_arr = None  # wavelength array [nm], calculated from `cal_arr`
 
-        # initial measured data
-        self.ADC_counts = np.empty(
-            shape=input_shape)  # shape=(n, 288), 288 wavelength pixels, n times of measurements per channel per file
-        self.ADC_counts_cal = np.empty(shape=input_shape)  # shape=(n, 288)
-        self.ADC_counts_dark = np.empty(shape=input_shape)
-        self.exposure_time = None  # shape=(n,)
-        self.temperature_after = None  # shape=(n,)
-        self.temperature_before = None  # shape=(n,)
-        self.time = None  # shape=(862,)
-        self.trigger_counter = None  # shape=(n,)
+        # measurement data
+        self.time = None  # absolute timestamp of the data, shape=(n,)
+        self.adc_counts = None  # data of 288 wavelength (pixel) per measurement, shape=(n, 288)
+        self.exposure_time = None  # exposure time [seconds]
+        self.temperature_before = None  # PCB temperature before the measurement [deg]
+        self.temperature_after = None  # PCB temperature after the measurement [deg]
+        self.trigger_counter = None  # trigger counter, counts one up for each measurement
+
+    def __loat_meta_data__(self, file):
+        """ Loads the data the one MiniSpectrometer."""
+        group = file[str(self.index)]
+
+        self.time = group['time']
+        self.adc_counts = group['ADCcounts']
+        self.exposure_time = group['exposure_time']
+        self.temperature_before = group['temperature_before']
+        self.temperature_after = group['temperature_after']
+        self.trigger_counter = group['trigger_counter']
+
+        self.ADC_shape = np.shape(get_ADC_counts_shape)
+        temp_spectrum = Spectrum(self.ADC_shape)
+
+        temp_spectrum.CAL_ARR = dset.attrs['CAL.ARR']
+        temp_spectrum.W1_UID = dset.attrs['W1 UID']
+        temp_spectrum.WAVELENGTH_ARR = dset.attrs['WAVELENGTH.ARR']
+
+        temp_spectrum.exposure_time = (dset['exposure_time'][:]) / 1e6  # convert us to s
+        temp_spectrum.temperature_after = dset['temperature_after'][:]
+        temp_spectrum.temperature_before = dset['temperature_before'][:]
+        temp_spectrum.time = dset['time'][:]
+        temp_spectrum.trigger_counter = dset['trigger_counter'][:]
+
+    def calculate_wavelength(self, cal_arr=None):
+        """"Calculates the calibrated wavelength per pixel from the calibration polynomial for all 288 pixel from the
+        polynomial: a_0 + b_1*pix_id**1 + b_2*pix_id**2 + b_3*pix_id**3 + b_4*pix_id**4 + b_5*pix_id**5
+
+        Parameter
+        ---------
+        cal_arr: ndarray, optional
+            calibration scalars for the polynomial with shape=(6,). Default is None, which takes the internal cal_arr
+            parameters.
+        Returns
+        -------
+        wavelength_arr: ndarray
+            the calibrated wavelength in nm as a array with shape=(288,)
+        """
+        pix = np.arange(288.).reshape(-1, 1)  # 288 pixel
+        i = np.arange(6).reshape(1, -1)  # index for sum
+        if cal_arr is None:
+            cal_arr = self.cal_arr.reshape(1, -1)  # calibration
+
+        # The wavelength calibration polynomial: Sum over i=0->5 of self.cal_arr[i] * pix**i
+        # or: a_0 + b_1*pix_id**1 + b_2*pix_id**2 + b_3*pix_id**3 + b_4*pix_id**4 + b_5*pix_id**5
+        wavelength_arr = np.sum(pix ** i * cal_arr, axis=1)  # numpy version of wavelength calibration
+        return wavelength_arr
