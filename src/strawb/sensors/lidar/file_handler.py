@@ -5,6 +5,12 @@ from strawb.base_file_handler import BaseFileHandler
 
 class FileHandler(BaseFileHandler):
     def __init__(self, *args, **kwargs):
+        """Lidar File Handler it holds links to the data available in the hdf5 file from the LiDAR.
+        PARAMETERS
+        ----------
+        *args, **kwargs: optional
+            parsed to BaseFileHandler
+        """
         # TRB_DAQ
         self.daq_time = None
         self.daq_measured_frequency_pmt = None  # Removed from hdf5 ~05.10.2021, as moved to counts reading
