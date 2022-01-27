@@ -20,9 +20,9 @@ def main(n_files=3):
     # in case execute db.load_onc_db_entirely() to load the entire db
     db = strawb.SyncDBHandler(file_name='Default')  # loads the db
 
-    ending = 'CAMERA.hdf5'
+    data_product_code = 'MSSCD'  # code for '...CAMERA.hdf5' files
     # mask by device
-    mask = db.dataframe.fullPath.str.endswith(ending)  # filter by filename
+    mask = db.dataframe.dataProductCode == data_product_code  # filter camera files: '...CAMERA.hdf5'
     mask &= db.dataframe.synced  # mask un-synced hdf5 files
     mask &= db.dataframe.fileSize > 11000  # mask empty hdf5 files
 
@@ -30,7 +30,7 @@ def main(n_files=3):
     file_list = list(db.dataframe.fullPath[mask])
 
     if file_list is []:
-        print(f'No file found which ends with: {ending}')
+        print(f'No file found for dataProductCode: {data_product_code}')
         return
     elif n_files is None or len(file_list) <= n_files:
         print(f'Process all {len(file_list)} files.')
