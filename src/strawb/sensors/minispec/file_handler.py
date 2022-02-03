@@ -1,16 +1,7 @@
-import datetime
-from datetime import datetime
-from datetime import timedelta
-
-import h5py
 import numpy as np
 
 from strawb.base_file_handler import BaseFileHandler
-from strawb.sensors.minispec.minispec_calibration import DarkCountFit
 
-
-# This class only handle device 1 by default.
-# There are 5 devices on MINISPECTROMETER001  module, to handle them all, check multi_files_handler.py
 
 class FileHandler(BaseFileHandler):
     def __init__(self, *args, **kwargs):
@@ -28,78 +19,6 @@ class FileHandler(BaseFileHandler):
                 mini_spectrometer = SingleMiniSpectrometer(int(i.replace('lucifer_', '')))
                 mini_spectrometer.__load_meta_data__(self.file)
                 self.mini_spectrometer_list.append(mini_spectrometer)
-
-        # from which module is this minispec device? generate an array to store data from each device
-        # if it is from pmtspec/minispec module, it has 1/5 devices
-        if self.module == "MINISPECTROMETER001":
-            self.device_number = 5
-        elif self.module == "PMTSPECTROMETER001" or "PMTSPECTROMETER002":
-            self.device_number = 1
-        else:
-            raise ValueError('unknown minispec device')
-
-        # generate an object array to store data
-        self.data_array = np.empty(shape=(self.device_number,), dtype=object)
-
-        # other data
-        for i in range(1, self.device_number + 1):
-            channel = i
-            dset = self.file[str(channel)]
-
-            get_ADC_counts_shape = dset['ADCcounts'][:]
-            self.ADC_shape = np.shape(get_ADC_counts_shape)
-            temp_spectrum = Spectrum(self.ADC_shape)
-
-            temp_spectrum.CAL_ARR = dset.attrs['CAL.ARR']
-            temp_spectrum.W1_UID = dset.attrs['W1 UID']
-            temp_spectrum.WAVELENGTH_ARR = dset.attrs['WAVELENGTH.ARR']
-
-            temp_spectrum.exposure_time = (dset['exposure_time'][:]) / 1e6  # convert us to s
-            temp_spectrum.temperature_after = dset['temperature_after'][:]
-            temp_spectrum.temperature_before = dset['temperature_before'][:]
-            temp_spectrum.time = dset['time'][:]
-            temp_spectrum.trigger_counter = dset['trigger_counter'][:]
-
-            self.data_array[channel - 1] = temp_spectrum
-
-    def calibrate_adc_counts(self):
-        """ subtract calculated dark counts
-        the opt parameters were taken from minispec_calibration.py, class DarkCountFit, fit_loop_pixel()
-        almost all measurements are dark, no need to select particular events.
-        """
-        for n in range(len(self.data_array)):  # n:select a channel
-            # generate a DarkCountFit object and get fit parameter from it
-            calibration_obj = DarkCountFit(self, n)
-            opt_parameters = calibration_obj.fit_loop_pixel()
-
-            # calculation
-            single_device = self.data_array[n]
-            for pixel_number in range(self.ADC_shape[1]):
-                for measurement_number in range(self.ADC_shape[0]):
-                    single_device.ADC_counts_dark[
-                    measurement_number:pixel_number] = calibration_obj.darkcounts_fit_function(
-                        single_device.exposure_time[measurement_number],
-                        single_device.temperature_after[measurement_number],
-                        *opt_parameters.reshape(calibration_obj.len_opt_parameter, 1, -1))
-
-                    # subtract dark count
-            single_device.ADC_counts_cal = single_device.ADC_counts - single_device.ADC_counts_dark
-
-
-#     def calibrate_adc_counts(self):
-#         """ subtract calculated dark counts
-#         the opt parameters were taken from minispec_calibration.py, class DarkCountFit, fit_loop_pixel()
-#         almost all measurements are dark, no need to select particular events.
-#         """
-#         calibration_obj = DarkCountFit(self)
-#         opt_parameters = calibration_obj.fit_loop_pixel()
-#         for pixel_number in range(288):
-#             for measurement_number in self.ADC_counts:
-#                 self.ADC_counts_cal = self.ADC_counts[
-#                                       measurement_number:pixel_number] - self.calibration_obj.darkcounts_fit_function(
-#                     self.exposure_time[measurement_number,],
-#                     self.temperature_after[measurement_number,],
-#                     *opt_parameters.reshape(calibration_obj.len_opt_parameter, 1, -1))
 
 
 class SingleMiniSpectrometer:
@@ -125,10 +44,11 @@ class SingleMiniSpectrometer:
         self.temperature_after = None  # PCB temperature after the measurement [deg]
         self.trigger_counter = None  # trigger counter, counts one up for each measurement
 
-    def __loat_meta_data__(self, file):
+    def __load_meta_data__(self, file):
         """ Loads the data the one MiniSpectrometer."""
         group = file[str(self.index)]
 
+        # measurement data
         self.time = group['time']
         self.adc_counts = group['ADCcounts']
         self.exposure_time = group['exposure_time']
@@ -136,22 +56,16 @@ class SingleMiniSpectrometer:
         self.temperature_after = group['temperature_after']
         self.trigger_counter = group['trigger_counter']
 
-        self.ADC_shape = np.shape(get_ADC_counts_shape)
-        temp_spectrum = Spectrum(self.ADC_shape)
-
-        temp_spectrum.CAL_ARR = dset.attrs['CAL.ARR']
-        temp_spectrum.W1_UID = dset.attrs['W1 UID']
-        temp_spectrum.WAVELENGTH_ARR = dset.attrs['WAVELENGTH.ARR']
-
-        temp_spectrum.exposure_time = (dset['exposure_time'][:]) / 1e6  # convert us to s
-        temp_spectrum.temperature_after = dset['temperature_after'][:]
-        temp_spectrum.temperature_before = dset['temperature_before'][:]
-        temp_spectrum.time = dset['time'][:]
-        temp_spectrum.trigger_counter = dset['trigger_counter'][:]
+        # calibration parameters
+        self.cal_arr = group.attrs['CAL.ARR']  # [a_0, b_1, b_2, b_3, b_4, b_5] <-> wavelength calibration polynomial
+        self.w1_uid = group.attrs['W1 UID']  # the unique ID
+        self.wavelength_arr = group.attrs['WAVELENGTH.ARR']  # the calculated wavelength from w1_uid
 
     def calculate_wavelength(self, cal_arr=None):
-        """"Calculates the calibrated wavelength per pixel from the calibration polynomial for all 288 pixel from the
-        polynomial: a_0 + b_1*pix_id**1 + b_2*pix_id**2 + b_3*pix_id**3 + b_4*pix_id**4 + b_5*pix_id**5
+        """"Calculates the calibrated wavelength per pixel from the calibration parameters provided by Hamamatsu and
+        stored in `self.cal_arr`. The calibration is done with a polynomial for all 288 pixel from:
+        a_0 + b_1*pix_id**1 + b_2*pix_id**2 + b_3*pix_id**3 + b_4*pix_id**4 + b_5*pix_id**5
+        with cal_arr = [a_0, b_1, b_2, b_3, b_4, b_5].
 
         Parameter
         ---------
@@ -172,3 +86,41 @@ class SingleMiniSpectrometer:
         # or: a_0 + b_1*pix_id**1 + b_2*pix_id**2 + b_3*pix_id**3 + b_4*pix_id**4 + b_5*pix_id**5
         wavelength_arr = np.sum(pix ** i * cal_arr, axis=1)  # numpy version of wavelength calibration
         return wavelength_arr
+
+    # def calibrate_adc_counts(self):
+    #     """ subtract calculated dark counts
+    #     the opt parameters were taken from minispec_calibration.py, class DarkCountFit, fit_loop_pixel()
+    #     almost all measurements are dark, no need to select particular events.
+    #     """
+    #     for n in range(len(self.data_array)):  # n:select a channel
+    #         # generate a DarkCountFit object and get fit parameter from it
+    #         calibration_obj = DarkCountFit(self, n)
+    #         opt_parameters = calibration_obj.fit_loop_pixel()
+    #
+    #         # calculation
+    #         single_device = self.data_array[n]
+    #         for pixel_number in range(self.ADC_shape[1]):
+    #             for measurement_number in range(self.ADC_shape[0]):
+    #                 single_device.ADC_counts_dark[
+    #                 measurement_number:pixel_number] = calibration_obj.darkcounts_fit_function(
+    #                     single_device.exposure_time[measurement_number],
+    #                     single_device.temperature_after[measurement_number],
+    #                     *opt_parameters.reshape(calibration_obj.len_opt_parameter, 1, -1))
+    #
+    #                 # subtract dark count
+    #         single_device.ADC_counts_cal = single_device.ADC_counts - single_device.ADC_counts_dark
+
+    #     def calibrate_adc_counts(self):
+    #         """ subtract calculated dark counts
+    #         the opt parameters were taken from minispec_calibration.py, class DarkCountFit, fit_loop_pixel()
+    #         almost all measurements are dark, no need to select particular events.
+    #         """
+    #         calibration_obj = DarkCountFit(self)
+    #         opt_parameters = calibration_obj.fit_loop_pixel()
+    #         for pixel_number in range(288):
+    #             for measurement_number in self.ADC_counts:
+    #                 self.ADC_counts_cal = self.ADC_counts[measurement_number:pixel_number] -
+    #                 self.calibration_obj.darkcounts_fit_function(
+    #                     self.exposure_time[measurement_number,],
+    #                     self.temperature_after[measurement_number,],
+    #                     *opt_parameters.reshape(calibration_obj.len_opt_parameter, 1, -1))
