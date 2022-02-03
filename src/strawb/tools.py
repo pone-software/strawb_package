@@ -305,7 +305,7 @@ def wavelength_to_rgb(channel, gamma=0.8):
     try:
         wavelength = float(channel["wavelength"])
         alt_color = channel["color"]
-    except TypeError:
+    except:
         wavelength = channel
         alt_color = "red"
         
