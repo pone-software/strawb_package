@@ -5,19 +5,19 @@ from strawb.trb_tools import TRBTools
 
 
 class PMTSpecTRBRates(TRBTools):
-    def __init__(self, file_handler: FileHandler):
-        TRBTools.__init__(self)
+    def __init__(self, file_handler: FileHandler, *args, **kwargs):
+        TRBTools.__init__(self, *args, **kwargs)
 
         if isinstance(file_handler, FileHandler):
             self.file_handler = file_handler
         else:
-            raise TypeError(f"Expected pmtspec.FileHandler got: {type(file_handler)}")
+            raise TypeError(f"Expected `strawb.sensors.pmtspec.FileHandler` got: {type(file_handler)}")
 
         if (
             self.file_handler.file_version >= 1
         ):  # 1 is the base file_version, therefore, its all files
             self.__daq_frequency_readout__ = self.file_handler.daq_frequency_readout
-            self.__counts_arr__ = [
+            self.__raw_counts_arr__ = [
                 self.file_handler.counts_ch0,
                 self.file_handler.counts_ch1,
                 self.file_handler.counts_ch3,

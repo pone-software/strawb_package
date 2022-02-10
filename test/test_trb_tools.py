@@ -13,7 +13,7 @@ class TestLidarTRBTools(TestCase):
         counts = np.arange(10) * steps
         counts %= 2 ** 31  # TRB overflow
         counts[2] -= 2 ** 31  # active reading
-        diff = TRBTools._diff_counts_(counts)
+        diff, active_read = TRBTools._diff_counts_(counts)
         self.assertTrue((diff == steps).all(), msg=f'Diff counts should be all {steps}, got: {diff}')
 
         # 2d array
@@ -21,7 +21,7 @@ class TestLidarTRBTools(TestCase):
         counts %= 2 ** 31  # TRB overflow
         counts[2, 5] -= 2 ** 31  # active reading
         counts[0, 2] -= 2 ** 31  # active reading
-        diff = TRBTools._diff_counts_(counts)
+        diff, active_read = TRBTools._diff_counts_(counts)
         self.assertTrue((diff == steps).all(), msg=f'Diff counts should be all {steps}, got: {diff}')
 
     def test_calculate_rates(self):

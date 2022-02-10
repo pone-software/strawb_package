@@ -6,8 +6,8 @@ from strawb.trb_tools import TRBTools
 
 
 class LidarTRBRates(TRBTools):
-    def __init__(self, file_handler: FileHandler):
-        TRBTools.__init__(self)
+    def __init__(self, file_handler: FileHandler, *args, **kwargs):
+        TRBTools.__init__(self, *args, **kwargs)
 
         self.file_handler = file_handler
 
@@ -16,7 +16,7 @@ class LidarTRBRates(TRBTools):
         # file_handler.counts_ch18: returns number of emitted laser pulses per readout interval
         if self.file_handler.file_version >= 2:
             self.__daq_frequency_readout__ = self.file_handler.daq_frequency_readout
-            self.__counts_arr__ = [
+            self.__raw_counts_arr__ = [
                 self.file_handler.counts_ch0,  # time channel
                 self.file_handler.counts_ch17,  # readout/PMT channel
                 self.file_handler.counts_ch18,

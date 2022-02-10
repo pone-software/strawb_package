@@ -5,23 +5,39 @@ from strawb import tools
 
 
 class TRBTools:
-    def __init__(self):
+    def __init__(self, frequency_interp=333.):
+        """Base Class for the TRB. It takes care about the counter readings and calculates the rates based on the
+        counts. In addition it can also calculate a interpolated rate based on the counts.
+
+        PARAMETER
+        ---------
+        frequency_interp: float or int
+            the frequency for the rate interpolation
+        """
+
         # define interfaces which need to be set in child classes, i.e. to link file handler variables
-        # __counts_arr__ are the counter arrays where __counts_arr__[0] must be the time counter of the TRB aka ch0.
+        # __raw_counts_arr__ are the counter arrays where __raw_counts_arr__[0] must be the time counter of the TRB aka
+        # ch0.
         # Each array (counts_ch0, counts_ch1,...) must be from the same length and must have the same length as
         # self.__time__.
-        # e.g.: self.__counts_arr__ = [file_handler.counts_ch0, file_handler.counts_ch1, file_handler.counts_ch2]
+        # e.g.: self.__raw_counts_arr__ = [file_handler.counts_ch0, file_handler.counts_ch1, file_handler.counts_ch2]
         # __daq_frequency_readout__ is the frequency TRB counts up the time counter (ch0)
-        self.__counts_arr__ = None  # list, needs to be set in the child class
+        self.__raw_counts_arr__ = None  # list, needs to be set in the child class
         self.__daq_frequency_readout__ = (
             None  # array or float, needs to be set in the child class
         )
         self.__time__ = None  # array with absolute time stamps
 
-        self._dcounts_arr_ = None  # stores result of self.diff_counts()
+        self.__dcounts_arr__ = None  # stores result of self.diff_counts()
+        self.__counts_arr__ = None  # stores 'absolute' counts as a 2D array,
         self._active_read_arr_ = None  # stores if the counter read happens at a event (1) or not (0)
         self._rate_delta_time = None
-        self._rate = None  # stores result of self.calculate_counts() (needs `self._dcounts_arr_`)
+        self._rate = None  # stores result of self.calculate_rates() (needs `self._dcounts_arr_`)
+
+        # interpolated rates
+        self._frequency_interp_ = frequency_interp  # the frequency to which the rates are interpolated to
+        self._time_interp_ = None  # the absolute timestamp of the interpolated rates
+        self._rate_interp_ = None  # the interpolated rates
 
     # Properties prevent here to load data directly at initialisation and to prevent setting the variables
     # ---- absolute Measurement Timestamp ----
@@ -46,33 +62,67 @@ class TRBTools:
 
     # ---- cleaned TRB Delta Counts ----
     @property
-    def dcounts(self):
-        """Returns all delta counts as a 2D array with the axes [channel_j, time_i]. dcounts[0] is the time channel
-        aka. dcounts_time."""
-        if self._dcounts_arr_ is None:
+    def _counts_arr_(self):
+        if self.__counts_arr__ is None:
+            self.cum_sum_dcounts()
+        return self.__counts_arr__
+
+    @property
+    def _dcounts_arr_(self):
+        if self.__dcounts_arr__ is None:
             self.diff_counts()
+        return self.__dcounts_arr__
+
+    @property
+    def dcounts(self):
+        """Returns all delta counts as a 2D array with the axes [channel_j, time_i]."""
         return self._dcounts_arr_[1:]  # [0] is dcounts_time
+
+    @property
+    def counts(self):
+        """Returns all 'absolute' counts as a 2D array with the axes [channel_j, time_i+1]. The counts start at 0."""
+        return self._counts_arr_[1:]
 
     @property
     def dcounts_time(self):
         """Channel which counts up at a constant frequency. The frequency is stored in `self.daq_frequency_readout`.
         1darray with axes [time_i].
         """
-        if self._dcounts_arr_ is None:
-            self.diff_counts()
         return self._dcounts_arr_[0]  # [1:] is dcounts
+
+    @property
+    def counts_time(self):
+        """Channel which counts up at a constant frequency. The frequency is stored in `self.daq_frequency_readout`.
+        1darray with axes [time_i].
+        """
+        return self._counts_arr_[0]
+
+    @property
+    def time_counts(self):
+        """Channel which counts up at a constant frequency. The frequency is stored in `self.daq_frequency_readout`.
+        1darray with axes [time_i].
+        """
+        return self._counts_arr_[0] / float(self.daq_frequency_readout)
 
     # ---- TRB Rates ----
     @property
     def rate_time(self):
         """Rate time is a timestamp since the start of the measurement in seconds. It represents the times when the
-        counters are read. It starts with 0. Attention: len(rate_time) = len(rate) + 1!"""
+        counters are read. It starts with 0. Attention: len(rate_time) = len(rate) + 1!
+        The time is calculated from the TRB channel_0 counts and the counting frequency, which is usually 10 kHz, see
+        self.file_handler.daq_frequency_readout. This delivers a more precise time because it is based on the raw
+        delta_t from the TRB and its more than the np.datetime64 can deliver. However, it's not an absolute timestamp.
+        """
         return np.append([0], np.cumsum(self.rate_delta_time))
 
     @property
     def rate_time_middle(self):
         """Rate time is a timestamp since the start of the measurement in seconds. It represents the middle of the
-        interval when two counters are read."""
+        interval when two counters are read.
+        The time is calculated from the TRB channel_0 counts and the counting frequency, which is usually 10 kHz, see
+        self.file_handler.daq_frequency_readout. This delivers a more precise time because it is based on the raw
+        delta_t from the TRB and its more than the np.datetime64 can deliver. However, it's not an absolute timestamp.
+        """
         return np.cumsum(self.rate_delta_time) - self.rate_delta_time * 0.5
 
     @property
@@ -83,7 +133,7 @@ class TRBTools:
         delta_t from the TRB and its more than the np.datetime64 can deliver. However, it's not an absolute timestamp.
         """
         if self._rate_delta_time is None:
-            self.calculate_counts()
+            self.calculate_rates()
         return self._rate_delta_time
 
     @property
@@ -91,7 +141,7 @@ class TRBTools:
         """The rate (in Hz) per channel. It is calculated from: dcounts/rate_delta_t."""
         # counts time is the middle of the interval and starts with 0
         if self._rate is None:
-            self.calculate_counts()
+            self.calculate_rates()
         return self._rate
 
     @property
@@ -102,14 +152,27 @@ class TRBTools:
             self.diff_counts()
         return self._active_read_arr_
 
+    def cum_sum_dcounts(self):
+        # self.__counts_arr__ will be set if not None, and self._dcounts_arr_ must be not None.
+        if self.__counts_arr__ is None and self._dcounts_arr_ is not None:
+            # prepend 0 for all channels and use uint64 for higher overflow
+            counts = np.append(np.zeros((self._dcounts_arr_.shape[0], 1), dtype=np.uint64),
+                               self._dcounts_arr_.astype(np.uint64),
+                               axis=-1)
+
+            # calculate the 'absolut'-counts
+            self.__counts_arr__ = np.cumsum(counts, axis=1)
+            return self._counts_arr_
+        return None
+
     def diff_counts(self):
-        if self.__counts_arr__ is not None:
-            self._dcounts_arr_, self._active_read_arr_ = self._diff_counts_(*self.__counts_arr__)
+        if self.__raw_counts_arr__ is not None:
+            self.__dcounts_arr__, self._active_read_arr_ = self._diff_counts_(*self.__raw_counts_arr__)
             return self._dcounts_arr_
         return None
 
-    def calculate_counts(self):
-        if self.__counts_arr__ is not None:
+    def calculate_rates(self):
+        if self.__raw_counts_arr__ is not None:
             self._rate_delta_time, self._rate = self._calculate_rates_(
                 daq_frequency_readout=self.__daq_frequency_readout__,
                 dcounts_time=self.dcounts_time,
@@ -154,7 +217,7 @@ class TRBTools:
         # prepend to start a 0 and get same shape
         counts_arr = np.diff(counts_arr)  # , prepend=counts[:, 0].reshape((-1, 1)))
         counts_arr[counts_arr < 0] += (
-            2 ** 31
+                2 ** 31
         )  # delta<0 when there is an overflow 2**31 (TRBint)
         return counts_arr.astype(np.int32), mask_active_read
 
@@ -185,7 +248,7 @@ class TRBTools:
             daq_frequency_readout = np.array(daq_frequency_readout)
         if isinstance(daq_frequency_readout, (np.ndarray, h5py.Dataset)):
             if np.unique(
-                daq_frequency_readout[daq_frequency_readout[:] != -1]
+                    daq_frequency_readout[daq_frequency_readout[:] != -1]
             ).shape != (1,):
                 raise RuntimeError(
                     "More than 1 unique value exits in daq_frequency_readout."
@@ -194,7 +257,7 @@ class TRBTools:
                 # if the daq_frequency_readout failed reading from the TRB it logs -1, correct here
                 daq_frequency_readout = daq_frequency_readout[
                     daq_frequency_readout[:] != -1
-                ][0]
+                    ][0]
 
         daq_frequency_readout = float(daq_frequency_readout)  # must be a float
         dcounts_arr = np.array(dcounts_arr, dtype=np.int64)  # must be of int64
@@ -204,3 +267,63 @@ class TRBTools:
         rate_arr = dcounts_arr.astype(float) / delta_time
 
         return delta_time, rate_arr
+
+    # interpolated rates
+    @property
+    def frequency_interp(self):
+        return self._frequency_interp_
+
+    @frequency_interp.setter
+    def frequency_interp(self, value):
+        """Sets the frequency for the interpolation in Hz."""
+        if not isinstance(value, (int, float)):
+            raise TypeError(f'frequency_interp must a int or float. Got {type(value)}')
+        # set it and calculate the new rates
+        self._frequency_interp_ = value
+        self._time_interp_, self._rate_interp_ = self.interpolate_rates(self._frequency_interp_)
+
+    @property
+    def time_interp(self):
+        if self._time_interp_ is None:
+            self._time_interp_, self._rate_interp_ = self.interpolate_rates(self._frequency_interp_)
+        return self._time_interp_
+
+    @property
+    def rate_interp(self):
+        if self._rate_interp_ is None:
+            self._time_interp_, self._rate_interp_ = self.interpolate_rates(self._frequency_interp_)
+        return self._rate_interp_
+
+    def interpolate_rates(self, frequency=333.):
+        """Interpolates the rates and timestamps to a given 'readout' frequency. It is based on the raw counts from TRB.
+        The process is the following. It interpolates the cumulative counts and calculates the rate based on it.
+        PARAMETER
+        ---------
+        frequency: float, optional
+            the frequency to which the data is interpolated in Hz. Default is 333 Hz.
+        RETURN
+        ------
+        time_inter: np.array
+            the interpolated absolute time
+        rates_inter: np.array
+            the interpolated rate
+        """
+        def interp_np(x, xp, fp):
+            y = np.zeros((fp.shape[0], x.shape[0]), dtype=float)
+            for i in range(y.shape[0]):
+                y[i] = np.interp(x, xp, fp[i])
+            return y
+
+        timestamps = self.rate_time  # seconds since file started
+        time_probe = np.arange(timestamps[0], timestamps[-1], 1. / frequency)
+
+        counts = interp_np(x=time_probe, xp=timestamps, fp=self.counts)
+
+        abs_time = np.interp(x=time_probe,
+                             xp=timestamps,
+                             fp=self.time.astype(float),
+                             ).astype('datetime64[us]')
+
+        rates_inter = np.diff(counts) / np.diff(time_probe)
+        time_inter = abs_time[:-1] + np.diff(abs_time) * .5
+        return time_inter, rates_inter
