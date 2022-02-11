@@ -279,8 +279,9 @@ class TRBTools:
         if not isinstance(value, (int, float)):
             raise TypeError(f'frequency_interp must a int or float. Got {type(value)}')
         # set it and calculate the new rates
-        self._frequency_interp_ = value
-        self._time_interp_, self._rate_interp_ = self.interpolate_rates(self._frequency_interp_)
+        if self._frequency_interp_ != value:
+            self._frequency_interp_ = value
+            self._time_interp_, self._rate_interp_ = self.interpolate_rates(self._frequency_interp_)
 
     @property
     def time_interp(self):
