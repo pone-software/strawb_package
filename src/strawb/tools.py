@@ -2,11 +2,9 @@ import sys
 import threading
 import time
 
-import h5py
 import numpy as np
 import scipy.stats
 from matplotlib import pyplot as plt
-
 #  ---- HDF5 Helper ----
 # add new asdatetime to h5py Dataset similar to asdtype for datetime64 when time is given as float in seconds
 from tqdm import tqdm
@@ -59,6 +57,19 @@ def asdatetime(array, precision='us'):
     scale = float(unit_dict[precision.lower()])
 
     return (array * scale).astype(dtype)
+
+
+def datetime2float(array):
+    """Converts a datetime64 array into seconds (as float) since epoch."""
+    unit_dict = {'D': 3600 * 24, 'h': 3600, 'm': 60, 's': 1, 'ms': 1e-3, 'us': 1e-6, 'ns': 1e-9, 'ps': 1e-12}
+    dtype = array.dtype
+    if not np.issubdtype(dtype, np.datetime64):
+        raise TypeError(f'Supports only datetime64. Got {dtype}')
+    else:
+        for i in unit_dict:
+            if dtype == f'datetime64[{i}]':
+                return array.astype(float) * unit_dict[i]
+        raise TypeError(f'Supports only specific datetime64. Got {dtype}')
 
 
 class ShareJobThreads:
@@ -293,14 +304,13 @@ def human_size(size_bytes, units=None, base=1024, precision=2):
 
 
 def wavelength_to_rgb(channel, gamma=0.8):
-
-    '''This converts a given wavelength of light to an 
+    """This converts a given wavelength of light to an
     approximate RGB color value. The wavelength must be given
     in nanometers in the range from 380 nm through 750 nm
     (789 THz through 400 THz).
     Based on code by Dan Bruton
     http://www.physics.sfasu.edu/astro/color/spectra.html
-    '''
+    """
 
     try:
         wavelength = float(channel["wavelength"])
@@ -308,34 +318,34 @@ def wavelength_to_rgb(channel, gamma=0.8):
     except:
         wavelength = channel
         alt_color = "red"
-        
-    if wavelength >= 380 and wavelength <= 440:
+
+    if 380 <= wavelength <= 440:
         attenuation = 0.3 + 0.7 * (wavelength - 380) / (440 - 380)
         R = ((-(wavelength - 440) / (440 - 380)) * attenuation) ** gamma
         G = 0.0
         B = (1.0 * attenuation) ** gamma
         return_this = (R, G, B)
-    elif wavelength >= 440 and wavelength <= 490:
+    elif 440 <= wavelength <= 490:
         R = 0.0
         G = ((wavelength - 440) / (490 - 440)) ** gamma
         B = 1.0
         return_this = (R, G, B)
-    elif wavelength >= 490 and wavelength <= 510:
+    elif 490 <= wavelength <= 510:
         R = 0.0
         G = 1.0
         B = (-(wavelength - 510) / (510 - 490)) ** gamma
         return_this = (R, G, B)
-    elif wavelength >= 510 and wavelength <= 580:
+    elif 510 <= wavelength <= 580:
         R = ((wavelength - 510) / (580 - 510)) ** gamma
         G = 1.0
         B = 0.0
         return_this = (R, G, B)
-    elif wavelength >= 580 and wavelength <= 645:
+    elif 580 <= wavelength <= 645:
         R = 1.0
         G = (-(wavelength - 645) / (645 - 580)) ** gamma
         B = 0.0
         return_this = (R, G, B)
-    elif wavelength >= 645 and wavelength <= 750:
+    elif 645 <= wavelength <= 750:
         attenuation = 0.3 + 0.7 * (750 - wavelength) / (750 - 645)
         R = (1.0 * attenuation) ** gamma
         G = 0.0
