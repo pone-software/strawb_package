@@ -71,11 +71,26 @@ class BaseFileHandler:
             except (KeyError, ValueError, TypeError):
                 pass
 
-    def open(self):
-        """Opens the file if it is not open"""
+    def open(self, mode='r'):
+        """Opens the file if it is not open.
+        PARAMETER
+        ---------
+        mode: str, optional
+            r	   : Readonly, file must exist (default)
+            r+	   : Read/write, file must exist
+            w	   : Create file, truncate if exists
+            w- or x: Create file, fail if exists
+            a	   : Read/write if exists, create otherwise
+        """
         if self.file is None:
             if self.file_typ in ['h5', 'hdf5']:
-                self.file = h5py.File(self.file_name, 'r', libver='latest', swmr=True)
+                if mode in ['r']:
+                    self.file = h5py.File(self.file_name, mode, libver='latest',
+                                          # swmr=True
+                                          )
+                else:
+                    self.file = h5py.File(self.file_name, mode, libver='latest')
+                    # self.file.swmr_mode = True
                 self.file_attributes = dict(self.file.attrs)
 
             elif self.file_typ in ['txt']:
@@ -88,6 +103,7 @@ class BaseFileHandler:
         """Close the file if it is open."""
         if self.file is not None:
             self.file.close()
+            self.file = None
 
     def __enter__(self):
         """For 'with' statement"""

@@ -5,14 +5,15 @@ from strawb import tools
 
 
 class TRBTools:
-    def __init__(self, frequency_interp=333.):
+    def __init__(self, file_handler=None, frequency_interp=33.):
         """Base Class for the TRB. It takes care about the counter readings and calculates the rates based on the
         counts. In addition it can also calculate a interpolated rate based on the counts.
 
         PARAMETER
         ---------
         frequency_interp: float or int
-            the frequency for the rate interpolation
+            sets the default frequency for the rates interpolation. Is only set, if there is no frequency_interp in
+            the file set. To overwrite, set frequency_interp (i.e. `frequency_interp=24`) after the initialisation.
         """
 
         # define interfaces which need to be set in child classes, i.e. to link file handler variables
@@ -34,10 +35,22 @@ class TRBTools:
         self._rate_delta_time = None
         self._rate = None  # stores result of self.calculate_rates() (needs `self._dcounts_arr_`)
 
-        # interpolated rates
-        self._frequency_interp_ = frequency_interp  # the frequency to which the rates are interpolated to
-        self._time_interp_ = None  # the absolute timestamp of the interpolated rates
-        self._rate_interp_ = None  # the interpolated rates
+        # interpolated rates. Based on the `counts` and interpolated to fit a artificially readout frequency.
+        self._interp_frequency_ = None  # artificially readout frequency
+        self._interp_time_ = None  # absolute timestamps. Shape: [time_j]
+        self._interp_rate_ = None  # rate as a 2d array. Shape: [channel_i, time_j]
+
+        # link to file_handler
+        self.file_handler = file_handler
+        if file_handler is not None:
+            try:
+                self.__load_interp_rate__()
+            except KeyError:
+                pass
+
+        # if the frequency is not loaded from the file, set default frequency
+        if self._interp_frequency_ is None:
+            self._interp_frequency_ = frequency_interp
 
     # Properties prevent here to load data directly at initialisation and to prevent setting the variables
     # ---- absolute Measurement Timestamp ----
@@ -270,33 +283,33 @@ class TRBTools:
 
     # interpolated rates
     @property
-    def frequency_interp(self):
-        return self._frequency_interp_
+    def interp_frequency(self):
+        return self._interp_frequency_
 
-    @frequency_interp.setter
-    def frequency_interp(self, value):
+    @interp_frequency.setter
+    def interp_frequency(self, value):
         """Sets the frequency for the interpolation in Hz."""
         if not isinstance(value, (int, float)):
             raise TypeError(f'frequency_interp must a int or float. Got {type(value)}')
         # set it and calculate the new rates
-        if self._frequency_interp_ != value:
-            self._frequency_interp_ = value
-            self._time_interp_, self._rate_interp_ = self.interpolate_rates(self._frequency_interp_)
+        if self._interp_frequency_ != value:
+            self._interp_frequency_ = value
+            self._interp_time_, self._interp_rate_ = self.interpolate_rate(self._interp_frequency_)
 
     @property
-    def time_interp(self):
-        if self._time_interp_ is None:
-            self._time_interp_, self._rate_interp_ = self.interpolate_rates(self._frequency_interp_)
-        return self._time_interp_
+    def interp_time(self):
+        if self._interp_time_ is None:
+            self._interp_time_, self._interp_rate_ = self.interpolate_rate(self._interp_frequency_)
+        return self._interp_time_
 
     @property
-    def rate_interp(self):
-        if self._rate_interp_ is None:
-            self._time_interp_, self._rate_interp_ = self.interpolate_rates(self._frequency_interp_)
-        return self._rate_interp_
+    def interp_rate(self):
+        if self._interp_rate_ is None:
+            self._interp_time_, self._interp_rate_ = self.interpolate_rate(self._interp_frequency_)
+        return self._interp_rate_
 
-    def interpolate_rates(self, frequency=333.):
-        """Interpolates the rates and timestamps to a given 'readout' frequency. It is based on the raw counts from TRB.
+    def interpolate_rate(self, frequency=333.):
+        """Interpolates the rate and timestamps to a given 'readout' frequency. It is based on the raw counts from TRB.
         The process is the following. It interpolates the cumulative counts and calculates the rate based on it.
         PARAMETER
         ---------
@@ -306,9 +319,10 @@ class TRBTools:
         ------
         time_inter: np.array
             the interpolated absolute time
-        rates_inter: np.array
+        rate_inter: np.array
             the interpolated rate
         """
+
         def interp_np(x, xp, fp):
             y = np.zeros((fp.shape[0], x.shape[0]), dtype=float)
             for i in range(y.shape[0]):
@@ -325,6 +339,60 @@ class TRBTools:
                              fp=self.time.astype(float),
                              ).astype('datetime64[us]')
 
-        rates_inter = np.diff(counts) / np.diff(time_probe)
+        rate_inter = np.diff(counts) / np.diff(time_probe)
         time_inter = abs_time[:-1] + np.diff(abs_time) * .5
-        return time_inter, rates_inter
+        return time_inter, rate_inter
+
+    def __load_interp_rate__(self):
+        group = self.file_handler.file['counts_interpolated']
+        self._interp_frequency_ = group.attrs['interpolated_frequency']
+        self._interp_time_ = group['time']
+        self._interp_rate_ = group['rate']
+
+    def write_interp_rate(self, force_write=False, compression_dict=None):
+        """Write the interpolated rates and time to the file.
+        PARAMETER
+        ---------
+        force_write: bool, optional
+            if existing data with the same frequency should be overwritten.
+        compression_dict: dict, optional
+            parameters parsed to h5py.create_dataset. 'None' (default) use:
+            compression_dict = {'compression': 'gzip', 'compression_opts': 6, 'shuffle': True, 'fletcher32': True}
+        """
+        if compression_dict is None:
+            compression_dict = {'compression': 'gzip',
+                                'compression_opts': 6,
+                                'shuffle': True,
+                                'fletcher32': True,
+                                }
+
+        if self.file_handler is None:
+            return
+
+        # close file as open in read mode and open it with 'r+'
+        try:
+            self.file_handler.close()
+            self.file_handler.open(mode='r+')  # r+ : Read/write, file must exist
+            print('file open in r+')
+
+            # write data to file, first check if data have to be updated or written
+            group = self.file_handler.file.require_group('/counts_interpolated')
+            if 'interpolated_frequency' in group.attrs and not force_write:
+                if group.attrs['interpolated_frequency'] == self.interp_frequency:
+                    return  # don't write the data again
+
+            print('group created')
+            # write data
+            if 'time' in group:
+                del group['time']
+            group.create_dataset('time', data=tools.datetime2float(self.interp_time), **compression_dict)
+            print('time created')
+            if 'rate' in group:
+                del group['rate']
+            group.create_dataset('rate', data=self.interp_rate, **compression_dict)
+            print('rate created')
+            group.attrs.update({'interpolated_frequency': self.interp_frequency})
+            print('done')
+        finally:
+            self.file_handler.close()  # close write mode
+            self.file_handler.open()  # open in read only mode

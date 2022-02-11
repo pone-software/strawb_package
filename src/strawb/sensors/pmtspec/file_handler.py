@@ -6,8 +6,7 @@ from strawb.base_file_handler import BaseFileHandler
 
 class FileHandler(BaseFileHandler):
     def __init__(self, *args, **kwargs):
-        # Counter, similar to PMTSpectrometer. Added to hdf5 ~05.10.2021.
-        # -> File version 2
+        # Counter
         self.counts_time = None  # absolute timestamps in seconds for each counts reading
         self.counts_ch0 = None  # channel which counts up at a constant frequency -> PMT Spectrometer
         self.counts_ch1 = None  # the PMT channel 1.
@@ -22,6 +21,11 @@ class FileHandler(BaseFileHandler):
         self.counts_ch12 = None  # the PMT channel
         self.counts_ch13 = None  # the PMT channel
         self.counts_ch15 = None  # the PMT channel
+
+        # interpolated rates. Based on the `counts` and interpolated to fit a artificially readout frequency.
+        self.interp_frequency = None  # artificially readout frequency
+        self.interp_time = None  # absolute timestamps. Shape: [time_j]
+        self.interp_rates = None  # rates a s a 2d array. Shape: [channel_i, time_j]
 
         # Padiwa Settings thresholds
         self.padiwa_time = None
