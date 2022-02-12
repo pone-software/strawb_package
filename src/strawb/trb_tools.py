@@ -373,7 +373,6 @@ class TRBTools:
         try:
             self.file_handler.close()
             self.file_handler.open(mode='r+')  # r+ : Read/write, file must exist
-            print('file open in r+')
 
             # write data to file, first check if data have to be updated or written
             group = self.file_handler.file.require_group('/counts_interpolated')
@@ -381,18 +380,15 @@ class TRBTools:
                 if group.attrs['interpolated_frequency'] == self.interp_frequency:
                     return  # don't write the data again
 
-            print('group created')
             # write data
             if 'time' in group:
                 del group['time']
             group.create_dataset('time', data=tools.datetime2float(self.interp_time), **compression_dict)
-            print('time created')
+
             if 'rate' in group:
                 del group['rate']
             group.create_dataset('rate', data=self.interp_rate, **compression_dict)
-            print('rate created')
             group.attrs.update({'interpolated_frequency': self.interp_frequency})
-            print('done')
         finally:
             self.file_handler.close()  # close write mode
             self.file_handler.open()  # open in read only mode
