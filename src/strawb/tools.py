@@ -35,7 +35,7 @@ class AsDatetimeWrapper(object):
         return AsDatetimeWrapper(dset=self, precision=unit)
 
 
-def asdatetime(array, precision='us'):
+def asdatetime(array, precision='us', date_type='datetime'):
     """Converts timestamps of floats with precision seconds to numpy.datetime of the defined precision.
     PARAMETER
     ---------
@@ -43,7 +43,8 @@ def asdatetime(array, precision='us'):
         input array of timestamp as floats in the precision seconds.
     precision: str, optional
         defines the precision of the timestamp. Valid precisions are: 's', 'ms', 'us', 'ns' and 'ps'
-
+    date_type: str, optional
+        either `datetime` or `timedelta`
     RETURNS
     -------
     array: ndarray
@@ -52,8 +53,10 @@ def asdatetime(array, precision='us'):
     unit_dict = {'s': 1, 'ms': 1e3, 'us': 1e6, 'ns': 1e9, 'ps': 1e12}
     if precision.lower() not in unit_dict:
         raise ValueError(f'precision not in unit_dict (unit_dict), got: {precision}')
+    if date_type.lower() not in ['datetime', 'timedelta']:
+        raise ValueError(f'date_type has to be out of: `datetime` or `timedelta`. Got: {date_type}')
 
-    dtype = np.dtype(f'datetime64[{precision.lower()}]')
+    dtype = np.dtype(f'{date_type.lower()}64[{precision.lower()}]')
     scale = float(unit_dict[precision.lower()])
 
     return (array * scale).astype(dtype)

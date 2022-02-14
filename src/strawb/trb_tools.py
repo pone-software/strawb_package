@@ -27,7 +27,7 @@ class TRBTools:
         self.__daq_frequency_readout__ = (
             None  # array or float, needs to be set in the child class
         )
-        self.__time__ = None  # array with absolute time stamps
+        self.__time__ = None  # array with absolute time stamps, needs to be set in the child class
 
         self.__dcounts_arr__ = None  # stores result of self.diff_counts()
         self.__counts_arr__ = None  # stores 'absolute' counts as a 2D array,
@@ -58,7 +58,10 @@ class TRBTools:
     def time(self):
         """The absolute timestamp when the counter are recorded. This time isn't very precise as it comes from the CPU
         clock, therefore its absolute. See `rate_time` for a very precise but not absolute timestamps from the TRB."""
-        return self.__time__.asdatetime()[:]
+        if isinstance(self.__time__, h5py.Dataset):
+            return self.__time__.asdatetime()[:]
+        else:
+            return tools.asdatetime(self.__time__)
 
     @property
     def time_middle(self):
@@ -336,7 +339,7 @@ class TRBTools:
 
         abs_time = np.interp(x=time_probe,
                              xp=timestamps,
-                             fp=self.time.astype(float),
+                             fp=self.time.astype(float),  # np.interp works only with float, int
                              ).astype('datetime64[us]')
 
         rate_inter = np.diff(counts) / np.diff(time_probe)
