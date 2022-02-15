@@ -44,18 +44,18 @@ class BaseFileHandler:
         elif os.path.exists(file_name):
             self.file_name = os.path.abspath(file_name)
             self.file_typ = self.file_name.rsplit('.', 1)[-1]
-            self.load_meta_data()
+            self.open()
         elif os.path.exists(os.path.join(Config.raw_data_dir, file_name)):
             path = os.path.join(Config.raw_data_dir, file_name)
             self.file_name = os.path.abspath(path)
             self.file_typ = self.file_name.rsplit('.', 1)[-1]
-            self.load_meta_data()
+            self.open()
         else:
             file_name_list = glob.glob(Config.raw_data_dir + "/**/" + file_name, recursive=True)
             if len(file_name_list) == 1:
                 self.file_name = file_name_list[0]
                 self.file_typ = self.file_name.rsplit('.', 1)[-1]
-                self.load_meta_data()
+                self.open()
             else:
                 if not file_name_list:
                     raise FileNotFoundError(f'{file_name} not found nor matches any file in "{Config.raw_data_dir}"')
@@ -71,7 +71,26 @@ class BaseFileHandler:
             except (KeyError, ValueError, TypeError):
                 pass
 
-    def open(self, mode='r'):
+    def close(self):
+        """Close the file if it is open."""
+        if self.file is not None:
+            self.file.close()
+            self.file = None
+
+    def __enter__(self):
+        """For 'with' statement"""
+        self.open()
+        return self
+
+    def __exit__(self, *args):
+        """For 'with' statement"""
+        self.close()
+
+    def __del__(self):
+        """When object is not deleted, e.g. when program ends, variable deleted, deleted by the garbage collector."""
+        self.close()
+
+    def _open_(self, mode='r'):
         """Opens the file if it is not open.
         PARAMETER
         ---------
@@ -99,28 +118,21 @@ class BaseFileHandler:
             else:
                 raise NotImplementedError(f'file_typ not implemented {self.file_typ}')
 
-    def close(self):
-        """Close the file if it is open."""
-        if self.file is not None:
-            self.file.close()
-            self.file = None
-
-    def __enter__(self):
-        """For 'with' statement"""
-        self.open()
-        return self
-
-    def __exit__(self, *args):
-        """For 'with' statement"""
-        self.close()
-
-    def __del__(self):
-        """When object is not deleted, e.g. when program ends, variable deleted, deleted by the garbage collector."""
-        self.close()
-
-    def load_meta_data(self, ):
-        """Opens the file and loads the data defined by __load_meta_data__."""
-        self.open()
+    def open(self, mode='r', load_data=True):
+        """Opens the file and loads the data defined by __load_meta_data__.
+        PARAMETER
+        ---------
+        mode: str, optional
+            r	   : Readonly, file must exist (default)
+            r+	   : Read/write, file must exist
+            w	   : Create file, truncate if exists
+            w- or x: Create file, fail if exists
+            a	   : Read/write if exists, create otherwise
+        load_data: bool, optional
+            if data should be loaded and linked. Must be disabled if hdf5 group should be deleted.
+        """
+        self._open_(mode=mode)
+        self.is_empty = True
         if self.file_typ in ['h5', 'hdf5']:
             if not list(self.file.keys()):  # no groups inside the file -> empty file
                 self.is_empty = True
@@ -130,10 +142,12 @@ class BaseFileHandler:
                     print(f'WARNING: HDF5 File {self.file_name} is empty.')
             else:
                 self.is_empty = False
-                self.__load_meta_data__()
 
         elif self.file_typ in ['txt']:
             self.is_empty = False  # TODO: detect an empty txt file
+
+        # link and load data
+        if not self.is_empty and load_data:
             self.__load_meta_data__()
 
     def __load_meta_data__(self, ):

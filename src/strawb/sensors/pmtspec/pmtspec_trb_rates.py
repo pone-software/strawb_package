@@ -13,11 +13,15 @@ class PMTSpecTRBRates(TRBTools):
         else:
             raise TypeError(f"Expected `strawb.sensors.pmtspec.FileHandler` got: {type(file_handler)}")
 
-        if (
-            self.file_handler.file_version >= 1
-        ):  # 1 is the base file_version, therefore, its all files
-            self.__daq_frequency_readout__ = self.file_handler.daq_frequency_readout
-            self.__raw_counts_arr__ = [
+    @ property
+    def __daq_frequency_readout__(self):
+        """Overwrite the property of TRBTools"""
+        return self.file_handler.daq_frequency_readout
+
+    @property
+    def __raw_counts_arr__(self):
+        """Overwrite the property of TRBTools"""
+        return [
                 self.file_handler.counts_ch0,
                 self.file_handler.counts_ch1,
                 self.file_handler.counts_ch3,
@@ -32,7 +36,11 @@ class PMTSpecTRBRates(TRBTools):
                 self.file_handler.counts_ch13,
                 self.file_handler.counts_ch15,
             ]
-            self.__time__ = self.file_handler.counts_time
+
+    @property
+    def __time__(self):
+        """Overwrite the property of TRBTools"""
+        return self.file_handler.counts_time
 
     # ---- Pandas DataFrames ----
     def get_pandas_dcounts(self):

@@ -44,7 +44,7 @@ class FileHandler(BaseFileHandler):
         BaseFileHandler.__init__(self, *args, **kwargs)
 
     # auxiliary functions
-    def load_meta_data(self):
+    def open(self):
         # from which module is this minispec device? generate an array to store data from each device
         # if it is from pmtspec/minispec module, it has 1/5 devices
         if self.module == "MINISPECTROMETER001":

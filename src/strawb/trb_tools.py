@@ -7,7 +7,10 @@ from strawb import tools
 class TRBTools:
     def __init__(self, file_handler=None, frequency_interp=33.):
         """Base Class for the TRB. It takes care about the counter readings and calculates the rates based on the
-        counts. In addition it can also calculate a interpolated rate based on the counts.
+        counts. In addition it can also calculate a interpolated rate based on the counts. To open and close a file can
+        cause corrupt links. Therefore, the following properties must be set in the child class which inherits from
+        TRBTools and they should set the link to the data source:
+        - __raw_counts_arr__; __daq_frequency_readout__; __time__
 
         PARAMETER
         ---------
@@ -15,20 +18,6 @@ class TRBTools:
             sets the default frequency for the rates interpolation. Is only set, if there is no frequency_interp in
             the file set. To overwrite, set frequency_interp (i.e. `frequency_interp=24`) after the initialisation.
         """
-
-        # define interfaces which need to be set in child classes, i.e. to link file handler variables
-        # __raw_counts_arr__ are the counter arrays where __raw_counts_arr__[0] must be the time counter of the TRB aka
-        # ch0.
-        # Each array (counts_ch0, counts_ch1,...) must be from the same length and must have the same length as
-        # self.__time__.
-        # e.g.: self.__raw_counts_arr__ = [file_handler.counts_ch0, file_handler.counts_ch1, file_handler.counts_ch2]
-        # __daq_frequency_readout__ is the frequency TRB counts up the time counter (ch0)
-        self.__raw_counts_arr__ = None  # list, needs to be set in the child class
-        self.__daq_frequency_readout__ = (
-            None  # array or float, needs to be set in the child class
-        )
-        self.__time__ = None  # array with absolute time stamps, needs to be set in the child class
-
         self.__dcounts_arr__ = None  # stores result of self.diff_counts()
         self.__counts_arr__ = None  # stores 'absolute' counts as a 2D array,
         self._active_read_arr_ = None  # stores if the counter read happens at a event (1) or not (0)
@@ -52,8 +41,32 @@ class TRBTools:
         if self._interp_frequency_ is None:
             self._interp_frequency_ = frequency_interp
 
+    # ---- MANDATORY properties ----
+    # define interfaces which need to be set in child classes, i.e. to link file handler variables
+    # __raw_counts_arr__ are the counter arrays where __raw_counts_arr__[0] must be the time counter of the TRB aka
+    # ch0.
+    # Each array (counts_ch0, counts_ch1,...) must be from the same length and must have the same length as
+    # self.__time__.
+    # e.g.: self.__raw_counts_arr__ = [file_handler.counts_ch0, file_handler.counts_ch1, file_handler.counts_ch2]
+    # __daq_frequency_readout__ is the frequency TRB counts up the time counter (ch0)
+    @property
+    def __time__(self):
+        return None  # array with absolute time stamps, needs to be set in the child class
+
+    @property
+    def __daq_frequency_readout__(self):
+        """Array or float of the TRB daq frequency, needs to be set in the child class"""
+        return None
+
+    @property
+    def __raw_counts_arr__(self):
+        """list of arrays of raw counts, needs to be set in the child class. __raw_counts_arr__[0] must be the time
+        counter of the TRB aka ch0."""
+        return None
+
+    # ---- END MANDATORY properties ----
+
     # Properties prevent here to load data directly at initialisation and to prevent setting the variables
-    # ---- absolute Measurement Timestamp ----
     @property
     def time(self):
         """The absolute timestamp when the counter are recorded. This time isn't very precise as it comes from the CPU
@@ -261,10 +274,11 @@ class TRBTools:
         # Prepare parameter
         # Check type and shape of counts arrays
         if isinstance(daq_frequency_readout, list):  # convert to array
-            daq_frequency_readout = np.array(daq_frequency_readout)
+            daq_frequency_readout = np.array(daq_frequency_readout[:])
         if isinstance(daq_frequency_readout, (np.ndarray, h5py.Dataset)):
+            # check if there is only one value (exclude -1: daq inactive)
             if np.unique(
-                    daq_frequency_readout[daq_frequency_readout[:] != -1]
+                    daq_frequency_readout[daq_frequency_readout != -1]
             ).shape != (1,):
                 raise RuntimeError(
                     "More than 1 unique value exits in daq_frequency_readout."
@@ -360,17 +374,13 @@ class TRBTools:
             if existing data with the same frequency should be overwritten.
         compression_dict: dict, optional
             parameters parsed to h5py.create_dataset. 'None' (default) use:
-            compression_dict = {'compression': 'gzip', 'compression_opts': 6, 'shuffle': True, 'fletcher32': True}
+            compression_dict = {'compression': 'gzip', 'compression_opts': 9, 'shuffle': True, 'fletcher32': True}
         """
-        if compression_dict is None:
-            compression_dict = {'compression': 'gzip',
-                                'compression_opts': 6,
-                                'shuffle': True,
-                                'fletcher32': True,
-                                }
-
         if self.file_handler is None:
             return
+
+        if compression_dict is None:
+            compression_dict = {'compression': 'gzip', 'compression_opts': 9, 'shuffle': True, 'fletcher32': True}
 
         # close file as open in read mode and open it with 'r+'
         try:
@@ -378,7 +388,7 @@ class TRBTools:
             self.file_handler.open(mode='r+')  # r+ : Read/write, file must exist
 
             # write data to file, first check if data have to be updated or written
-            group = self.file_handler.file.require_group('/counts_interpolated')
+            group = self.file_handler.file.require_group('counts_interpolated')
             if 'interpolated_frequency' in group.attrs and not force_write:
                 if group.attrs['interpolated_frequency'] == self.interp_frequency:
                     return  # don't write the data again
@@ -392,6 +402,22 @@ class TRBTools:
                 del group['rate']
             group.create_dataset('rate', data=self.interp_rate, **compression_dict)
             group.attrs.update({'interpolated_frequency': self.interp_frequency})
+        finally:
+            self.file_handler.close()  # close write mode
+            self.file_handler.open()  # open in read only mode
+
+    def remove_interp_rate(self, ):
+        if self.file_handler is None:
+            return
+
+        try:
+            # close file as open in read mode and open it with 'r+'
+            self.file_handler.close()
+            self.file_handler.open(mode='r+', load_data=False)  # r+ : Read/write, file must exist
+
+            if 'counts_interpolated' in self.file_handler.file:
+                del self.file_handler.file['/counts_interpolated']
+
         finally:
             self.file_handler.close()  # close write mode
             self.file_handler.open()  # open in read only mode
