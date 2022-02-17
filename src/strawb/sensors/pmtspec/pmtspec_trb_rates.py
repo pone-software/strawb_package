@@ -5,19 +5,23 @@ from strawb.trb_tools import TRBTools
 
 
 class PMTSpecTRBRates(TRBTools):
-    def __init__(self, file_handler: FileHandler):
-        TRBTools.__init__(self)
+    def __init__(self, file_handler: FileHandler, *args, **kwargs):
+        TRBTools.__init__(self, *args, **kwargs)
 
         if isinstance(file_handler, FileHandler):
             self.file_handler = file_handler
         else:
-            raise TypeError(f"Expected pmtspec.FileHandler got: {type(file_handler)}")
+            raise TypeError(f"Expected `strawb.sensors.pmtspec.FileHandler` got: {type(file_handler)}")
 
-        if (
-            self.file_handler.file_version >= 1
-        ):  # 1 is the base file_version, therefore, its all files
-            self.__daq_frequency_readout__ = self.file_handler.daq_frequency_readout
-            self.__counts_arr__ = [
+    @ property
+    def __daq_frequency_readout__(self):
+        """Overwrite the property of TRBTools"""
+        return self.file_handler.daq_frequency_readout
+
+    @property
+    def raw_counts_arr(self):
+        """Overwrite the property of TRBTools"""
+        return [
                 self.file_handler.counts_ch0,
                 self.file_handler.counts_ch1,
                 self.file_handler.counts_ch3,
@@ -32,13 +36,17 @@ class PMTSpecTRBRates(TRBTools):
                 self.file_handler.counts_ch13,
                 self.file_handler.counts_ch15,
             ]
-            self.__time__ = self.file_handler.counts_time
+
+    @property
+    def __time__(self):
+        """Overwrite the property of TRBTools"""
+        return self.file_handler.counts_time
 
     # ---- Pandas DataFrames ----
     def get_pandas_dcounts(self):
         """Returns a pandas dataframe with the dcounts, and an absolute timestamp"""
         if self.file_handler.file_version >= 1:
-            return pandas.DataFrame(
+            df = pandas.DataFrame(
                 dict(
                     time=self.time_middle,
                     dcounts_time=self.dcounts_time,
@@ -56,11 +64,13 @@ class PMTSpecTRBRates(TRBTools):
                     dcounts_ch15=self.dcounts[11],
                 )
             )
+            df.set_index('time', drop=False, inplace=True)
+            return df
 
     def get_pandas_rate(self):
         """Returns a pandas dataframe with the rates, the rate_delta_t, and an absolute timestamp"""
         if self.file_handler.file_version >= 1:
-            return pandas.DataFrame(
+            df = pandas.DataFrame(
                 dict(
                     time=self.time_middle,
                     rate_time=self.rate_time_middle,
@@ -78,3 +88,5 @@ class PMTSpecTRBRates(TRBTools):
                     rate_ch15=self.rate[11],
                 )
             )
+            df.set_index('time', drop=False, inplace=True)
+            return df

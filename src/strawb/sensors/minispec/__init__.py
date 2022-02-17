@@ -2,8 +2,6 @@ from .file_handler import FileHandler
 
 from typing import Union
 
-from strawb.sensors.minispec.file_handler import FileHandler
-
 
 class MiniSpectrometer:
 
