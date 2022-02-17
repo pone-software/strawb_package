@@ -60,7 +60,6 @@ class FileHandler(BaseFileHandler):
         # start_time
         hdf5_name = self.file_name.rsplit('/', 1)[-1]
         datetime_str = hdf5_name.split("_")[1][0:15]
-        print(datetime_str)
         self.start_time = datetime.strptime(datetime_str, "%Y%m%dT%H%M%S")
 
         # other data
@@ -94,7 +93,8 @@ class FileHandler(BaseFileHandler):
                 # endtime
                 self.end_time = self.start_time + timedelta(seconds=abs(end - start))
             else:
-                print("be careful, this file is not 24 hours complete")
+                pass
+                # print("be careful, this file is not 24 hours complete")
         file.close()
 
     def calculate_wavelength(self):
@@ -105,7 +105,7 @@ class FileHandler(BaseFileHandler):
         # wavelength(*get_param(0xe300000b18ef6228))
         """
         if self.if_wavecal is True:
-            print("wavelength is already calibrated")
+            pass  # print("wavelength is already calibrated")
         elif self.if_wavecal is False:
             for n in range(len(self.data_array)):
                 pix = np.arange(288.)
@@ -114,7 +114,7 @@ class FileHandler(BaseFileHandler):
                                        single_device.CAL_ARR[2] * pix ** 2 + \
                                        single_device.CAL_ARR[3] * pix ** 3 + single_device.CAL_ARR[4] * pix ** 4 + \
                                        single_device.CAL_ARR[5] * pix ** 5
-                print(new_wavelength_array)
+                #  print(new_wavelength_array)
                 self.data_array[n].WAVELENGTH_ARR = new_wavelength_array
         self.if_wavecal = True
 

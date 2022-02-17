@@ -10,7 +10,7 @@ class TRBTools:
         counts. In addition it can also calculate a interpolated rate based on the counts. To open and close a file can
         cause corrupt links. Therefore, the following properties must be set in the child class which inherits from
         TRBTools and they should set the link to the data source:
-        - __raw_counts_arr__; __daq_frequency_readout__; __time__
+        - raw_counts_arr; __daq_frequency_readout__; __time__
 
         PARAMETER
         ---------
@@ -43,11 +43,11 @@ class TRBTools:
 
     # ---- MANDATORY properties ----
     # define interfaces which need to be set in child classes, i.e. to link file handler variables
-    # __raw_counts_arr__ are the counter arrays where __raw_counts_arr__[0] must be the time counter of the TRB aka
+    # raw_counts_arr are the counter arrays where raw_counts_arr[0] must be the time counter of the TRB aka
     # ch0.
     # Each array (counts_ch0, counts_ch1,...) must be from the same length and must have the same length as
     # self.__time__.
-    # e.g.: self.__raw_counts_arr__ = [file_handler.counts_ch0, file_handler.counts_ch1, file_handler.counts_ch2]
+    # e.g.: self.raw_counts_arr: return [file_handler.counts_ch0, file_handler.counts_ch1, file_handler.counts_ch2]
     # __daq_frequency_readout__ is the frequency TRB counts up the time counter (ch0)
     @property
     def __time__(self):
@@ -59,11 +59,10 @@ class TRBTools:
         return None
 
     @property
-    def __raw_counts_arr__(self):
-        """list of arrays of raw counts, needs to be set in the child class. __raw_counts_arr__[0] must be the time
+    def raw_counts_arr(self):
+        """List of arrays of raw counts, needs to be set in the child class. raw_counts_arr[0] must be the time
         counter of the TRB aka ch0."""
         return None
-
     # ---- END MANDATORY properties ----
 
     # Properties prevent here to load data directly at initialisation and to prevent setting the variables
@@ -72,6 +71,7 @@ class TRBTools:
         """The absolute timestamp when the counter are recorded. This time isn't very precise as it comes from the CPU
         clock, therefore its absolute. See `rate_time` for a very precise but not absolute timestamps from the TRB."""
         if isinstance(self.__time__, h5py.Dataset):
+            # noinspection PyUnresolvedReferences
             return self.__time__.asdatetime()[:]
         else:
             return tools.asdatetime(self.__time__)
@@ -131,7 +131,9 @@ class TRBTools:
         """Channel which counts up at a constant frequency. The frequency is stored in `self.daq_frequency_readout`.
         1darray with axes [time_i].
         """
-        return self._counts_arr_[0] / float(self.daq_frequency_readout)
+        if self.daq_frequency_readout is not None:
+            # noinspection PyTypeChecker
+            return self._counts_arr_[0] / float(self.daq_frequency_readout)
 
     # ---- TRB Rates ----
     @property
@@ -195,13 +197,14 @@ class TRBTools:
         return None
 
     def diff_counts(self):
-        if self.__raw_counts_arr__ is not None:
-            self.__dcounts_arr__, self._active_read_arr_ = self._diff_counts_(*self.__raw_counts_arr__)
+        if self.raw_counts_arr is not None:
+            # noinspection PyArgumentList
+            self.__dcounts_arr__, self._active_read_arr_ = self._diff_counts_(*self.raw_counts_arr)
             return self._dcounts_arr_
         return None
 
     def calculate_rates(self):
-        if self.__raw_counts_arr__ is not None:
+        if self.raw_counts_arr is not None:
             self._rate_delta_time, self._rate = self._calculate_rates_(
                 daq_frequency_readout=self.__daq_frequency_readout__,
                 dcounts_time=self.dcounts_time,

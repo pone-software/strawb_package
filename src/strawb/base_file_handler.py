@@ -6,7 +6,7 @@ from strawb.config_parser.__init__ import Config
 
 
 class BaseFileHandler:
-    def __init__(self, file_name=None, module=None, raise_empty_file=False):
+    def __init__(self, file_name=None, module=None, empty_file=None):
         """The Base File Handler defines the basic file handling for the strawb package.
 
         PARAMETER
@@ -21,8 +21,8 @@ class BaseFileHandler:
         module: Union[str, None], optional
             sets the name of the module which the file belongs to. If None (default) it extract the module name from the
             file name following the ONC naming scheme.
-        raise_empty_file: bool, optional
-            if an empty file should raise an error or not. Default is False.
+        empty_file: str, optional
+            if an empty file should `raise` an error or print a `warning` or do nothing with `None`. Default is None.
         """
         # get all Meta Data arrays
         self.__members__ = [attr for attr in dir(self) if
@@ -32,9 +32,10 @@ class BaseFileHandler:
         self.file_name = None
         self.module = None
         self.file_typ = None  # file type
+        self.file_version = None
 
         # empty file
-        self.raise_empty_file = raise_empty_file
+        self.empty_file = empty_file
         self.is_empty = None
 
         self.file_attributes = None  # holds all hdf5-file attributes as dict
@@ -136,9 +137,9 @@ class BaseFileHandler:
         if self.file_typ in ['h5', 'hdf5']:
             if not list(self.file.keys()):  # no groups inside the file -> empty file
                 self.is_empty = True
-                if self.raise_empty_file:
+                if self.empty_file == 'raise':
                     raise FileExistsError(f'File {self.file.file_name} is empty! Can not load {type(self).__name__}.')
-                else:
+                elif self.empty_file == 'warning':
                     print(f'WARNING: HDF5 File {self.file_name} is empty.')
             else:
                 self.is_empty = False

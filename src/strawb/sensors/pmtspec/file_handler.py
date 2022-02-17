@@ -167,31 +167,36 @@ class FileHandler(BaseFileHandler):
 
     # Define pandas DataFrame export helpers
     def get_pandas_daq(self):
-        return pandas.DataFrame(dict(time=self.daq_time.asdatetime()[:],
-                                     daq_frequency_readout=self.daq_frequency_readout,
-                                     state=self.daq_state,
-                                     trb=self.daq_trb))
+        df = pandas.DataFrame(dict(time=self.daq_time.asdatetime()[:],
+                                   daq_frequency_readout=self.daq_frequency_readout,
+                                   state=self.daq_state,
+                                   trb=self.daq_trb))
+        df.set_index('time', drop=False, inplace=True)
+        return df
 
     def get_pandas_padiwa(self):
-        return pandas.DataFrame(dict(time=self.padiwa_time.asdatetime()[:],
-                                     th1=self.padiwa_th1,
-                                     th3=self.padiwa_th3,
-                                     th5=self.padiwa_th5,
-                                     th6=self.padiwa_th6,
-                                     th7=self.padiwa_th7,
-                                     th8=self.padiwa_th8,
-                                     th9=self.padiwa_th9,
-                                     th10=self.padiwa_th10,
-                                     th11=self.padiwa_th11,
-                                     th12=self.padiwa_th12,
-                                     th13=self.padiwa_th13,
-                                     th15=self.padiwa_th15,
-                                     offset=self.padiwa_offset,
-                                     power=self.padiwa_power,
-                                     ))
+        df = pandas.DataFrame(dict(time=self.padiwa_time.asdatetime()[:],
+                                   th1=self.padiwa_th1,
+                                   th3=self.padiwa_th3,
+                                   th5=self.padiwa_th5,
+                                   th6=self.padiwa_th6,
+                                   th7=self.padiwa_th7,
+                                   th8=self.padiwa_th8,
+                                   th9=self.padiwa_th9,
+                                   th10=self.padiwa_th10,
+                                   th11=self.padiwa_th11,
+                                   th12=self.padiwa_th12,
+                                   th13=self.padiwa_th13,
+                                   th15=self.padiwa_th15,
+                                   offset=self.padiwa_offset,
+                                   power=self.padiwa_power,
+                                   ))
+
+        df.set_index('time', drop=False, inplace=True)
+        return df
 
     def get_pandas_hv(self):
-        return pandas.DataFrame(dict(time=self.hv_time.asdatetime()[:],
+        df = pandas.DataFrame(dict(time=self.hv_time.asdatetime()[:],
                                      ch1=self.hv_ch1,
                                      ch3=self.hv_ch3,
                                      ch5=self.hv_ch5,
@@ -206,22 +211,26 @@ class FileHandler(BaseFileHandler):
                                      ch15=self.hv_ch15,
                                      power=self.hv_power,
                                      ))
+        df.set_index('time', drop=False, inplace=True)
+        return df
 
     def get_pandas_counts(self):
-        return pandas.DataFrame(dict(time=self.counts_time.asdatetime()[:],
-                                     ch1=self.counts_ch1,
-                                     ch3=self.counts_ch3,
-                                     ch5=self.counts_ch5,
-                                     ch6=self.counts_ch6,
-                                     ch7=self.counts_ch7,
-                                     ch8=self.counts_ch8,
-                                     ch9=self.counts_ch9,
-                                     ch10=self.counts_ch10,
-                                     ch11=self.counts_ch11,
-                                     ch12=self.counts_ch12,
-                                     ch13=self.counts_ch13,
-                                     ch15=self.counts_ch15,
-                                     ))
+        df = pandas.DataFrame(dict(time=self.counts_time.asdatetime()[:],
+                                   ch1=self.counts_ch1,
+                                   ch3=self.counts_ch3,
+                                   ch5=self.counts_ch5,
+                                   ch6=self.counts_ch6,
+                                   ch7=self.counts_ch7,
+                                   ch8=self.counts_ch8,
+                                   ch9=self.counts_ch9,
+                                   ch10=self.counts_ch10,
+                                   ch11=self.counts_ch11,
+                                   ch12=self.counts_ch12,
+                                   ch13=self.counts_ch13,
+                                   ch15=self.counts_ch15,
+                                   ))
+        df.set_index('time', drop=False, inplace=True)
+        return df
 
     # ---- OLD CODE ----
     # def load_from_file(self, read_until_index=None):

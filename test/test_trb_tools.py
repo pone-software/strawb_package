@@ -64,7 +64,7 @@ class TestIntegratedRates(TestCase):
                 return __daq_frequency_readout__
 
             @property
-            def __raw_counts_arr__(self):
+            def raw_counts_arr(self):
                 # the raw counts are the cum. sum
                 return np.cumsum(counts, axis=-1)
 

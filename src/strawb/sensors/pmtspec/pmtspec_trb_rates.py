@@ -19,7 +19,7 @@ class PMTSpecTRBRates(TRBTools):
         return self.file_handler.daq_frequency_readout
 
     @property
-    def __raw_counts_arr__(self):
+    def raw_counts_arr(self):
         """Overwrite the property of TRBTools"""
         return [
                 self.file_handler.counts_ch0,
@@ -46,7 +46,7 @@ class PMTSpecTRBRates(TRBTools):
     def get_pandas_dcounts(self):
         """Returns a pandas dataframe with the dcounts, and an absolute timestamp"""
         if self.file_handler.file_version >= 1:
-            return pandas.DataFrame(
+            df = pandas.DataFrame(
                 dict(
                     time=self.time_middle,
                     dcounts_time=self.dcounts_time,
@@ -64,11 +64,13 @@ class PMTSpecTRBRates(TRBTools):
                     dcounts_ch15=self.dcounts[11],
                 )
             )
+            df.set_index('time', drop=False, inplace=True)
+            return df
 
     def get_pandas_rate(self):
         """Returns a pandas dataframe with the rates, the rate_delta_t, and an absolute timestamp"""
         if self.file_handler.file_version >= 1:
-            return pandas.DataFrame(
+            df = pandas.DataFrame(
                 dict(
                     time=self.time_middle,
                     rate_time=self.rate_time_middle,
@@ -86,3 +88,5 @@ class PMTSpecTRBRates(TRBTools):
                     rate_ch15=self.rate[11],
                 )
             )
+            df.set_index('time', drop=False, inplace=True)
+            return df
