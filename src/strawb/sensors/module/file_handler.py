@@ -1,3 +1,5 @@
+import numpy as np
+
 from strawb.base_file_handler import BaseFileHandler
 
 
@@ -68,22 +70,42 @@ class Lucifer:
         self.mode = None
         self.time = None
 
+        self.version = None
+
     def __load_meta_data__(self, file):
+        for i in [self.__load_meta_data_v2__]:
+            try:
+                i(file)  # try file versions
+                return
+            # version is detected because datasets in the hdf5 aren't present -> i() fails with KeyError
+            except (KeyError, TypeError) as a:
+                pass
+
+        self.__load_meta_data_v1__(file)  # try with file default version
+
+    def __load_meta_data_v1__(self, file):
+        self.current = file[f'lucifer_{self.id}/current']
+        self.duration = file[f'lucifer_{self.id}/duration']
+        self.mode = file[f'lucifer_{self.id}/mode']
+        self.time = file[f'lucifer_{self.id}/time']
+
+        self.version = 1  # starts with 2 as it is a subclass
+
+    def __load_meta_data_v2__(self, file):
+        """
+        CHANGES to v1:
+        added: `current_mA` and `duration_seconds`
+        """
         self.current = file[f'lucifer_{self.id}/current']
         self.duration = file[f'lucifer_{self.id}/duration']
         self.mode = file[f'lucifer_{self.id}/mode']
         self.time = file[f'lucifer_{self.id}/time']
 
         # some older versions doesn't have `current_mA` and `duration_seconds`
-        try:
-            self.current_mA = file[f'lucifer_{self.id}/current_mA']
-        except KeyError:
-            pass
+        self.current_mA = file[f'lucifer_{self.id}/current_mA']
+        self.duration_seconds = file[f'lucifer_{self.id}/duration_seconds']
 
-        try:
-            self.duration_seconds = file[f'lucifer_{self.id}/duration_seconds']
-        except KeyError:
-            pass
+        self.version = 2  # starts with 2 as it is a subclass
 
 
 class FileHandler(BaseFileHandler):
@@ -180,3 +202,14 @@ class FileHandler(BaseFileHandler):
                 lucifer_i = Lucifer(int(i.replace('lucifer_', '')))
                 lucifer_i.__load_meta_data__(self.file)
                 self.lucifer_list.append(lucifer_i)
+
+        lucifer_version = np.unique([i.version for i in self.lucifer_list])
+
+        if len(lucifer_version) == 0:
+            self.file_version = 1
+        elif len(lucifer_version) == 1 and lucifer_version[0] == 1:
+            self.file_version = 2
+        elif len(lucifer_version) == 1 and lucifer_version[0] == 2:
+            self.file_version = 3
+        else:
+            self.file_version = 'multiple lucifer versions'

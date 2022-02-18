@@ -6,7 +6,7 @@ from strawb.config_parser.__init__ import Config
 
 
 class BaseFileHandler:
-    def __init__(self, file_name=None, module=None, empty_file=None):
+    def __init__(self, file_name=None, module=None, raise_error=True):
         """The Base File Handler defines the basic file handling for the strawb package.
 
         PARAMETER
@@ -21,8 +21,8 @@ class BaseFileHandler:
         module: Union[str, None], optional
             sets the name of the module which the file belongs to. If None (default) it extract the module name from the
             file name following the ONC naming scheme.
-        empty_file: str, optional
-            if an empty file should `raise` an error or print a `warning` or do nothing with `None`. Default is None.
+        raise_error: bool, optional
+            if an empty or broken file should raise an error or continue without. Default is None.
         """
         # get all Meta Data arrays
         self.__members__ = [attr for attr in dir(self) if
@@ -32,10 +32,9 @@ class BaseFileHandler:
         self.file_name = None
         self.module = None
         self.file_typ = None  # file type
-        self.file_version = None
+        self.file_version = 0  # can be either a error str or int for the file version. Default is 0 <-> not loaded.
 
         # empty file
-        self.empty_file = empty_file
         self.is_empty = None
 
         self.file_attributes = None  # holds all hdf5-file attributes as dict
@@ -45,18 +44,18 @@ class BaseFileHandler:
         elif os.path.exists(file_name):
             self.file_name = os.path.abspath(file_name)
             self.file_typ = self.file_name.rsplit('.', 1)[-1]
-            self.open()
+            self.file_version = self._init_open_(raise_error=raise_error)
         elif os.path.exists(os.path.join(Config.raw_data_dir, file_name)):
             path = os.path.join(Config.raw_data_dir, file_name)
             self.file_name = os.path.abspath(path)
             self.file_typ = self.file_name.rsplit('.', 1)[-1]
-            self.open()
+            self.file_version = self._init_open_(raise_error=raise_error)
         else:
             file_name_list = glob.glob(Config.raw_data_dir + "/**/" + file_name, recursive=True)
             if len(file_name_list) == 1:
                 self.file_name = file_name_list[0]
                 self.file_typ = self.file_name.rsplit('.', 1)[-1]
-                self.open()
+                self.file_version = self._init_open_(raise_error=raise_error)
             else:
                 if not file_name_list:
                     raise FileNotFoundError(f'{file_name} not found nor matches any file in "{Config.raw_data_dir}"')
@@ -117,7 +116,7 @@ class BaseFileHandler:
                 self.file = open(self.file_name, 'r')
 
             else:
-                raise NotImplementedError(f'file_typ not implemented {self.file_typ}')
+                raise NotImplementedError(f'File_typ not implemented. Got: {self.file_typ}')
 
     def open(self, mode='r', load_data=True):
         """Opens the file and loads the data defined by __load_meta_data__.
@@ -133,14 +132,11 @@ class BaseFileHandler:
             if data should be loaded and linked. Must be disabled if hdf5 group should be deleted.
         """
         self._open_(mode=mode)
+
         self.is_empty = True
         if self.file_typ in ['h5', 'hdf5']:
             if not list(self.file.keys()):  # no groups inside the file -> empty file
                 self.is_empty = True
-                if self.empty_file == 'raise':
-                    raise FileExistsError(f'File {self.file.file_name} is empty! Can not load {type(self).__name__}.')
-                elif self.empty_file == 'warning':
-                    print(f'WARNING: HDF5 File {self.file_name} is empty.')
             else:
                 self.is_empty = False
 
@@ -154,6 +150,40 @@ class BaseFileHandler:
     def __load_meta_data__(self, ):
         """Placeholder which defines how data are read."""
         pass
+
+    def _init_open_(self, raise_error=True):
+        """Open file to get the file_error = file_version."""
+        file_error = 'unknown error'
+
+        if raise_error:
+            self.open(mode='r', load_data=True)
+            if self.is_empty:
+                raise FileExistsError(f'HDF5 File is empty. Got: {self.file_name}')
+
+        # noinspection PyBroadException
+        try:
+            self.open(mode='r', load_data=True)
+
+            # group or dataset not in hdf5 file
+        except KeyError as err:
+            if err.args[0] == 'Unable to open object (component not found)':
+                file_error = 'hdf5 missing group or dataset'  # -2
+
+        except OSError as a:
+            if a.args[0].startswith('Unable to open file (truncated file:'):
+                file_error = 'broken hdf5'  # -3
+
+        # all other exceptions
+        except Exception:
+            file_error = 'unknown error'
+
+        else:
+            if self.is_empty:
+                file_error = 'empty file'  # -1
+            else:
+                return self.file_version
+
+        return file_error
 
     @staticmethod
     def find_files_glob(file_pattern='*.hdf5', directory=None, recursive=True, raise_nothing_found=False):

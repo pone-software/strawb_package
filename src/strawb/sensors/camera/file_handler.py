@@ -51,3 +51,5 @@ class FileHandler(BaseFileHandler):
         self.Resolution = self.file['camera'].attrs['Resolution']
 
         self.all_attributes = dict(self.file['camera'].attrs)
+
+        self.file_version = 1

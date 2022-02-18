@@ -20,6 +20,8 @@ class FileHandler(BaseFileHandler):
                 mini_spectrometer.__load_meta_data__(self.file)
                 self.mini_spectrometer_list.append(mini_spectrometer)
 
+        self.file_version = 1
+
 
 class SingleMiniSpectrometer:
     # the object fill into FileHandler.data_array, each one represent a bridgette channel

@@ -6,6 +6,7 @@ from strawb.base_file_handler import BaseFileHandler
 
 class FileHandler(BaseFileHandler):
     def __init__(self, *args, **kwargs):
+        """The File Handler of the PMTSpectrometer hdf5 data."""
         # Counter
         self.counts_time = None  # absolute timestamps in seconds for each counts reading
         self.counts_ch0 = None  # channel which counts up at a constant frequency -> PMT Spectrometer
