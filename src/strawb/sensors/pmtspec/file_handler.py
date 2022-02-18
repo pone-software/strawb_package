@@ -88,22 +88,29 @@ class FileHandler(BaseFileHandler):
         self.__load_meta_data_v1__()  # try with file default version
 
     def __load_meta_data_v1__(self, ):
+        """In older versions, only the counts have been written.
+        `padiwa`, `hv`, and `daq` not, because there was no change. Support it here."""
+        self.__load_counts__()
+        self.file_version = 1
+
+    def __load_meta_data_v2__(self, ):
+        """Similar to file_version with `padiwa`, `hv`, and `daq`."""
         self.__load_counts__()
         self.__load_padiwa__()
         self.__load_hv__()
         self.__load_daq_v1__()
-        self.file_version = 1
+        self.file_version = 2
 
-    def __load_meta_data_v2__(self, ):
+    def __load_meta_data_v3__(self, ):
         """
-        CHANGES to v1:
+        CHANGES to v2:
         renamed: '/daq/rate_readout' -> '/daq/frequency_readout'
         """
         self.__load_counts__()
         self.__load_padiwa__()
         self.__load_hv__()
         self.__load_daq_v2__()
-        self.file_version = 2
+        self.file_version = 3
 
     def __load_counts__(self):
         self.counts_time = self.file['/counts/time']
