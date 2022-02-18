@@ -65,16 +65,17 @@ class FileHandler(BaseFileHandler):
 
     def __load_meta_data__(self, ):
         # order is important, tries to load newest first and oldest latest.
+        err_list = []
         for i in [self.__load_meta_data_v5__, self.__load_meta_data_v4__, self.__load_meta_data_v3__,
-                  self.__load_meta_data_v2__]:
+                  self.__load_meta_data_v2__, self.__load_meta_data_v1__]:
             try:
                 i()  # try file versions
                 return
             # version is detected because datasets in the hdf5 aren't present -> i() fails with KeyError
             except KeyError as a:
-                pass
+                err_list.append(a.args[0])
 
-        self.__load_meta_data_v1__()  # try with file default version
+        raise KeyError('; '.join(err_list))
 
     # ---- The functions for different versions ----
     def __load_meta_data_v1__(self, ):
@@ -173,10 +174,13 @@ class FileHandler(BaseFileHandler):
         self.__load_meta_data_laser_v1__()
 
     def __load_meta_data_tot__(self):
-        # TOT
-        self.tot_time = self.file['tot/time']
-        self.tot_time_ns = self.file['tot/time_ns']
-        self.tot_tot = self.file['tot/tot']
+        # TOT - sometime there are is no TOT available
+        try:
+            self.tot_time = self.file['tot/time']
+            self.tot_time_ns = self.file['tot/time_ns']
+            self.tot_tot = self.file['tot/tot']
+        except KeyError:
+            pass
 
     def __load_meta_data_counts__(self):
         # Counter

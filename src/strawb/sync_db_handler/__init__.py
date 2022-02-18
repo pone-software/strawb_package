@@ -715,6 +715,9 @@ class SyncDBHandler:
 
         if file_handler is not None:
             dataframe.loc[file_handler.file_name, 'file_version'] = file_handler.file_version
+        else:
+            err = BaseFileHandler.error2codes['FileHandler not implemented']
+            dataframe.loc[file_handler.file_name, 'file_version'] = err
 
     def update_file_version(self, dataframe=None, update_existing=False):
         """Update the file version/state of all items in the dataframe. A negative file version indicate errors.
@@ -749,15 +752,23 @@ class SyncDBHandler:
                 # add files to be checked
                 items_to_check |= dataframe.dataProductCode == i
 
+        # mark all file where the FileHandler is not implemented
+        items_not_implemented = items_to_check & ~dataframe.synced
         items_to_check &= dataframe.synced  # exclude non existing files
 
         if 'file_version' not in dataframe:
             # add column
-            dataframe.insert(dataframe.columns.shape[0], 'file_version', BaseFileHandler.error2codes['file not exist'])
+            dataframe.insert(dataframe.columns.shape[0],
+                             'file_version',
+                             np.nan)
         elif not update_existing:
             # take only the one with missing parameters
-            # items_to_check &= dataframe.file_version.isnull()  # takes all None or np.nan
-            items_to_check &= dataframe.file_version == 0  # takes all 0
+            items_to_check &= dataframe.file_version.isnull()  # takes all None or np.nan
+
+        # mark all file where the FileHandler is not implemented
+        dataframe.file_version.where(~items_not_implemented,
+                                     other=BaseFileHandler.error2codes['FileHandler not implemented'],
+                                     inplace=True)
 
         # only 1 thread works here otherwise some files are labeled wrong (why?)
         sjt = ShareJobThreads(thread_n=1, unit='files')
@@ -771,7 +782,9 @@ class SyncDBHandler:
     def unique_with_count(pandas_series):
         """Return the unique items and how often they exist."""
         res = []
-        for j in pandas_series.unique():
+        unique = pandas_series.unique()
+        unique.sort()
+        for j in unique:
             if j is None:
                 count = pandas_series.isnull().sum()
             else:

@@ -77,6 +77,7 @@ def main(download=False, dev_codes=None, date_from=None, date_to=None,
                            date_from=date_from, date_to=date_to,
                            min_file_size=min_file_size, max_file_size=max_file_size,
                            add_hdf5_attributes=True,
+                           add_file_version=True,
                            add_dataframe=True,
                            download=download,
                            extensions=extensions)

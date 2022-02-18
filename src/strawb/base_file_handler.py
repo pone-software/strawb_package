@@ -1,22 +1,25 @@
 import glob
 import os
 import h5py
+import numpy as np
 
 from strawb.config_parser.__init__ import Config
 
 
 class BaseFileHandler:
     error2codes = {
+        'version not checked': np.nan,
         'file not exist': -1,
-        'empty file': -2,
-        'hdf5 missing group or dataset': -3,
-        'broken hdf5': -4,
+        'FileHandler not implemented': -2,
+        'empty file': -3,
+        'hdf5 missing group or dataset': -4,
+        'broken hdf5': -5,
         'unknown error': -10,
     }
     # invert the error2codes
     codes2error = {i: j for j, i in error2codes.items()}
 
-    def __init__(self, file_name=None, module=None, raise_error=True):
+    def __init__(self, file_name=None, module=None, raise_error=True, skipp_init_open=False):
         """The Base File Handler defines the basic file handling for the strawb package.
 
         PARAMETER
@@ -33,6 +36,8 @@ class BaseFileHandler:
             file name following the ONC naming scheme.
         raise_error: bool, optional
             if an empty or broken file should raise an error or continue without. Default is None.
+        skipp_init_open: bool, optional
+            don't open the file at initialisation
         """
         # get all Meta Data arrays
         self.__members__ = [attr for attr in dir(self) if
@@ -43,7 +48,7 @@ class BaseFileHandler:
         self.module = None
         self.file_typ = None  # file type
         # can be either a error str or int for the file version. Default is 0 <-> not exist.
-        self.file_version = self.error2codes['file not exist']
+        self.file_version = self.error2codes['version not checked']
 
         # empty file
         self.is_empty = None
@@ -55,18 +60,21 @@ class BaseFileHandler:
         elif os.path.exists(file_name):
             self.file_name = os.path.abspath(file_name)
             self.file_typ = self.file_name.rsplit('.', 1)[-1]
-            self.file_version = self._init_open_(raise_error=raise_error)
+            if not skipp_init_open:
+                self.file_version = self._init_open_(raise_error=raise_error)
         elif os.path.exists(os.path.join(Config.raw_data_dir, file_name)):
             path = os.path.join(Config.raw_data_dir, file_name)
             self.file_name = os.path.abspath(path)
             self.file_typ = self.file_name.rsplit('.', 1)[-1]
-            self.file_version = self._init_open_(raise_error=raise_error)
+            if not skipp_init_open:
+                self.file_version = self._init_open_(raise_error=raise_error)
         else:
             file_name_list = glob.glob(Config.raw_data_dir + "/**/" + file_name, recursive=True)
             if len(file_name_list) == 1:
                 self.file_name = file_name_list[0]
                 self.file_typ = self.file_name.rsplit('.', 1)[-1]
-                self.file_version = self._init_open_(raise_error=raise_error)
+                if not skipp_init_open:
+                    self.file_version = self._init_open_(raise_error=raise_error)
             else:
                 if not file_name_list:
                     raise FileNotFoundError(f'{file_name} not found nor matches any file in "{Config.raw_data_dir}"')
@@ -163,7 +171,12 @@ class BaseFileHandler:
         pass
 
     def _init_open_(self, raise_error=True):
-        """Open file to get the file_error = file_version. self.error_codes has a translation for the error codes."""
+        """Open file to get the file_error = file_version. self.error_codes has a translation for the error codes.
+        PARAMETER
+        ---------
+        raise_error: bool, optional
+            if it should raise with the error. To detect the file version, it must be False.
+        """
         file_error = self.error2codes['unknown error']
 
         if raise_error:
@@ -177,15 +190,16 @@ class BaseFileHandler:
 
             # group or dataset not in hdf5 file
         except KeyError as err:
-            if err.args[0] == 'Unable to open object (component not found)':
+            if err.args[0].startswith('Unable to open object (component not found)') or \
+                    err.args[0].startswith('Unable to open object (object '):
                 file_error = self.error2codes['hdf5 missing group or dataset']  # -2
 
-        except OSError as a:
-            if a.args[0].startswith('Unable to open file (truncated file:'):
+        except OSError as err:
+            if err.args[0].startswith('Unable to open file (truncated file:'):
                 file_error = self.error2codes['broken hdf5']  # -3
 
         # all other exceptions
-        except Exception:
+        except Exception as err:
             file_error = self.error2codes['unknown error']  # -10
 
         else:
