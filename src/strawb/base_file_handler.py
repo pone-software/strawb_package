@@ -6,6 +6,16 @@ from strawb.config_parser.__init__ import Config
 
 
 class BaseFileHandler:
+    error2codes = {
+        'file not exist': -1,
+        'empty file': -2,
+        'hdf5 missing group or dataset': -3,
+        'broken hdf5': -4,
+        'unknown error': -10,
+    }
+    # invert the error2codes
+    codes2error = {i: j for j, i in error2codes.items()}
+
     def __init__(self, file_name=None, module=None, raise_error=True):
         """The Base File Handler defines the basic file handling for the strawb package.
 
@@ -32,7 +42,8 @@ class BaseFileHandler:
         self.file_name = None
         self.module = None
         self.file_typ = None  # file type
-        self.file_version = 0  # can be either a error str or int for the file version. Default is 0 <-> not loaded.
+        # can be either a error str or int for the file version. Default is 0 <-> not exist.
+        self.file_version = self.error2codes['file not exist']
 
         # empty file
         self.is_empty = None
@@ -152,8 +163,8 @@ class BaseFileHandler:
         pass
 
     def _init_open_(self, raise_error=True):
-        """Open file to get the file_error = file_version."""
-        file_error = 'unknown error'
+        """Open file to get the file_error = file_version. self.error_codes has a translation for the error codes."""
+        file_error = self.error2codes['unknown error']
 
         if raise_error:
             self.open(mode='r', load_data=True)
@@ -167,19 +178,19 @@ class BaseFileHandler:
             # group or dataset not in hdf5 file
         except KeyError as err:
             if err.args[0] == 'Unable to open object (component not found)':
-                file_error = 'hdf5 missing group or dataset'  # -2
+                file_error = self.error2codes['hdf5 missing group or dataset']  # -2
 
         except OSError as a:
             if a.args[0].startswith('Unable to open file (truncated file:'):
-                file_error = 'broken hdf5'  # -3
+                file_error = self.error2codes['broken hdf5']  # -3
 
         # all other exceptions
         except Exception:
-            file_error = 'unknown error'
+            file_error = self.error2codes['unknown error']  # -10
 
         else:
             if self.is_empty:
-                file_error = 'empty file'  # -1
+                file_error = self.error2codes['empty file']  # -1
             else:
                 return self.file_version
 

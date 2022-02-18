@@ -8,18 +8,29 @@ from src.strawb.sensors.camera import Images
 from src.strawb import SyncDBHandler
 
 
+def get_files():
+    db = SyncDBHandler(file_name='Default')  # loads the db
+
+    # mask by device
+    mask = db.dataframe['deviceCode'] == 'TUMPMTSPECTROMETER001'
+    mask |= db.dataframe['deviceCode'] == 'TUMPMTSPECTROMETER002'
+    mask |= db.dataframe['deviceCode'] == 'TUMMINISPECTROMETER001'
+
+    mask &= db.dataframe.dataProductCode == 'MSSCD'
+    mask &= db.dataframe.synced  # only downloaded files
+    mask &= db.dataframe.file_version > 0  # only valid files
+
+    file_list = db.dataframe.fullPath[mask].to_list()
+
+    return file_list, mask, db
+
+
 class TestCameraFileHandlerInit(TestCase):
     def setUp(self):
-        # Load DB, in case execute db.load_onc_db_entirely() to load the entire db, but this takes a bit.
-        self.db = SyncDBHandler(file_name='Default')  # loads the db
-
-        # filter the camera files
-        mask = self.db.dataframe.fullPath.str.endswith('CAMERA.hdf5')  # filter by filename
-        mask &= self.db.dataframe.synced  # mask un-synced hdf5 files
-        mask &= self.db.dataframe.fileSize > 11000  # mask empty hdf5 files
+        file_list, mask, db = get_files()
 
         # and take one file randomly
-        self.full_path = random.choice(self.db.dataframe.fullPath[mask])
+        self.full_path = random.choice(file_list)
         self.file_name = os.path.basename(self.full_path)
 
     def test_init_full_path(self):
@@ -36,42 +47,19 @@ class TestCameraFileHandlerInit(TestCase):
                               np.ndarray,
                               f'camera.time[:] has to be a np.ndarray, got: {type(camera.time)}')
 
-    def test_init_empty_file(self):
-        camera = FileHandler(self.file_name)
-        # check here only the time
-        self.assertFalse(camera.is_empty,
-                         f'camera.is_empty should be False for {camera.file_name}')
-
-        # filter the camera files
-        mask = self.db.dataframe.fullPath.str.endswith('CAMERA.hdf5')  # filter by filename
-        mask &= self.db.dataframe.synced  # mask un-synced hdf5 files
-        mask &= self.db.dataframe.fileSize > 11000  # mask empty hdf5 files
-
-        # and take one file randomly
-        full_path = random.choice(self.db.dataframe.fullPath[mask])
-        camera = FileHandler(full_path)
-        # check here only the time
-        self.assertFalse(camera.is_empty,
-                         f'camera.is_empty should be False for {camera.file_name}')
-
-    def tearDown(self):
-        print(self.full_path)
+    # def tearDown(self):
+    #     print(self.full_path)
 
 
 class TestCameraImages(TestCase):
     def setUp(self):
-        # Load DB, in case execute db.load_onc_db_entirely() to load the entire db, but this takes a bit.
-        db = SyncDBHandler(file_name='Default')  # loads the db
-
-        # filter the camera files
-        mask = db.dataframe.fullPath.str.endswith('CAMERA.hdf5')  # filter by filename
-        mask &= db.dataframe.synced  # mask un-synced hdf5 files
-        mask &= db.dataframe.fileSize > 11000  # mask empty hdf5 files
+        file_list, mask, db = get_files()
 
         # and take one file randomly
         self.full_path = random.choice(db.dataframe.fullPath[mask])
         cam_run = FileHandler(self.full_path)
         self.picture_handler = Images(cam_run)
+        print(self.full_path)  # TODO: fix error, first detect teh file name
 
     def test_image2png_lucifer(self):
         self.picture_handler.image2png_lucifer()

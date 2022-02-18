@@ -7,6 +7,7 @@ import h5py
 import numpy as np
 import pandas
 
+from ..base_file_handler import BaseFileHandler
 from ..config_parser import Config
 from ..onc_downloader import ONCDownloader
 from ..sensors import lidar, minispec, module, camera, pmtspec
@@ -716,7 +717,20 @@ class SyncDBHandler:
             dataframe.loc[file_handler.file_name, 'file_version'] = file_handler.file_version
 
     def update_file_version(self, dataframe=None, update_existing=False):
-        """Update the file version/state of all items in the dataframe.
+        """Update the file version/state of all items in the dataframe. A negative file version indicate errors.
+        The translation of negative file version is located at: strawb.BaseFileHandler.codes2error or
+        the inverse strawb.BaseFileHandler.error2codes. The example list all different file version together with the
+        counts how often they exist in the dataframe. The positive file versions are deppedning on the individual
+        FileHandler.
+
+        EXAMPLE
+        -------
+        >>> import strawb
+        >>> db = strawb.SyncDBHandler()
+        >>> for e, j in db.unique_with_count(db.dataframe.file_version):
+        >>>     if e in strawb.BaseFileHandler.codes2error:
+        >>>         e = strawb.BaseFileHandler.codes2error[e]
+        >>>     print(e, j)
 
         PARAMETER
         ---------
@@ -739,10 +753,11 @@ class SyncDBHandler:
 
         if 'file_version' not in dataframe:
             # add column
-            dataframe.insert(dataframe.columns.shape[0], 'file_version', None)
+            dataframe.insert(dataframe.columns.shape[0], 'file_version', BaseFileHandler.error2codes['file not exist'])
         elif not update_existing:
             # take only the one with missing parameters
-            items_to_check &= dataframe.file_version.isnull()  # takes all None or np.nan
+            # items_to_check &= dataframe.file_version.isnull()  # takes all None or np.nan
+            items_to_check &= dataframe.file_version == 0  # takes all 0
 
         # only 1 thread works here otherwise some files are labeled wrong (why?)
         sjt = ShareJobThreads(thread_n=1, unit='files')

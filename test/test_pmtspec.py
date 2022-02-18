@@ -16,6 +16,7 @@ def get_files():
     mask = db.dataframe['deviceCode'] == 'TUMPMTSPECTROMETER001'
     mask &= db.dataframe.dataProductCode == 'PMTSD'
     mask &= db.dataframe.synced  # only downloaded files
+    mask &= db.dataframe.file_version > 0  # only valid files
 
     file_list = db.dataframe.fullPath[mask].to_list()
 
