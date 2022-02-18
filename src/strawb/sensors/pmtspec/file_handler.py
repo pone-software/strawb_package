@@ -77,15 +77,18 @@ class FileHandler(BaseFileHandler):
         BaseFileHandler.__init__(self, *args, **kwargs)
 
     def __load_meta_data__(self, ):
-        for i in [self.__load_meta_data_v2__]:
+        err_list = []
+        for i in [self.__load_meta_data_v3__, self.__load_meta_data_v2__, self.__load_meta_data_v1__()]:
             try:
                 i()  # try file versions
                 return
             # version is detected because datasets in the hdf5 aren't present -> i() fails with KeyError
             except (KeyError, TypeError) as a:
                 pass
+            except KeyError as a:
+                err_list.append(a.args[0])
 
-        self.__load_meta_data_v1__()  # try with file default version
+        raise KeyError('; '.join(err_list))
 
     def __load_meta_data_v1__(self, ):
         """In older versions, only the counts have been written.
