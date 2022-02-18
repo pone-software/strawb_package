@@ -199,7 +199,7 @@ class BaseFileHandler:
                 file_error = self.error2codes['broken hdf5']  # -3
 
         # all other exceptions
-        except Exception as err:
+        except Exception:
             file_error = self.error2codes['unknown error']  # -10
 
         else:
