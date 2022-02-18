@@ -717,7 +717,7 @@ class SyncDBHandler:
             dataframe.loc[file_handler.file_name, 'file_version'] = file_handler.file_version
         else:
             err = BaseFileHandler.error2codes['FileHandler not implemented']
-            dataframe.loc[file_handler.file_name, 'file_version'] = err
+            dataframe.loc[dataframe.fullPath.iloc[i], 'file_version'] = err
 
     def update_file_version(self, dataframe=None, update_existing=False):
         """Update the file version/state of all items in the dataframe. A negative file version indicate errors.
@@ -785,7 +785,7 @@ class SyncDBHandler:
         unique = pandas_series.unique()
         unique.sort()
         for j in unique:
-            if j is None:
+            if j is None or np.isnan(j):
                 count = pandas_series.isnull().sum()
             else:
                 count = (pandas_series == j).sum()
