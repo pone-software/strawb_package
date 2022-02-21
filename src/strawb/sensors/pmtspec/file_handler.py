@@ -92,13 +92,17 @@ class FileHandler(BaseFileHandler):
 
     def __load_meta_data_v1__(self, ):
         """In older versions, only the counts have been written.
-        `padiwa`, `hv`, and `daq` not, because there was no change. Support it here."""
-        self.__load_counts__()
+        `padiwa`, `hv`, and `daq` not, because there was no change. Support it here.
+        This version has no: `padiwa`, `hv`, and `daq`."""
+        self.__load_counts_v1__()
         self.file_version = 1
 
     def __load_meta_data_v2__(self, ):
-        """Similar to file_version with `padiwa`, `hv`, and `daq`."""
-        self.__load_counts__()
+        """In older versions, only the counts have been written.
+        `padiwa`, `hv`, and `daq` not, because there was no change. Support it here.
+        This version has `padiwa`, `hv`, and `daq`."""
+        self.__load_counts_v1__()
+        self.file_version = 1
         self.__load_padiwa__()
         self.__load_hv__()
         self.__load_daq_v1__()
@@ -106,16 +110,57 @@ class FileHandler(BaseFileHandler):
 
     def __load_meta_data_v3__(self, ):
         """
+        In older versions, only the counts have been written.
+        `padiwa`, `hv`, and `daq` not, because there was no change. Support it here.
+        This version has no: `padiwa`, `hv`, and `daq`.
+
+        CHANGES to v2:
+        - renamed group `rates` to `counts`: `rates/ch0` -> `counts/ch0`
+        """
+        self.__load_counts_v2__()
+        self.file_version = 3
+
+    def __load_meta_data_v4__(self, ):
+        """Similar to file_version v2 with `padiwa`, `hv`, and `daq`.
+        This version has: `padiwa`, `hv`, and `daq`.
+
+        CHANGES to v2:
+        - renamed group `rates` to `counts`: `rates/ch0` -> `counts/ch0`
+        """
+        self.__load_counts_v2__()
+        self.__load_padiwa__()
+        self.__load_hv__()
+        self.__load_daq_v1__()
+        self.file_version = 4
+
+    def __load_meta_data_v5__(self, ):
+        """
         CHANGES to v2:
         renamed: '/daq/rate_readout' -> '/daq/frequency_readout'
         """
-        self.__load_counts__()
+        self.__load_counts_v2__()
         self.__load_padiwa__()
         self.__load_hv__()
         self.__load_daq_v2__()
-        self.file_version = 3
+        self.file_version = 5
 
-    def __load_counts__(self):
+    def __load_counts_v1__(self):
+        self.counts_time = self.file['/rates/time']
+        self.counts_ch0 = self.file['/rates/ch0']
+        self.counts_ch1 = self.file['/rates/ch1']
+        self.counts_ch3 = self.file['/rates/ch3']
+        self.counts_ch5 = self.file['/rates/ch5']
+        self.counts_ch6 = self.file['/rates/ch6']
+        self.counts_ch7 = self.file['/rates/ch7']
+        self.counts_ch8 = self.file['/rates/ch8']
+        self.counts_ch9 = self.file['/rates/ch9']
+        self.counts_ch10 = self.file['/rates/ch10']
+        self.counts_ch11 = self.file['/rates/ch11']
+        self.counts_ch12 = self.file['/rates/ch12']
+        self.counts_ch13 = self.file['/rates/ch13']
+        self.counts_ch15 = self.file['/rates/ch15']
+
+    def __load_counts_v2__(self):
         self.counts_time = self.file['/counts/time']
         self.counts_ch0 = self.file['/counts/ch0']
         self.counts_ch1 = self.file['/counts/ch1']
