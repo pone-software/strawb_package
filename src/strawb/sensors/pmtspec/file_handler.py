@@ -82,8 +82,8 @@ class FileHandler(BaseFileHandler):
             raise KeyError('missing important group')
 
         err_list = []
-        for i in [self.__load_meta_data_v5__, self.__load_meta_data_v4__, self.__load_meta_data_v3__,
-                  self.__load_meta_data_v2__, self.__load_meta_data_v1__]:
+        for i in [self.__load_meta_data_v6__, self.__load_meta_data_v5__, self.__load_meta_data_v4__,
+                  self.__load_meta_data_v3__, self.__load_meta_data_v2__, self.__load_meta_data_v1__]:
             try:
                 i()  # try file versions
                 return
@@ -105,8 +105,7 @@ class FileHandler(BaseFileHandler):
         `padiwa`, `hv`, and `daq` not, because there was no change. Support it here.
         This version has `padiwa`, `hv`, and `daq`."""
         self.__load_counts_v1__()
-        self.file_version = 1
-        self.__load_padiwa__()
+        self.__load_padiwa_v1__()
         self.__load_hv__()
         self.__load_daq_v1__()
         self.file_version = 2
@@ -131,21 +130,34 @@ class FileHandler(BaseFileHandler):
         - renamed group `rates` to `counts`: `rates/ch0` -> `counts/ch0`
         """
         self.__load_counts_v2__()
-        self.__load_padiwa__()
+        self.__load_padiwa_v1__()
         self.__load_hv__()
         self.__load_daq_v1__()
         self.file_version = 4
 
     def __load_meta_data_v5__(self, ):
+        """Similar to file_version v2 with `padiwa`, `hv`, and `daq`.
+        This version has: `padiwa`, `hv`, and `daq`.
+
+        CHANGES to v2:
+        - renamed group `rates` to `counts`: `rates/ch0` -> `counts/ch0`
+        """
+        self.__load_counts_v2__()
+        self.__load_padiwa_v2__()
+        self.__load_hv__()
+        self.__load_daq_v3__()
+        self.file_version = 5
+
+    def __load_meta_data_v6__(self, ):
         """
         CHANGES to v2:
         renamed: '/daq/rate_readout' -> '/daq/frequency_readout'
         """
         self.__load_counts_v2__()
-        self.__load_padiwa__()
+        self.__load_padiwa_v2__()
         self.__load_hv__()
-        self.__load_daq_v2__()
-        self.file_version = 5
+        self.__load_daq_v3__()
+        self.file_version = 6
 
     def __load_counts_v1__(self):
         self.counts_time = self.file['/rates/time']
@@ -179,7 +191,25 @@ class FileHandler(BaseFileHandler):
         self.counts_ch13 = self.file['/counts/ch13']
         self.counts_ch15 = self.file['/counts/ch15']
 
-    def __load_padiwa__(self):
+    def __load_padiwa_v1__(self):
+        """Old: no '/padiwa/power' in daq"""
+        self.padiwa_time = self.file['/padiwa/time']
+        self.padiwa_th1 = self.file['/padiwa/th1']
+        self.padiwa_th3 = self.file['/padiwa/th3']
+        self.padiwa_th5 = self.file['/padiwa/th5']
+        self.padiwa_th6 = self.file['/padiwa/th6']
+        self.padiwa_th7 = self.file['/padiwa/th7']
+        self.padiwa_th8 = self.file['/padiwa/th8']
+        self.padiwa_th9 = self.file['/padiwa/th9']
+        self.padiwa_th10 = self.file['/padiwa/th10']
+        self.padiwa_th11 = self.file['/padiwa/th11']
+        self.padiwa_th12 = self.file['/padiwa/th12']
+        self.padiwa_th13 = self.file['/padiwa/th13']
+        self.padiwa_th15 = self.file['/padiwa/th15']
+        self.padiwa_offset = self.file['/padiwa/offset']
+
+    def __load_padiwa_v2__(self):
+        """Old: with '/padiwa/power' """
         self.padiwa_time = self.file['/padiwa/time']
         self.padiwa_th1 = self.file['/padiwa/th1']
         self.padiwa_th3 = self.file['/padiwa/th3']
@@ -212,14 +242,26 @@ class FileHandler(BaseFileHandler):
         self.hv_ch15 = self.file['/hv/ch15']
         self.hv_power = self.file['/hv/power']
 
+    def __load_daq_v1__(self):
+        """Old: daq '/padiwa/power' as '/daq/power' """
+        self.daq_frequency_readout = self.file['/daq/rate_readout']
+        self.daq_state = self.file['/daq/state']
+        self.daq_time = self.file['/daq/time']
+        self.daq_trb = self.file['/daq/trb']
+        self.padiwa_power = self.file['/daq/power']
+
     def __load_daq_v2__(self):
-        self.daq_frequency_readout = self.file['/daq/frequency_readout']
+        """CHANGES to V1:
+        - daq '/daq/power' -> '/padiwa/power'"""
+        self.daq_frequency_readout = self.file['/daq/rate_readout']
         self.daq_state = self.file['/daq/state']
         self.daq_time = self.file['/daq/time']
         self.daq_trb = self.file['/daq/trb']
 
-    def __load_daq_v1__(self):
-        self.daq_frequency_readout = self.file['/daq/rate_readout']
+    def __load_daq_v3__(self):
+        """CHANGES to V1:
+        - daq '/daq/rate_readout' -> '/daq/frequency_readout'"""
+        self.daq_frequency_readout = self.file['/daq/frequency_readout']
         self.daq_state = self.file['/daq/state']
         self.daq_time = self.file['/daq/time']
         self.daq_trb = self.file['/daq/trb']
@@ -256,20 +298,20 @@ class FileHandler(BaseFileHandler):
 
     def get_pandas_hv(self):
         df = pandas.DataFrame(dict(time=self.hv_time.asdatetime()[:],
-                                     ch1=self.hv_ch1,
-                                     ch3=self.hv_ch3,
-                                     ch5=self.hv_ch5,
-                                     ch6=self.hv_ch6,
-                                     ch7=self.hv_ch7,
-                                     ch8=self.hv_ch8,
-                                     ch9=self.hv_ch9,
-                                     ch10=self.hv_ch10,
-                                     ch11=self.hv_ch11,
-                                     ch12=self.hv_ch12,
-                                     ch13=self.hv_ch13,
-                                     ch15=self.hv_ch15,
-                                     power=self.hv_power,
-                                     ))
+                                   ch1=self.hv_ch1,
+                                   ch3=self.hv_ch3,
+                                   ch5=self.hv_ch5,
+                                   ch6=self.hv_ch6,
+                                   ch7=self.hv_ch7,
+                                   ch8=self.hv_ch8,
+                                   ch9=self.hv_ch9,
+                                   ch10=self.hv_ch10,
+                                   ch11=self.hv_ch11,
+                                   ch12=self.hv_ch12,
+                                   ch13=self.hv_ch13,
+                                   ch15=self.hv_ch15,
+                                   power=self.hv_power,
+                                   ))
         df.set_index('time', drop=False, inplace=True)
         return df
 
