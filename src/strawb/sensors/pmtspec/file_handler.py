@@ -78,7 +78,8 @@ class FileHandler(BaseFileHandler):
 
     def __load_meta_data__(self, ):
         err_list = []
-        for i in [self.__load_meta_data_v3__, self.__load_meta_data_v2__, self.__load_meta_data_v1__()]:
+        for i in [self.__load_meta_data_v5__, self.__load_meta_data_v4__, self.__load_meta_data_v3__,
+                  self.__load_meta_data_v2__, self.__load_meta_data_v1__()]:
             try:
                 i()  # try file versions
                 return
