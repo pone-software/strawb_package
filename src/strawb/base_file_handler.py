@@ -1,5 +1,7 @@
 import glob
 import os
+import subprocess
+
 import h5py
 import numpy as np
 
@@ -14,6 +16,7 @@ class BaseFileHandler:
         'empty file': -3,
         'hdf5 missing group or dataset': -4,
         'broken hdf5': -5,
+        'still open hdf5': -6,
         'unknown error': -10,
     }
     # invert the error2codes
@@ -123,6 +126,16 @@ class BaseFileHandler:
         if self.file is None:
             if self.file_typ in ['h5', 'hdf5']:
                 if mode in ['r']:
+                    try:
+                        self.file = h5py.File(self.file_name, mode, libver='latest',
+                                              # swmr=True
+                                              )
+                    except OSError as err:
+                        if err.args[0].startswith('Unable to open file (file is already open for write'):
+                            subprocess.run(["/usr/bin/h5clear", "-s", self.file_name])
+                        else:
+                            raise OSError(err.args)
+
                     self.file = h5py.File(self.file_name, mode, libver='latest',
                                           # swmr=True
                                           )
@@ -197,6 +210,8 @@ class BaseFileHandler:
         except OSError as err:
             if err.args[0].startswith('Unable to open file (truncated file:'):
                 file_error = self.error2codes['broken hdf5']  # -3
+            elif err.args[0].startswith('Unable to open file (file is already open for write'):
+                file_error = self.error2codes['still open hdf5']  # -3
 
         # all other exceptions
         except Exception:

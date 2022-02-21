@@ -84,9 +84,7 @@ class FileHandler(BaseFileHandler):
                 i()  # try file versions
                 return
             # version is detected because datasets in the hdf5 aren't present -> i() fails with KeyError
-            except (KeyError, TypeError) as a:
-                pass
-            except KeyError as a:
+            except (TypeError, KeyError) as a:
                 err_list.append(a.args[0])
 
         raise KeyError('; '.join(err_list))
