@@ -15,8 +15,9 @@ class BaseFileHandler:
         'FileHandler not implemented': -2,
         'empty file': -3,
         'hdf5 missing group or dataset': -4,
-        'broken hdf5': -5,
-        'still open hdf5': -6,
+        'missing important group': -5,
+        'broken hdf5': -6,
+        'still open hdf5': -7,
         'unknown error': -10,
     }
     # invert the error2codes
@@ -206,6 +207,8 @@ class BaseFileHandler:
             if err.args[0].startswith('Unable to open object (component not found)') or \
                     err.args[0].startswith('Unable to open object (object '):
                 file_error = self.error2codes['hdf5 missing group or dataset']  # -2
+            elif err.args[0].startswith('missing important group'):
+                file_error = self.error2codes['missing important group']
 
         except OSError as err:
             if err.args[0].startswith('Unable to open file (truncated file:'):

@@ -77,6 +77,10 @@ class FileHandler(BaseFileHandler):
         BaseFileHandler.__init__(self, *args, **kwargs)
 
     def __load_meta_data__(self, ):
+        # 'counts' (older files 'rates') is the measurement data and most important group
+        if 'counts' not in self.file or 'rates' not in self.file:
+            raise KeyError('missing important group')
+
         err_list = []
         for i in [self.__load_meta_data_v5__, self.__load_meta_data_v4__, self.__load_meta_data_v3__,
                   self.__load_meta_data_v2__, self.__load_meta_data_v1__]:
