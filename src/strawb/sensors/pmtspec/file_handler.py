@@ -243,16 +243,16 @@ class FileHandler(BaseFileHandler):
         self.hv_power = self.file['/hv/power']
 
     def __load_daq_v1__(self):
-        """Old: daq '/padiwa/power' as '/daq/power' """
+        """Old: daq '/padiwa/power' as '/daq/padiwa' """
         self.daq_frequency_readout = self.file['/daq/rate_readout']
         self.daq_state = self.file['/daq/state']
         self.daq_time = self.file['/daq/time']
         self.daq_trb = self.file['/daq/trb']
-        self.padiwa_power = self.file['/daq/power']
+        self.padiwa_power = self.file['/daq/padiwa']
 
     def __load_daq_v2__(self):
         """CHANGES to V1:
-        - daq '/daq/power' -> '/padiwa/power'"""
+        - daq '/daq/padiwa' -> '/padiwa/power'"""
         self.daq_frequency_readout = self.file['/daq/rate_readout']
         self.daq_state = self.file['/daq/state']
         self.daq_time = self.file['/daq/time']
