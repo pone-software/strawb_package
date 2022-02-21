@@ -126,8 +126,8 @@ class FileHandler(BaseFileHandler):
         """Similar to file_version v2 with `padiwa`, `hv`, and `daq`.
         This version has: `padiwa`, `hv`, and `daq`.
 
-        CHANGES to v2:
-        - renamed group `rates` to `counts`: `rates/ch0` -> `counts/ch0`
+        CHANGES to v3:
+        - This version has: `padiwa`, `hv`, and `daq`.
         """
         self.__load_counts_v2__()
         self.__load_padiwa_v1__()
@@ -137,21 +137,22 @@ class FileHandler(BaseFileHandler):
 
     def __load_meta_data_v5__(self, ):
         """Similar to file_version v2 with `padiwa`, `hv`, and `daq`.
-        This version has: `padiwa`, `hv`, and `daq`.
 
-        CHANGES to v2:
-        - renamed group `rates` to `counts`: `rates/ch0` -> `counts/ch0`
+        CHANGES to v4:
+        - moved '/daq/padiwa' -> '/padiwa/power'
         """
         self.__load_counts_v2__()
         self.__load_padiwa_v2__()
         self.__load_hv__()
-        self.__load_daq_v3__()
+        self.__load_daq_v2__()
         self.file_version = 5
 
     def __load_meta_data_v6__(self, ):
-        """
+        """Similar to file_version v2 with `padiwa`, `hv`, and `daq`.
+        This version has: `padiwa`, `hv`, and `daq`.
+
         CHANGES to v2:
-        renamed: '/daq/rate_readout' -> '/daq/frequency_readout'
+        - renamed: '/daq/rate_readout' -> '/daq/frequency_readout'
         """
         self.__load_counts_v2__()
         self.__load_padiwa_v2__()
