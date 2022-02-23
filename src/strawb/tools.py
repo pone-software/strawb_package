@@ -66,13 +66,13 @@ def datetime2float(array):
     """Converts a datetime64 array into seconds (as float) since epoch."""
     unit_dict = {'D': 3600 * 24, 'h': 3600, 'm': 60, 's': 1, 'ms': 1e-3, 'us': 1e-6, 'ns': 1e-9, 'ps': 1e-12}
     dtype = array.dtype
-    if not np.issubdtype(dtype, np.datetime64):
-        raise TypeError(f'Supports only datetime64. Got {dtype}')
+    if not (np.issubdtype(dtype, np.timedelta64) or np.issubdtype(dtype, np.datetime64)):
+        raise TypeError(f'Supports only datetime64 or timedelta64. Got {dtype}')
     else:
         for i in unit_dict:
-            if dtype == f'datetime64[{i}]':
+            if dtype == f'datetime64[{i}]' or dtype == f'timedelta64[{i}]':
                 return array.astype(float) * unit_dict[i]
-        raise TypeError(f'Supports only specific datetime64. Got {dtype}')
+        raise TypeError(f'Supports only specific datetime64 and timedelta64. Got {dtype}')
 
 
 class ShareJobThreads:
