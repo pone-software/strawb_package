@@ -206,7 +206,7 @@ class BaseFileHandler:
         except KeyError as err:
             if err.args[0].startswith('Unable to open object (component not found)') or \
                     err.args[0].startswith('Unable to open object (object '):
-                file_error = self.error2codes['hdf5 missing group or dataset']  # -2
+                file_error = self.error2codes['hdf5 missing group or dataset']
             elif err.args[0].startswith('missing important group'):
                 file_error = self.error2codes['missing important group']
 

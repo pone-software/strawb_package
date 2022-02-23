@@ -753,7 +753,7 @@ class SyncDBHandler:
                 items_to_check |= dataframe.dataProductCode == i
 
         # mark all file where the FileHandler is not implemented
-        items_not_implemented = items_to_check  # & ~dataframe.synced
+        items_not_implemented = ~items_to_check.copy()  # & ~dataframe.synced
         items_to_check &= dataframe.synced  # exclude non existing files
 
         if 'file_version' not in dataframe:
@@ -766,7 +766,7 @@ class SyncDBHandler:
             items_to_check &= dataframe.file_version.isnull()  # takes all None or np.nan
 
         # mark all file where the FileHandler is not implemented
-        dataframe.file_version.where(items_not_implemented,
+        dataframe.file_version.where(~items_not_implemented,  # it sets items with False <-> ~
                                      other=BaseFileHandler.error2codes['FileHandler not implemented'],
                                      inplace=True)
 
