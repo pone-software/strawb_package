@@ -211,9 +211,12 @@ class BaseFileHandler:
                 file_error = self.error2codes['missing important group']
 
         except OSError as err:
-            if err.args[0].startswith('Unable to open file (truncated file:'):
+            err_str = err.args[0]  # h5py raise an error with tupel(tuple(str)
+            while not (isinstance(err_str, str) or err_str is None):
+                err_str = err_str[0]
+            if err_str.startswith('Unable to open file (truncated file:'):
                 file_error = self.error2codes['broken hdf5']  # -3
-            elif err.args[0].startswith('Unable to open file (file is already open for write'):
+            elif err_str.startswith('Unable to open file (file is already open for write'):
                 file_error = self.error2codes['still open hdf5']  # -3
 
         # all other exceptions

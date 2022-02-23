@@ -753,7 +753,7 @@ class SyncDBHandler:
                 items_to_check |= dataframe.dataProductCode == i
 
         # mark all file where the FileHandler is not implemented
-        items_not_implemented = items_to_check & ~dataframe.synced
+        items_not_implemented = items_to_check  # & ~dataframe.synced
         items_to_check &= dataframe.synced  # exclude non existing files
 
         if 'file_version' not in dataframe:
