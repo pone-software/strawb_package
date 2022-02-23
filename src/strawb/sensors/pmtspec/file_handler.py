@@ -1,4 +1,5 @@
 # Author: Kilian Holzapfel <kilian.holzapfel@tum.de>
+import numpy as np
 import pandas
 
 from strawb.base_file_handler import BaseFileHandler
@@ -100,6 +101,9 @@ class FileHandler(BaseFileHandler):
         self.__load_counts_v1__()
         self.file_version = 1
 
+        # its the default frequency to fix files where writing failed
+        self.daq_frequency_readout = np.array([10000.], dtype=np.float32)
+
     def __load_meta_data_v2__(self, ):
         """In older versions, only the counts have been written.
         `padiwa`, `hv`, and `daq` not, because there was no change. Support it here.
@@ -121,6 +125,9 @@ class FileHandler(BaseFileHandler):
         """
         self.__load_counts_v2__()
         self.file_version = 3
+
+        # its the default frequency to fix files where writing failed
+        self.daq_frequency_readout = np.array([10000.], dtype=np.float32)
 
     def __load_meta_data_v4__(self, ):
         """Similar to file_version v2 with `padiwa`, `hv`, and `daq`.
