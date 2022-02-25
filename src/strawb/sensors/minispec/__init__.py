@@ -1,2 +1,14 @@
 from .file_handler import FileHandler
-from .multi_file_handler import MultiFileHandler
+
+from typing import Union
+
+
+class MiniSpectrometer:
+
+    def __init__(self, file: Union[str, FileHandler] = None, name=''):
+        self.name = name
+
+        if isinstance(file, str):
+            self.file_handler = FileHandler(file_name=file)
+        else:
+            self.file_handler = file

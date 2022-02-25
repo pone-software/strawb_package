@@ -21,14 +21,14 @@ class TestBaseFileHandlerInit(TestCase):
         self.file_name = os.path.split(self.full_path)[-1]
 
     def test_init_full_path(self):
-        module = BaseFileHandler(self.full_path)
+        module = BaseFileHandler(self.full_path, raise_error=False)
         # check here only the the three parameters
         self.assertEqual(module.file_name, self.full_path)
         self.assertIsNotNone(module.module)
         self.assertIsNotNone(module.file)  # instance of the h5py file
 
     def test_init_default_path(self):
-        module = BaseFileHandler(self.file_name)
+        module = BaseFileHandler(self.file_name, raise_error=False)
         # check here only the the three parameters
         self.assertEqual(module.file_name, self.full_path)
         self.assertIsNotNone(module.module)

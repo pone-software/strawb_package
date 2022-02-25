@@ -65,15 +65,17 @@ class FileHandler(BaseFileHandler):
 
     def __load_meta_data__(self, ):
         # order is important, tries to load newest first and oldest latest.
-        for i in [self.__load_meta_data_v5__, self.__load_meta_data_v4__, self.__load_meta_data_v3__, self.__load_meta_data_v2__]:
+        err_list = []
+        for i in [self.__load_meta_data_v5__, self.__load_meta_data_v4__, self.__load_meta_data_v3__,
+                  self.__load_meta_data_v2__, self.__load_meta_data_v1__]:
             try:
                 i()  # try file versions
                 return
             # version is detected because datasets in the hdf5 aren't present -> i() fails with KeyError
             except KeyError as a:
-                pass
+                err_list.append(a.args[0])
 
-        self.__load_meta_data_v1__()  # try with file default version
+        raise KeyError('; '.join(err_list))
 
     # ---- The functions for different versions ----
     def __load_meta_data_v1__(self, ):
@@ -172,10 +174,13 @@ class FileHandler(BaseFileHandler):
         self.__load_meta_data_laser_v1__()
 
     def __load_meta_data_tot__(self):
-        # TOT
-        self.tot_time = self.file['tot/time']
-        self.tot_time_ns = self.file['tot/time_ns']
-        self.tot_tot = self.file['tot/tot']
+        # TOT - sometime there are is no TOT available
+        try:
+            self.tot_time = self.file['tot/time']
+            self.tot_time_ns = self.file['tot/time_ns']
+            self.tot_tot = self.file['tot/tot']
+        except KeyError:
+            pass
 
     def __load_meta_data_counts__(self):
         # Counter
@@ -226,72 +231,96 @@ class FileHandler(BaseFileHandler):
     # ---- Define pandas DataFrame export helpers ----
     def get_pandas_daq(self):
         if self.file_version == 1:
-            return pandas.DataFrame(dict(time=self.daq_time.asdatetime()[:],
-                                         measured_frequency_pmt=self.daq_measured_frequency_pmt,
-                                         measured_frequency_trigger=self.daq_measured_frequency_trigger,
-                                         pmt=self.daq_pmt,
-                                         frequency_readout=self.daq_frequency_readout,
-                                         frequency_trigger=self.daq_frequency_trigger,
-                                         state=self.daq_state,
-                                         trb=self.daq_trb))
+            df = pandas.DataFrame(dict(time=self.daq_time.asdatetime()[:],
+                                       measured_frequency_pmt=self.daq_measured_frequency_pmt,
+                                       measured_frequency_trigger=self.daq_measured_frequency_trigger,
+                                       pmt=self.daq_pmt,
+                                       frequency_readout=self.daq_frequency_readout,
+                                       frequency_trigger=self.daq_frequency_trigger,
+                                       state=self.daq_state,
+                                       trb=self.daq_trb))
+
+            df.set_index('time', drop=False, inplace=True)
+            return df
 
         elif self.file_version >= 2:
-            return pandas.DataFrame(dict(time=self.daq_time.asdatetime()[:],
-                                         pmt=self.daq_pmt,
-                                         frequency_readout=self.daq_frequency_readout,
-                                         frequency_trigger=self.daq_frequency_trigger,
-                                         state=self.daq_state,
-                                         trb=self.daq_trb))
+            df = pandas.DataFrame(dict(time=self.daq_time.asdatetime()[:],
+                                       pmt=self.daq_pmt,
+                                       frequency_readout=self.daq_frequency_readout,
+                                       frequency_trigger=self.daq_frequency_trigger,
+                                       state=self.daq_state,
+                                       trb=self.daq_trb))
+
+            df.set_index('time', drop=False, inplace=True)
+            return df
 
     def get_pandas_gimbal(self):
-        return pandas.DataFrame(dict(time=self.gimbal_time.asdatetime()[:],
-                                     delay=self.gimbal_delay,
-                                     pos_x=self.gimbal_pos_x,
-                                     pos_y=self.gimbal_pos_y,
-                                     power=self.gimbal_power, )
-                                )
+        df = pandas.DataFrame(dict(time=self.gimbal_time.asdatetime()[:],
+                                   delay=self.gimbal_delay,
+                                   pos_x=self.gimbal_pos_x,
+                                   pos_y=self.gimbal_pos_y,
+                                   power=self.gimbal_power, )
+                              )
+
+        df.set_index('time', drop=False, inplace=True)
+        return df
 
     def get_pandas_laser(self):
         if self.file_version < 5:
-            return pandas.DataFrame(dict(time=self.laser_time.asdatetime()[:],
-                                         diode=self.laser_diode,
-                                         frequency=self.laser_frequency,
-                                         power=self.laser_power,
-                                         pulsewidth=self.laser_pulsewidth,
-                                         set_adjust_x=self.laser_set_adjust_x,
-                                         set_adjust_y=self.laser_set_adjust_y, )
-                                    )
+            df = pandas.DataFrame(dict(time=self.laser_time.asdatetime()[:],
+                                       diode=self.laser_diode,
+                                       frequency=self.laser_frequency,
+                                       power=self.laser_power,
+                                       pulsewidth=self.laser_pulsewidth,
+                                       set_adjust_x=self.laser_set_adjust_x,
+                                       set_adjust_y=self.laser_set_adjust_y, )
+                                  )
+
+            df.set_index('time', drop=False, inplace=True)
+            return df
         else:
-            return pandas.DataFrame(dict(time=self.laser_time.asdatetime()[:],
-                                         diode=self.laser_diode,
-                                         frequency=self.laser_frequency,
-                                         power=self.laser_power,
-                                         pulsewidth=self.laser_pulsewidth,
-                                         set_adjust_x=self.laser_set_adjust_x,
-                                         set_adjust_y=self.laser_set_adjust_y,
-                                         set_adjust_x_offset=self.laser_set_adjust_x_offset,
-                                         set_adjust_y_offset=self.laser_set_adjust_y_offset,)
-                                    )
+            df = pandas.DataFrame(dict(time=self.laser_time.asdatetime()[:],
+                                       diode=self.laser_diode,
+                                       frequency=self.laser_frequency,
+                                       power=self.laser_power,
+                                       pulsewidth=self.laser_pulsewidth,
+                                       set_adjust_x=self.laser_set_adjust_x,
+                                       set_adjust_y=self.laser_set_adjust_y,
+                                       set_adjust_x_offset=self.laser_set_adjust_x_offset,
+                                       set_adjust_y_offset=self.laser_set_adjust_y_offset, )
+                                  )
+
+            df.set_index('time', drop=False, inplace=True)
+            return df
 
     def get_pandas_counts(self):
         if self.file_version >= 2:
-            return pandas.DataFrame(dict(time=self.counts_time.asdatetime()[:],
-                                         ch0=self.counts_ch0,
-                                         ch17=self.counts_ch17,
-                                         ch18=self.counts_ch18)
-                                    )
+            df = pandas.DataFrame(dict(time=self.counts_time.asdatetime()[:],
+                                       ch0=self.counts_ch0,
+                                       ch17=self.counts_ch17,
+                                       ch18=self.counts_ch18)
+                                  )
+
+            df.set_index('time', drop=False, inplace=True)
+            return df
 
     def get_pandas_tot(self):
         if self.file_version >= 2:
-            return pandas.DataFrame(dict(time=self.tot_time.asdatetime()[:],
-                                         time_ns=self.tot_time_ns,
-                                         tot=self.tot_tot,
-                                         )
-                                    )
+            df = pandas.DataFrame(dict(time=self.tot_time.asdatetime()[:],
+                                       time_ns=self.tot_time_ns,
+                                       tot=self.tot_tot,
+                                       )
+                                  )
+
+            df.set_index('time', drop=False, inplace=True)
+            return df
 
     def get_pandas_measurement(self):
         if self.file_version >= 3:
-            return pandas.DataFrame(dict(time=self.measurement_time.asdatetime()[:],
-                                         step=self.measurement_step,
-                                         )
-                                    )
+            df = pandas.DataFrame(dict(time=self.measurement_time.asdatetime()[:],
+                                       step=self.measurement_step,
+                                       )
+                                  )
+
+            df.set_index('time', drop=False, inplace=True)
+            return df

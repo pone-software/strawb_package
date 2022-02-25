@@ -1,4 +1,5 @@
 # Author: Kilian Holzapfel <kilian.holzapfel@tum.de>
+import numpy as np
 import pandas
 
 from strawb.base_file_handler import BaseFileHandler
@@ -6,8 +7,8 @@ from strawb.base_file_handler import BaseFileHandler
 
 class FileHandler(BaseFileHandler):
     def __init__(self, *args, **kwargs):
-        # Counter, similar to PMTSpectrometer. Added to hdf5 ~05.10.2021.
-        # -> File version 2
+        """The File Handler of the PMTSpectrometer hdf5 data."""
+        # Counter
         self.counts_time = None  # absolute timestamps in seconds for each counts reading
         self.counts_ch0 = None  # channel which counts up at a constant frequency -> PMT Spectrometer
         self.counts_ch1 = None  # the PMT channel 1.
@@ -22,6 +23,11 @@ class FileHandler(BaseFileHandler):
         self.counts_ch12 = None  # the PMT channel
         self.counts_ch13 = None  # the PMT channel
         self.counts_ch15 = None  # the PMT channel
+
+        # interpolated rates. Based on the `counts` and interpolated to fit a artificially readout frequency.
+        self.interp_frequency = None  # artificially readout frequency
+        self.interp_time = None  # absolute timestamps. Shape: [time_j]
+        self.interp_rates = None  # rates a s a 2d array. Shape: [channel_i, time_j]
 
         # Padiwa Settings thresholds
         self.padiwa_time = None
@@ -72,35 +78,112 @@ class FileHandler(BaseFileHandler):
         BaseFileHandler.__init__(self, *args, **kwargs)
 
     def __load_meta_data__(self, ):
-        for i in [self.__load_meta_data_v2__]:
+        # 'counts' (older files 'rates') is the measurement data and most important group
+        if not ('counts' in self.file or 'rates' in self.file):
+            raise KeyError('missing important group')
+
+        err_list = []
+        for i in [self.__load_meta_data_v6__, self.__load_meta_data_v5__, self.__load_meta_data_v4__,
+                  self.__load_meta_data_v3__, self.__load_meta_data_v2__, self.__load_meta_data_v1__]:
             try:
                 i()  # try file versions
                 return
             # version is detected because datasets in the hdf5 aren't present -> i() fails with KeyError
-            except [KeyError, TypeError] as a:
-                pass
+            except (TypeError, KeyError) as a:
+                err_list.append(a.args[0])
 
-        self.__load_meta_data_v1__()  # try with file default version
+        raise KeyError('; '.join(err_list))
 
     def __load_meta_data_v1__(self, ):
-        self.__load_counts__()
-        self.__load_padiwa__()
-        self.__load_hv__()
-        self.__load_daq_v1__()
+        """In older versions, only the counts have been written.
+        `padiwa`, `hv`, and `daq` not, because there was no change. Support it here.
+        This version has no: `padiwa`, `hv`, and `daq`."""
+        self.__load_counts_v1__()
         self.file_version = 1
 
+        # its the default frequency to fix files where writing failed
+        self.daq_frequency_readout = np.array([10000.], dtype=np.float32)
+
     def __load_meta_data_v2__(self, ):
-        """
-        CHANGES to v1:
-        renamed: '/daq/rate_readout' -> '/daq/frequency_readout'
-        """
-        self.__load_counts__()
-        self.__load_padiwa__()
+        """In older versions, only the counts have been written.
+        `padiwa`, `hv`, and `daq` not, because there was no change. Support it here.
+        This version has `padiwa`, `hv`, and `daq`."""
+        self.__load_counts_v1__()
+        self.__load_padiwa_v1__()
         self.__load_hv__()
-        self.__load_daq_v2__()
+        self.__load_daq_v1__()
         self.file_version = 2
 
-    def __load_counts__(self):
+    def __load_meta_data_v3__(self, ):
+        """
+        In older versions, only the counts have been written.
+        `padiwa`, `hv`, and `daq` not, because there was no change. Support it here.
+        This version has no: `padiwa`, `hv`, and `daq`.
+
+        CHANGES to v2:
+        - renamed group `rates` to `counts`: `rates/ch0` -> `counts/ch0`
+        """
+        self.__load_counts_v2__()
+        self.file_version = 3
+
+        # its the default frequency to fix files where writing failed
+        self.daq_frequency_readout = np.array([10000.], dtype=np.float32)
+
+    def __load_meta_data_v4__(self, ):
+        """Similar to file_version v2 with `padiwa`, `hv`, and `daq`.
+        This version has: `padiwa`, `hv`, and `daq`.
+
+        CHANGES to v3:
+        - This version has: `padiwa`, `hv`, and `daq`.
+        """
+        self.__load_counts_v2__()
+        self.__load_padiwa_v1__()
+        self.__load_hv__()
+        self.__load_daq_v1__()
+        self.file_version = 4
+
+    def __load_meta_data_v5__(self, ):
+        """Similar to file_version v2 with `padiwa`, `hv`, and `daq`.
+
+        CHANGES to v4:
+        - moved '/daq/padiwa' -> '/padiwa/power'
+        """
+        self.__load_counts_v2__()
+        self.__load_padiwa_v2__()
+        self.__load_hv__()
+        self.__load_daq_v2__()
+        self.file_version = 5
+
+    def __load_meta_data_v6__(self, ):
+        """Similar to file_version v2 with `padiwa`, `hv`, and `daq`.
+        This version has: `padiwa`, `hv`, and `daq`.
+
+        CHANGES to v2:
+        - renamed: '/daq/rate_readout' -> '/daq/frequency_readout'
+        """
+        self.__load_counts_v2__()
+        self.__load_padiwa_v2__()
+        self.__load_hv__()
+        self.__load_daq_v3__()
+        self.file_version = 6
+
+    def __load_counts_v1__(self):
+        self.counts_time = self.file['/rates/time']
+        self.counts_ch0 = self.file['/rates/ch0']
+        self.counts_ch1 = self.file['/rates/ch1']
+        self.counts_ch3 = self.file['/rates/ch3']
+        self.counts_ch5 = self.file['/rates/ch5']
+        self.counts_ch6 = self.file['/rates/ch6']
+        self.counts_ch7 = self.file['/rates/ch7']
+        self.counts_ch8 = self.file['/rates/ch8']
+        self.counts_ch9 = self.file['/rates/ch9']
+        self.counts_ch10 = self.file['/rates/ch10']
+        self.counts_ch11 = self.file['/rates/ch11']
+        self.counts_ch12 = self.file['/rates/ch12']
+        self.counts_ch13 = self.file['/rates/ch13']
+        self.counts_ch15 = self.file['/rates/ch15']
+
+    def __load_counts_v2__(self):
         self.counts_time = self.file['/counts/time']
         self.counts_ch0 = self.file['/counts/ch0']
         self.counts_ch1 = self.file['/counts/ch1']
@@ -116,7 +199,25 @@ class FileHandler(BaseFileHandler):
         self.counts_ch13 = self.file['/counts/ch13']
         self.counts_ch15 = self.file['/counts/ch15']
 
-    def __load_padiwa__(self):
+    def __load_padiwa_v1__(self):
+        """Old: no '/padiwa/power' in daq"""
+        self.padiwa_time = self.file['/padiwa/time']
+        self.padiwa_th1 = self.file['/padiwa/th1']
+        self.padiwa_th3 = self.file['/padiwa/th3']
+        self.padiwa_th5 = self.file['/padiwa/th5']
+        self.padiwa_th6 = self.file['/padiwa/th6']
+        self.padiwa_th7 = self.file['/padiwa/th7']
+        self.padiwa_th8 = self.file['/padiwa/th8']
+        self.padiwa_th9 = self.file['/padiwa/th9']
+        self.padiwa_th10 = self.file['/padiwa/th10']
+        self.padiwa_th11 = self.file['/padiwa/th11']
+        self.padiwa_th12 = self.file['/padiwa/th12']
+        self.padiwa_th13 = self.file['/padiwa/th13']
+        self.padiwa_th15 = self.file['/padiwa/th15']
+        self.padiwa_offset = self.file['/padiwa/offset']
+
+    def __load_padiwa_v2__(self):
+        """Old: with '/padiwa/power' """
         self.padiwa_time = self.file['/padiwa/time']
         self.padiwa_th1 = self.file['/padiwa/th1']
         self.padiwa_th3 = self.file['/padiwa/th3']
@@ -149,75 +250,96 @@ class FileHandler(BaseFileHandler):
         self.hv_ch15 = self.file['/hv/ch15']
         self.hv_power = self.file['/hv/power']
 
+    def __load_daq_v1__(self):
+        """Old: daq '/padiwa/power' as '/daq/padiwa' """
+        self.daq_frequency_readout = self.file['/daq/rate_readout']
+        self.daq_state = self.file['/daq/state']
+        self.daq_time = self.file['/daq/time']
+        self.daq_trb = self.file['/daq/trb']
+        self.padiwa_power = self.file['/daq/padiwa']
+
     def __load_daq_v2__(self):
-        self.daq_frequency_readout = self.file['/daq/frequency_readout']
+        """CHANGES to V1:
+        - daq '/daq/padiwa' -> '/padiwa/power'"""
+        self.daq_frequency_readout = self.file['/daq/rate_readout']
         self.daq_state = self.file['/daq/state']
         self.daq_time = self.file['/daq/time']
         self.daq_trb = self.file['/daq/trb']
 
-    def __load_daq_v1__(self):
-        self.daq_frequency_readout = self.file['/daq/rate_readout']
+    def __load_daq_v3__(self):
+        """CHANGES to V1:
+        - daq '/daq/rate_readout' -> '/daq/frequency_readout'"""
+        self.daq_frequency_readout = self.file['/daq/frequency_readout']
         self.daq_state = self.file['/daq/state']
         self.daq_time = self.file['/daq/time']
         self.daq_trb = self.file['/daq/trb']
 
     # Define pandas DataFrame export helpers
     def get_pandas_daq(self):
-        return pandas.DataFrame(dict(time=self.daq_time.asdatetime()[:],
-                                     daq_frequency_readout=self.daq_frequency_readout,
-                                     state=self.daq_state,
-                                     trb=self.daq_trb))
+        df = pandas.DataFrame(dict(time=self.daq_time.asdatetime()[:],
+                                   daq_frequency_readout=self.daq_frequency_readout,
+                                   state=self.daq_state,
+                                   trb=self.daq_trb))
+        df.set_index('time', drop=False, inplace=True)
+        return df
 
     def get_pandas_padiwa(self):
-        return pandas.DataFrame(dict(time=self.padiwa_time.asdatetime()[:],
-                                     th1=self.padiwa_th1,
-                                     th3=self.padiwa_th3,
-                                     th5=self.padiwa_th5,
-                                     th6=self.padiwa_th6,
-                                     th7=self.padiwa_th7,
-                                     th8=self.padiwa_th8,
-                                     th9=self.padiwa_th9,
-                                     th10=self.padiwa_th10,
-                                     th11=self.padiwa_th11,
-                                     th12=self.padiwa_th12,
-                                     th13=self.padiwa_th13,
-                                     th15=self.padiwa_th15,
-                                     offset=self.padiwa_offset,
-                                     power=self.padiwa_power,
-                                     ))
+        df = pandas.DataFrame(dict(time=self.padiwa_time.asdatetime()[:],
+                                   th1=self.padiwa_th1,
+                                   th3=self.padiwa_th3,
+                                   th5=self.padiwa_th5,
+                                   th6=self.padiwa_th6,
+                                   th7=self.padiwa_th7,
+                                   th8=self.padiwa_th8,
+                                   th9=self.padiwa_th9,
+                                   th10=self.padiwa_th10,
+                                   th11=self.padiwa_th11,
+                                   th12=self.padiwa_th12,
+                                   th13=self.padiwa_th13,
+                                   th15=self.padiwa_th15,
+                                   offset=self.padiwa_offset,
+                                   power=self.padiwa_power,
+                                   ))
+
+        df.set_index('time', drop=False, inplace=True)
+        return df
 
     def get_pandas_hv(self):
-        return pandas.DataFrame(dict(time=self.hv_time.asdatetime()[:],
-                                     ch1=self.hv_ch1,
-                                     ch3=self.hv_ch3,
-                                     ch5=self.hv_ch5,
-                                     ch6=self.hv_ch6,
-                                     ch7=self.hv_ch7,
-                                     ch8=self.hv_ch8,
-                                     ch9=self.hv_ch9,
-                                     ch10=self.hv_ch10,
-                                     ch11=self.hv_ch11,
-                                     ch12=self.hv_ch12,
-                                     ch13=self.hv_ch13,
-                                     ch15=self.hv_ch15,
-                                     power=self.hv_power,
-                                     ))
+        df = pandas.DataFrame(dict(time=self.hv_time.asdatetime()[:],
+                                   ch1=self.hv_ch1,
+                                   ch3=self.hv_ch3,
+                                   ch5=self.hv_ch5,
+                                   ch6=self.hv_ch6,
+                                   ch7=self.hv_ch7,
+                                   ch8=self.hv_ch8,
+                                   ch9=self.hv_ch9,
+                                   ch10=self.hv_ch10,
+                                   ch11=self.hv_ch11,
+                                   ch12=self.hv_ch12,
+                                   ch13=self.hv_ch13,
+                                   ch15=self.hv_ch15,
+                                   power=self.hv_power,
+                                   ))
+        df.set_index('time', drop=False, inplace=True)
+        return df
 
     def get_pandas_counts(self):
-        return pandas.DataFrame(dict(time=self.counts_time.asdatetime()[:],
-                                     ch1=self.counts_ch1,
-                                     ch3=self.counts_ch3,
-                                     ch5=self.counts_ch5,
-                                     ch6=self.counts_ch6,
-                                     ch7=self.counts_ch7,
-                                     ch8=self.counts_ch8,
-                                     ch9=self.counts_ch9,
-                                     ch10=self.counts_ch10,
-                                     ch11=self.counts_ch11,
-                                     ch12=self.counts_ch12,
-                                     ch13=self.counts_ch13,
-                                     ch15=self.counts_ch15,
-                                     ))
+        df = pandas.DataFrame(dict(time=self.counts_time.asdatetime()[:],
+                                   ch1=self.counts_ch1,
+                                   ch3=self.counts_ch3,
+                                   ch5=self.counts_ch5,
+                                   ch6=self.counts_ch6,
+                                   ch7=self.counts_ch7,
+                                   ch8=self.counts_ch8,
+                                   ch9=self.counts_ch9,
+                                   ch10=self.counts_ch10,
+                                   ch11=self.counts_ch11,
+                                   ch12=self.counts_ch12,
+                                   ch13=self.counts_ch13,
+                                   ch15=self.counts_ch15,
+                                   ))
+        df.set_index('time', drop=False, inplace=True)
+        return df
 
     # ---- OLD CODE ----
     # def load_from_file(self, read_until_index=None):

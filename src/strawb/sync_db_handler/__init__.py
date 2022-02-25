@@ -7,12 +7,29 @@ import h5py
 import numpy as np
 import pandas
 
+from ..base_file_handler import BaseFileHandler
 from ..config_parser import Config
 from ..onc_downloader import ONCDownloader
+from ..sensors import lidar, minispec, module, camera, pmtspec
 from ..tools import human_size, ShareJobThreads
 
 
 class SyncDBHandler:
+    sensor_mapping = {
+        'LF': None,
+        'MTSD': None,  # TUMMUONTRACKER001_20210503T000000.000Z-SDAQ-MUON.hdf5
+        'LIDARSD': lidar,  # TUMLIDAR001_20210503T000000.000Z-SDAQ-LIDAR.hdf5
+        'MSRD': minispec,  # TUMLIDAR001_20210503T000000.000Z-SDAQ-MINISPEC.hdf5
+        'SMRD': module,  # TUMLIDAR001_20210503T000000.000Z-SDAQ-MODULE.hdf5
+        'MSSD': minispec,  # TUMPMTSPECTROMETER002_20210503T000000.000Z-SDAQ-MINISPEC.hdf5
+        'MTRD': None,  # TUMMUONTRACKER001_20210503T000001.223Z-MUON.hld
+        'LIDARTOT': None,  # TUMLIDAR001_20210503T000610.343Z-TOT-LIDAR.txt
+        'MSSCD': camera,  # TUMPMTSPECTROMETER002_20210503T190000.000Z-SDAQ-CAMERA.hdf5
+        'MTTOT': None,  # TUMMUONTRACKER001_20210802T230012.933Z-TOT-MUON.txt
+        'LIDARRD': None,  # TUMLIDAR001_20210830T001811.088Z-LIDAR.hld
+        'PMTSD': pmtspec,  # TUMPMTSPECTROMETER001_20211018T200000.000Z-SDAQ-PMTSPEC.hdf5
+    }
+
     def __init__(self, file_name='Default', update=False, **kwargs):
         """Handle the DB, which holds the metadata from the ONC DB and adds quantities like hdf5 attributes.
         PARAMETER
@@ -62,6 +79,7 @@ class SyncDBHandler:
         if update and os.path.exists(self.file_name):
             self.update_sync_state()
             self.update_hdf5_attributes()
+            self.update_file_version()
 
     @property
     def dataframe(self):
@@ -476,7 +494,8 @@ class SyncDBHandler:
                                                   unit='s', errors='coerce', utc=True, infer_datetime_format=True)
         return h5_dataframe
 
-    def load_onc_db(self, output=False, download=False, add_hdf5_attributes=True, add_dataframe=True, save_db=False,
+    def load_onc_db(self, output=False, download=False, add_hdf5_attributes=True, add_file_version=True,
+                    add_dataframe=True, save_db=False,
                     **kwargs):
         """Loads and downloads the db directly from the ONC server.
 
@@ -488,6 +507,8 @@ class SyncDBHandler:
             if the missing files should be downloaded.
         add_hdf5_attributes: bool, optional
             scan files for hdf5 attributes and adds to the dataframe as new columns
+        add_file_version: bool, optional
+            scan files for the file version and adds to the dataframe as new columns
         add_dataframe: bool, optional
             if the dataframe should be added to the internal dataframe or not. Default is True.
         save_db: bool, optional
@@ -504,18 +525,20 @@ class SyncDBHandler:
                                                   output=output,
                                                   download=download,
                                                   add_hdf5_attributes=add_hdf5_attributes,
+                                                  add_file_version=add_file_version,
                                                   add_dataframe=add_dataframe,
                                                   save_db=save_db)
 
         return dataframe
 
-    def update_db_and_load_files(self, dataframe, output=False, download=False, add_hdf5_attributes=True,
-                                 add_dataframe=True, save_db=False):
-        """Depending which options are set, this function does any combination of the following three tasks:
+    def update_db_and_load_files(self, dataframe=None, output=False, download=False, add_hdf5_attributes=True,
+                                 add_dataframe=True, add_file_version=True, save_db=False):
+        """Depending which options are set, this function does any combination of the following 4 tasks:
         1. `download=True` -> loads all missing files from the dataframe
         2. `add_hdf5_attributes=True` -> updates the hdf5 attributes from the files which are present on the disc
-        3. `add_dataframe=True` -> adds the dataframe to the internal stored DB (must be saved separately to disc)
-        4. `save_db=True' -> stores the new DB on disc. works only if `add_dataframe=True`.
+        3. 'add_file_version' -> scan the files and extract the file_version
+        4. `add_dataframe=True` -> adds the dataframe to the internal stored DB (must be saved separately to disc)
+        5. `save_db=True' -> stores the new DB on disc.
 
 
         PARAMETER
@@ -524,6 +547,8 @@ class SyncDBHandler:
             if the missing files should be downloaded.
         add_hdf5_attributes: bool, optional
             scan files for hdf5 attributes and adds to the dataframe as new columns
+        add_file_version: bool, optional
+            scan files for the file version and adds to the dataframe as new columns
         add_dataframe: bool, optional
             if the dataframe should be added to the internal dataframe or not. Default is True.
         save_db: bool, optional
@@ -534,6 +559,8 @@ class SyncDBHandler:
         """
         # remove the pointer to the original dataframe,
         # i.e. if it is a slice <-> update_db_and_load_files(dataframe[mask])
+        if dataframe is None:
+            dataframe = self.dataframe
         dataframe = dataframe.copy()
 
         self.update_sync_state(dataframe=dataframe)
@@ -555,7 +582,12 @@ class SyncDBHandler:
                 print('\n-> Update hdf5 attributes')
             self.update_hdf5_attributes(dataframe=dataframe, add_hdf5_attributes2dataframe=True)
 
-        if add_dataframe:
+        if add_file_version:
+            if output:
+                print('\n-> Update file version')
+            self.update_file_version(dataframe=dataframe)
+
+        if add_dataframe or save_db:
             if output:
                 print('\n-> Add to db')
             # here 'self.dataframe =' is important as it could be None before and that brakes the inplace
@@ -634,3 +666,128 @@ class SyncDBHandler:
 
         else:
             return self.dataframe[mask]
+
+    def open_file(self, i, dataframe=None, *args, **kwargs):
+        """Use dataProductCode and sensor_mapping to find the right path to open a file.
+        PARAMETER
+        ---------
+        i: int or str
+            could a integer or string to select a item from the dataframe. Or directly a pandas.Series.
+            The integer is used as an numeric index and the string as the index (fullPath) of the pandas dataframe.
+        dataframe: pandas.DataFrame ro None, optional
+            the dataframe to which i_or_full_path revers. If None, default, it takes the internal dataframe.
+        *args, **kwargs: optional
+            parsed to the file handler initialization
+        RETURNS
+        -------
+        file_handler: BaseFileHandler
+            the file handler for the specific dataProductCode or None, if sensor_mapping has no FileHandler linked.
+        """
+        if dataframe is None:
+            dataframe = self.dataframe
+        if dataframe is None:  # when self.dataframe is None
+            return
+
+        if np.issubdtype(type(i), np.integer):
+            pd_item = dataframe.iloc[i]
+        elif isinstance(i, pandas.Series):
+            pd_item = i
+        else:
+            pd_item = dataframe.loc[i]
+
+        sensor = self.sensor_mapping[pd_item.dataProductCode]
+        if sensor is None:
+            return None
+        else:
+            return sensor.FileHandler(pd_item.fullPath, *args, **kwargs)
+
+    def _update_file_version_(self, i, dataframe=None):
+        """Gets and updates the file version in the dataframe. The dataframe must have the column 'file_version'.
+        PARAMETER
+        ---------
+        i: int or str
+            could a integer or string to select a item from the dataframe. Or directly a pandas.Series.
+            The integer is used as an numeric index and the string as the index (fullPath) of the pandas dataframe.
+        dataframe: pandas.DataFrame ro None, optional
+            the dataframe to which i_or_full_path revers. If None, default, it takes the internal dataframe.
+        """
+        file_handler = self.open_file(i=i, dataframe=dataframe, raise_error=False)
+
+        if file_handler is not None:
+            dataframe.loc[file_handler.file_name, 'file_version'] = file_handler.file_version
+        else:
+            err = BaseFileHandler.error2codes['FileHandler not implemented']
+            dataframe.loc[dataframe.fullPath.iloc[i], 'file_version'] = err
+
+    def update_file_version(self, dataframe=None, update_existing=False):
+        """Update the file version/state of all items in the dataframe. A negative file version indicate errors.
+        The translation of negative file version is located at: strawb.BaseFileHandler.codes2error or
+        the inverse strawb.BaseFileHandler.error2codes. The example list all different file version together with the
+        counts how often they exist in the dataframe. The positive file versions are deppedning on the individual
+        FileHandler.
+
+        EXAMPLE
+        -------
+        >>> import strawb
+        >>> db = strawb.SyncDBHandler()
+        >>> for e, j in db.unique_with_count(db.dataframe.file_version):
+        >>>     if e in strawb.BaseFileHandler.codes2error:
+        >>>         e = strawb.BaseFileHandler.codes2error[e]
+        >>>     print(e, j)
+
+        PARAMETER
+        ---------
+        dataframe: Union[None, pandas.DataFrame], optional
+            If None (default) it checks the internal dataframe. Otherwise it checks the provided dataframe.
+        """
+        if dataframe is None:
+            dataframe = self.dataframe
+        if dataframe is None:  # when self.dataframe is None
+            return
+
+        # mask file, that are linked in sensor_mapping and therefore has an defined file_handler
+        items_to_check = dataframe.synced * False  # array all False
+        for i in self.sensor_mapping:
+            if self.sensor_mapping[i] is not None:
+                # add files to be checked
+                items_to_check |= dataframe.dataProductCode == i
+
+        # mark all file where the FileHandler is not implemented
+        items_not_implemented = ~items_to_check.copy()  # & ~dataframe.synced
+        items_to_check &= dataframe.synced  # exclude non existing files
+
+        if 'file_version' not in dataframe:
+            # add column
+            dataframe.insert(dataframe.columns.shape[0],
+                             'file_version',
+                             np.nan)
+        elif not update_existing:
+            # take only the one with missing parameters
+            items_to_check &= dataframe.file_version.isnull()  # takes all None or np.nan
+
+        # mark all file where the FileHandler is not implemented
+        dataframe.file_version.where(~items_not_implemented,  # it sets items with False <-> ~
+                                     other=BaseFileHandler.error2codes['FileHandler not implemented'],
+                                     inplace=True)
+
+        # only 1 thread works here otherwise some files are labeled wrong (why?)
+        sjt = ShareJobThreads(thread_n=1, unit='files')
+        sjt.do(self._update_file_version_,
+               np.argwhere(items_to_check.to_numpy(dtype=bool)).flatten(),
+               dataframe=dataframe)
+
+        return dataframe
+
+    @staticmethod
+    def unique_with_count(pandas_series):
+        """Return the unique items and how often they exist."""
+        res = []
+        unique = pandas_series.unique()
+        unique.sort()
+        for j in unique:
+            if j is None or np.isnan(j):
+                count = pandas_series.isnull().sum()
+            else:
+                count = (pandas_series == j).sum()
+            res.append([j, count])
+        return res
