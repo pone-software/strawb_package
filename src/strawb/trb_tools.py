@@ -284,7 +284,7 @@ class TRBTools:
             # check if there is only one value (exclude -1: daq inactive)
             if np.unique(
                     daq_frequency_readout[daq_frequency_readout != -1]
-            ).shape != (0,):
+            ).shape == (0,):
                 daq_frequency_readout = 10000  # the default frequency
             elif np.unique(
                     daq_frequency_readout[daq_frequency_readout != -1]
