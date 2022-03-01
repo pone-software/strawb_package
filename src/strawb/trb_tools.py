@@ -277,8 +277,10 @@ class TRBTools:
         # Prepare parameter
         # Check type and shape of counts arrays
         if isinstance(daq_frequency_readout, list):  # convert to array
-            daq_frequency_readout = np.array(daq_frequency_readout[:])
-        if isinstance(daq_frequency_readout, (np.ndarray, h5py.Dataset)):
+            daq_frequency_readout = np.array(daq_frequency_readout)
+        if isinstance(daq_frequency_readout, h5py.Dataset):
+            daq_frequency_readout = daq_frequency_readout[:]  # need [:] here
+        if isinstance(daq_frequency_readout, np.ndarray):
             # check if there is only one value (exclude -1: daq inactive)
             if np.unique(
                     daq_frequency_readout[daq_frequency_readout != -1]
