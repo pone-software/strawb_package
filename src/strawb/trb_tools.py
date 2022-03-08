@@ -24,6 +24,10 @@ class TRBTools:
         self._rate_delta_time = None
         self._rate = None  # stores result of self.calculate_rates() (needs `self._dcounts_arr_`)
 
+        # in some version of the SDAQ there was a bug which leads to a corrupt start of n indexes.
+        # where n is the length of the SDAQ buffer
+        self._index_start_valid_data_ = None
+
         # interpolated rates. Based on the `counts` and interpolated to fit a artificially readout frequency.
         self._interp_frequency_ = None  # artificially readout frequency
         self._interp_time_ = None  # absolute timestamps. Shape: [time_j]
@@ -67,14 +71,45 @@ class TRBTools:
 
     # Properties prevent here to load data directly at initialisation and to prevent setting the variables
     @property
+    def _time_(self):
+        """The absolute timestamp in seconds since epoch when the counter are recorded. This time isn't very
+        precise as it comes from the CPU clock, therefore its absolute. See `rate_time` for a very precise but
+        not absolute timestamps from the TRB."""
+        if self.__time__ is None:
+            return None
+
+        return self.__time__[self.index_start_valid_data:]
+
+    @property
     def time(self):
-        """The absolute timestamp when the counter are recorded. This time isn't very precise as it comes from the CPU
-        clock, therefore its absolute. See `rate_time` for a very precise but not absolute timestamps from the TRB."""
-        if isinstance(self.__time__, h5py.Dataset):
-            # noinspection PyUnresolvedReferences
-            return self.__time__.asdatetime()[:]
-        else:
-            return tools.asdatetime(self.__time__)
+        """The absolute timestamp as datetime when the counter are recorded. This time isn't very
+        precise as it comes from the CPU clock, therefore its absolute. See `rate_time` for a very precise but
+        not absolute timestamps from the TRB."""
+        if self.__time__ is None:
+            return
+
+        # if isinstance(self.__time__, h5py.Dataset):
+        #     # noinspection PyUnresolvedReferences
+        #     return self.__time__.asdatetime()[self.index_start_valid_data:]
+        # else:
+        return tools.asdatetime(self._time_)
+
+    @property
+    def index_start_valid_data(self):
+        """ Workaround for a bug in SDAQ, which writes at initialisation the buffer size to the file.
+        This means, the first n (=buffer size) entries are corrupt, which can detected by looking for the sorting
+        """
+        if self.__time__ is None:
+            return None
+        elif self._index_start_valid_data_ is None:
+            # noinspection PyTypeChecker
+            sort_args = np.argsort(self.__time__)
+            unordered_indexes = np.argwhere(np.diff(sort_args) != 1).flatten()
+            if len(unordered_indexes) != 0:
+                self._index_start_valid_data_ = unordered_indexes[-1] + 1
+            else:
+                self._index_start_valid_data_ = 0
+        return self._index_start_valid_data_
 
     @property
     def time_middle(self):
@@ -198,8 +233,13 @@ class TRBTools:
 
     def diff_counts(self):
         if self.raw_counts_arr is not None:
+            # noinspection PyTypeChecker
+            raw_counts_arr = np.array(self.raw_counts_arr)[:, self.index_start_valid_data:]
+
             # noinspection PyArgumentList
-            self.__dcounts_arr__, self._active_read_arr_ = self._diff_counts_(*self.raw_counts_arr)
+            self.__dcounts_arr__, self._active_read_arr_ = self._diff_counts_(*raw_counts_arr)
+            self._active_read_arr_ = self._active_read_arr_[1:]  # ch0 can't be active
+
             return self._dcounts_arr_
         return None
 
@@ -319,8 +359,8 @@ class TRBTools:
             raise TypeError(f'frequency_interp must a int or float. Got {type(value)}')
         # set it and calculate the new rates
         if self._interp_frequency_ != value:
+            self._interp_time_, self._interp_rate_ = self.interpolate_rate(value)
             self._interp_frequency_ = value
-            self._interp_time_, self._interp_rate_ = self.interpolate_rate(self._interp_frequency_)
 
     @property
     def interp_time(self):
