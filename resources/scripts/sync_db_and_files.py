@@ -36,10 +36,10 @@ def parser_args():
     parser.add_argument('-e', '--extensions', type=str, default=None, nargs='+',
                         help="Defines the file extensions which should be synced,"
                              "e.g.  ['hdf5', 'hld', 'raw', 'png', 'txt'].")
-    parser.add_argument('-l', '--min', type=float, default=0,
+    parser.add_argument('-l', '--min', type=int, default=0,
                         help="Defines the minimum file size in Byte which should be synced, e.g.  1024 [=1kB] "
                              "(default: %(default)s)")
-    parser.add_argument('-m', '--max', type=float, default=.75e9,
+    parser.add_argument('-m', '--max', type=int, default=.75e9,
                         help="Defines the minimum file size in Byte which should be synced, e.g.  1e6 [~1MB] "
                              "(default: %(default)s)")
 
