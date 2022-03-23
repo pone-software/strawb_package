@@ -31,18 +31,22 @@ class FileHandler(BaseFileHandler):
 
         # Padiwa Settings thresholds
         self.padiwa_time = None
-        self.padiwa_th1 = None
-        self.padiwa_th3 = None
-        self.padiwa_th5 = None
-        self.padiwa_th6 = None
-        self.padiwa_th7 = None
-        self.padiwa_th8 = None
-        self.padiwa_th9 = None
-        self.padiwa_th10 = None
-        self.padiwa_th11 = None
-        self.padiwa_th12 = None
-        self.padiwa_th13 = None
-        self.padiwa_th15 = None
+        self.padiwa_th1 = None  # 350 nm
+        self.padiwa_th2 = None  # 400 nm
+        self.padiwa_th3 = None  # 425 nm
+        self.padiwa_th4 = None  # 450 nm
+        self.padiwa_th5 = None  # 460 nm
+        self.padiwa_th6 = None  # 470 nm
+        self.padiwa_th7 = None  # 480 nm
+        self.padiwa_th8 = None  # 492 nm
+        self.padiwa_th9 = None  # not connected
+        self.padiwa_th10 = None  # not connected
+        self.padiwa_th11 = None  # 510 nm
+        self.padiwa_th12 = None  # 525 nm
+        self.padiwa_th13 = None  # 550 nm
+        self.padiwa_th14 = None  # NO FILTER
+        self.padiwa_th15 = None  # not connected
+        self.padiwa_th16 = None  # not connected
         self.padiwa_offset = None
         self.padiwa_power = None
 
@@ -51,18 +55,22 @@ class FileHandler(BaseFileHandler):
 
         # HV-PMT Settings
         self.hv_time = None
-        self.hv_ch1 = None
-        self.hv_ch3 = None
-        self.hv_ch5 = None
-        self.hv_ch6 = None
-        self.hv_ch7 = None
-        self.hv_ch8 = None
-        self.hv_ch9 = None
-        self.hv_ch10 = None
-        self.hv_ch11 = None
-        self.hv_ch12 = None
-        self.hv_ch13 = None
-        self.hv_ch15 = None
+        self.hv_ch0 = None  # 350 nm
+        self.hv_ch1 = None  # 400 nm, 480 nm
+        self.hv_ch2 = None  # 425 nm
+        self.hv_ch3 = None  # 450 nm, 470 nm
+        self.hv_ch4 = None  # 460 nm, 492 nm
+        self.hv_ch5 = None  # 510 nm, 550 nm
+        self.hv_ch6 = None  # 525 nm
+        self.hv_ch7 = None  # NO FILTER
+        self.hv_ch8 = None  # not connected
+        self.hv_ch9 = None  # not connected
+        self.hv_ch10 = None  # not connected
+        self.hv_ch11 = None  # not connected
+        self.hv_ch12 = None  # not connected
+        self.hv_ch13 = None  # not connected
+        self.hv_ch14 = None  # not connected
+        self.hv_ch15 = None  # not connected
         self.hv_power = None
 
         # TRB Settings
@@ -202,52 +210,64 @@ class FileHandler(BaseFileHandler):
     def __load_padiwa_v1__(self):
         """Old: no '/padiwa/power' in daq"""
         self.padiwa_time = self.file['/padiwa/time']
-        self.padiwa_th1 = self.file['/padiwa/th1']
-        self.padiwa_th3 = self.file['/padiwa/th3']
-        self.padiwa_th5 = self.file['/padiwa/th5']
-        self.padiwa_th6 = self.file['/padiwa/th6']
-        self.padiwa_th7 = self.file['/padiwa/th7']
-        self.padiwa_th8 = self.file['/padiwa/th8']
-        self.padiwa_th9 = self.file['/padiwa/th9']
-        self.padiwa_th10 = self.file['/padiwa/th10']
-        self.padiwa_th11 = self.file['/padiwa/th11']
-        self.padiwa_th12 = self.file['/padiwa/th12']
-        self.padiwa_th13 = self.file['/padiwa/th13']
-        self.padiwa_th15 = self.file['/padiwa/th15']
         self.padiwa_offset = self.file['/padiwa/offset']
+        self.padiwa_th1 = self.file['/padiwa/th1']  # 350 nm
+        self.padiwa_th2 = self.file['/padiwa/th2']  # 400 nm
+        self.padiwa_th3 = self.file['/padiwa/th3']  # 425 nm
+        self.padiwa_th4 = self.file['/padiwa/th4']  # 450 nm
+        self.padiwa_th5 = self.file['/padiwa/th5']  # 460 nm
+        self.padiwa_th6 = self.file['/padiwa/th6']  # 470 nm
+        self.padiwa_th7 = self.file['/padiwa/th7']  # 480 nm
+        self.padiwa_th8 = self.file['/padiwa/th8']  # 492 nm
+        self.padiwa_th9 = self.file['/padiwa/th9']  # not connected
+        self.padiwa_th10 = self.file['/padiwa/th10']  # not connected
+        self.padiwa_th11 = self.file['/padiwa/th11']  # 510 nm
+        self.padiwa_th12 = self.file['/padiwa/th12']  # 525 nm
+        self.padiwa_th13 = self.file['/padiwa/th13']  # 550 nm
+        self.padiwa_th14 = self.file['/padiwa/th14']  # NO FILTER
+        self.padiwa_th15 = self.file['/padiwa/th15']  # not connected
+        self.padiwa_th16 = self.file['/padiwa/th16']  # not connected
 
     def __load_padiwa_v2__(self):
         """Old: with '/padiwa/power' """
         self.padiwa_time = self.file['/padiwa/time']
-        self.padiwa_th1 = self.file['/padiwa/th1']
-        self.padiwa_th3 = self.file['/padiwa/th3']
-        self.padiwa_th5 = self.file['/padiwa/th5']
-        self.padiwa_th6 = self.file['/padiwa/th6']
-        self.padiwa_th7 = self.file['/padiwa/th7']
-        self.padiwa_th8 = self.file['/padiwa/th8']
-        self.padiwa_th9 = self.file['/padiwa/th9']
-        self.padiwa_th10 = self.file['/padiwa/th10']
-        self.padiwa_th11 = self.file['/padiwa/th11']
-        self.padiwa_th12 = self.file['/padiwa/th12']
-        self.padiwa_th13 = self.file['/padiwa/th13']
-        self.padiwa_th15 = self.file['/padiwa/th15']
-        self.padiwa_offset = self.file['/padiwa/offset']
+        self.padiwa_offset = self.file['/padiwa/offset']  # new
         self.padiwa_power = self.file['/padiwa/power']
+        self.padiwa_th1 = self.file['/padiwa/th1']  # 350 nm
+        self.padiwa_th2 = self.file['/padiwa/th2']  # 400 nm
+        self.padiwa_th3 = self.file['/padiwa/th3']  # 425 nm
+        self.padiwa_th4 = self.file['/padiwa/th4']  # 450 nm
+        self.padiwa_th5 = self.file['/padiwa/th5']  # 460 nm
+        self.padiwa_th6 = self.file['/padiwa/th6']  # 470 nm
+        self.padiwa_th7 = self.file['/padiwa/th7']  # 480 nm
+        self.padiwa_th8 = self.file['/padiwa/th8']  # 492 nm
+        self.padiwa_th9 = self.file['/padiwa/th9']  # not connected
+        self.padiwa_th10 = self.file['/padiwa/th10']  # not connected
+        self.padiwa_th11 = self.file['/padiwa/th11']  # 510 nm
+        self.padiwa_th12 = self.file['/padiwa/th12']  # 525 nm
+        self.padiwa_th13 = self.file['/padiwa/th13']  # 550 nm
+        self.padiwa_th14 = self.file['/padiwa/th14']  # NO FILTER
+        self.padiwa_th15 = self.file['/padiwa/th15']  # not connected
+        self.padiwa_th16 = self.file['/padiwa/th16']  # not connected
 
     def __load_hv__(self):
         self.hv_time = self.file['/hv/time']
-        self.hv_ch1 = self.file['/hv/ch1']
-        self.hv_ch3 = self.file['/hv/ch3']
-        self.hv_ch5 = self.file['/hv/ch5']
-        self.hv_ch6 = self.file['/hv/ch6']
-        self.hv_ch7 = self.file['/hv/ch7']
-        self.hv_ch8 = self.file['/hv/ch8']
-        self.hv_ch9 = self.file['/hv/ch9']
-        self.hv_ch10 = self.file['/hv/ch10']
-        self.hv_ch11 = self.file['/hv/ch11']
-        self.hv_ch12 = self.file['/hv/ch12']
-        self.hv_ch13 = self.file['/hv/ch13']
-        self.hv_ch15 = self.file['/hv/ch15']
+        self.hv_ch0 = self.file['/hv/ch0']  # 350 nm
+        self.hv_ch1 = self.file['/hv/ch1']  # 400 nm, 480 nm
+        self.hv_ch2 = self.file['/hv/ch2']  # 425 nm
+        self.hv_ch3 = self.file['/hv/ch3']  # 450 nm, 470 nm
+        self.hv_ch4 = self.file['/hv/ch4']  # 460 nm, 492 nm
+        self.hv_ch5 = self.file['/hv/ch5']  # 510 nm, 550 nm
+        self.hv_ch6 = self.file['/hv/ch6']  # 525 nm
+        self.hv_ch7 = self.file['/hv/ch7']  # NO FILTER
+        self.hv_ch8 = self.file['/hv/ch8']  # not connected
+        self.hv_ch9 = self.file['/hv/ch9']  # not connected
+        self.hv_ch10 = self.file['/hv/ch10']  # not connected
+        self.hv_ch11 = self.file['/hv/ch11']  # not connected
+        self.hv_ch12 = self.file['/hv/ch12']  # not connected
+        self.hv_ch13 = self.file['/hv/ch13']  # not connected
+        self.hv_ch14 = self.file['/hv/ch14']  # not connected
+        self.hv_ch15 = self.file['/hv/ch15']  # not connected
         self.hv_power = self.file['/hv/power']
 
     def __load_daq_v1__(self):
@@ -286,7 +306,9 @@ class FileHandler(BaseFileHandler):
     def get_pandas_padiwa(self):
         df = pandas.DataFrame(dict(time=self.padiwa_time.asdatetime()[:],
                                    th1=self.padiwa_th1,
+                                   th2=self.padiwa_th2,
                                    th3=self.padiwa_th3,
+                                   th4=self.padiwa_th4,
                                    th5=self.padiwa_th5,
                                    th6=self.padiwa_th6,
                                    th7=self.padiwa_th7,
@@ -296,7 +318,9 @@ class FileHandler(BaseFileHandler):
                                    th11=self.padiwa_th11,
                                    th12=self.padiwa_th12,
                                    th13=self.padiwa_th13,
+                                   th14=self.padiwa_th14,
                                    th15=self.padiwa_th15,
+                                   th16=self.padiwa_th16,
                                    offset=self.padiwa_offset,
                                    power=self.padiwa_power,
                                    ))
@@ -307,7 +331,9 @@ class FileHandler(BaseFileHandler):
     def get_pandas_hv(self):
         df = pandas.DataFrame(dict(time=self.hv_time.asdatetime()[:],
                                    ch1=self.hv_ch1,
+                                   ch2=self.hv_ch2,
                                    ch3=self.hv_ch3,
+                                   ch4=self.hv_ch4,
                                    ch5=self.hv_ch5,
                                    ch6=self.hv_ch6,
                                    ch7=self.hv_ch7,
@@ -317,6 +343,7 @@ class FileHandler(BaseFileHandler):
                                    ch11=self.hv_ch11,
                                    ch12=self.hv_ch12,
                                    ch13=self.hv_ch13,
+                                   ch14=self.hv_ch14,
                                    ch15=self.hv_ch15,
                                    power=self.hv_power,
                                    ))
