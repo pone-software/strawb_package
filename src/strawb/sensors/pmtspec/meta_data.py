@@ -10,13 +10,13 @@ class PMTMetaData:
         # The entries are:        [index, channel_name, wavelength, label]
         dtype = [('index', int), ('trb', int), ('dac', int), ('padiwa', int), ('wavelength', int),
                  ('label', object), ('color', object)]
-        channel_meta_array = np.array([(0, 9, 3, 4, 450, '', None),  # or (0, 1, 3, 4, 450, '', None) ? 'channel'=1
+        channel_meta_array = np.array([(0, 1, 4, 8, 492, '', None),   # or (0, 1, 3, 4, 450, '', None) ?
                                        (1, 3, 1, 7, 480, '', None),
                                        (2, 5, 3, 6, 470, '', None),
                                        (3, 6, 7, 14, 0, '', None),
                                        (4, 7, 4, 5, 460, '', None),
                                        (5, 8, 5, 13, 550, '', None),
-                                       (6, 1, 4, 8, 492, '', None),  # or (6, 9, 4, 8, 492, '', None) ? 'channel'=9
+                                       (6, 9, 3, 4, 450, '', None),  # or (6, 9, 4, 8, 492, '', None) ?
                                        (7, 10, 6, 12, 525, '', None),
                                        (8, 11, 2, 3, 425, '', None),
                                        (9, 12, 5, 11, 510, '', None),
