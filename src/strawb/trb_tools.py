@@ -339,10 +339,10 @@ class TRBTools:
                     ][0]
 
         daq_frequency_readout = float(daq_frequency_readout)  # must be a float
-        dcounts_arr = np.array(dcounts_arr, dtype=np.int64)  # must be of int64
+        dcounts_arr = np.array(dcounts_arr, dtype=np.float)  # must be of int64
 
         # Calculate Rates
-        delta_time = dcounts_time / daq_frequency_readout  # seconds
+        delta_time = dcounts_time.astype(float) / daq_frequency_readout  # seconds
         rate_arr = dcounts_arr.astype(float) / delta_time
 
         return delta_time, rate_arr
@@ -374,19 +374,23 @@ class TRBTools:
             self._interp_time_, self._interp_rate_ = self.interpolate_rate(self._interp_frequency_)
         return self._interp_rate_
 
-    def interpolate_rate(self, frequency=333.):
+    def interpolate_rate(self, frequency=333., time_probe=None):
         """Interpolates the rate and timestamps to a given 'readout' frequency. It is based on the raw counts from TRB.
         The process is the following. It interpolates the cumulative counts and calculates the rate based on it.
         PARAMETER
         ---------
         frequency: float, optional
-            the frequency to which the data is interpolated in Hz. Default is 333 Hz.
+            the frequency to which the data is interpolated in Hz. Default is 333 Hz. `time_probe` must be None.
+        time_probe: ndarray, optional
+            the timestamps in seconds since the file start and at which the counts should be interpolated to calculate
+            the rates. For absolute timestamps subtract: strawb.tools.datetime2float(pmt.trb_rates.time)[0].
         RETURN
         ------
         time_inter: np.array
-            the interpolated absolute time
+            the interpolated absolute timestamp in seconds since the epoch. It corresponds to the middle of time_probe.
+            Therefore len(time_probe) -1 == len(time_inter)
         rate_inter: np.array
-            the interpolated rate
+            the interpolated rate as a 2d array with shape [channel_i, rate_j] and len(rate_j) == len(time_inter).
         """
 
         def interp_np(x, xp, fp):
@@ -396,7 +400,8 @@ class TRBTools:
             return y
 
         timestamps = self.rate_time  # seconds since file started
-        time_probe = np.arange(timestamps[0], timestamps[-1], 1. / frequency)
+        if time_probe is None:
+            time_probe = np.arange(timestamps[0], timestamps[-1], 1. / frequency)
 
         counts = interp_np(x=time_probe, xp=timestamps, fp=self.counts)
 
