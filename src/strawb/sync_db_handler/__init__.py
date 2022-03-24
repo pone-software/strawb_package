@@ -788,15 +788,11 @@ class SyncDBHandler:
                                      other=BaseFileHandler.error2codes['FileHandler not implemented'],
                                      inplace=True)
 
-        print('items_to_check: ', items_to_check.sum())
-
         # only 1 thread works here otherwise some files are labeled wrong (why?)
         sjt = ShareJobThreads(thread_n=self._threads_, unit='files')
         sjt.do(self._update_file_version_,
                np.argwhere(items_to_check.to_numpy(dtype=bool)).flatten(),
                dataframe=dataframe)
-
-        print('return_buffer : ', sjt.return_buffer)
 
         return dataframe
 
