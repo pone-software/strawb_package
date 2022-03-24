@@ -81,6 +81,7 @@ def main(download=False, dev_codes=None, date_from=None, date_to=None,
                            add_hdf5_attributes=True,
                            add_file_version=True,
                            add_dataframe=True,
+                           save_db=True,
                            download=download,
                            extensions=extensions)
 
