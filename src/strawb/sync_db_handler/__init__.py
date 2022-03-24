@@ -731,7 +731,8 @@ class SyncDBHandler:
             err = BaseFileHandler.error2codes['FileHandler not implemented']
             dataframe.loc[dataframe.fullPath.iloc[i], 'file_version'] = err
 
-        print(i, file_handler, dataframe.loc[dataframe.fullPath.iloc[i], 'file_version'])
+        # print(i, file_handler, dataframe.loc[dataframe.fullPath.iloc[i], 'file_version'])
+        return dataframe.loc[dataframe.fullPath.iloc[i], 'file_version']
 
     def update_file_version(self, dataframe=None, update_existing=False):
         """Update the file version/state of all items in the dataframe. A negative file version indicate errors.
