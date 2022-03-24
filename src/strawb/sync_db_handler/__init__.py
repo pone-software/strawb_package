@@ -30,7 +30,7 @@ class SyncDBHandler:
         'PMTSD': pmtspec,  # TUMPMTSPECTROMETER001_20211018T200000.000Z-SDAQ-PMTSPEC.hdf5
     }
 
-    def __init__(self, file_name='Default', update=False, **kwargs):
+    def __init__(self, file_name='Default', update=False, threads=5, **kwargs):
         """Handle the DB, which holds the metadata from the ONC DB and adds quantities like hdf5 attributes.
         PARAMETER
         file_name: Union[str, None], optional
@@ -41,6 +41,8 @@ class SyncDBHandler:
             - a file name which is anywhere located in the strawb.Config.raw_data_dir
         update: bool, optional
             defines if the entries should be checked against existing files
+        threads: int, optional
+            defines how many threads should be used. Default: 5.
         kwargs: dict, optional
             parsed to ONCDownloader(**kwargs), e.g.: token, outPath, download_threads
         """
@@ -67,6 +69,7 @@ class SyncDBHandler:
 
         self.onc_downloader = ONCDownloader(**kwargs)
         self.dataframe = None  # stores the db in a pandas data frame
+        self._threads_ = threads
 
         self.onc_downloader = ONCDownloader(**kwargs)
 
@@ -438,7 +441,7 @@ class SyncDBHandler:
             keys_converter = {'mes_typ': 'measurement_type', 'mes_duration': 'measurement_duration',
                               'mes_steps': 'measurement_steps'}
 
-        sjt = ShareJobThreads(thread_n=5, unit='files')
+        sjt = ShareJobThreads(thread_n=self._threads_, unit='files')
         sjt.do(self._extract_hdf5_attribute_,
                np.argwhere(items_to_check.to_numpy(dtype=bool)).flatten(),
                dataframe=dataframe,
@@ -788,7 +791,7 @@ class SyncDBHandler:
         print('items_to_check: ', items_to_check.sum())
 
         # only 1 thread works here otherwise some files are labeled wrong (why?)
-        sjt = ShareJobThreads(thread_n=1, unit='files')
+        sjt = ShareJobThreads(thread_n=self._threads_, unit='files')
         sjt.do(self._update_file_version_,
                np.argwhere(items_to_check.to_numpy(dtype=bool)).flatten(),
                dataframe=dataframe)
