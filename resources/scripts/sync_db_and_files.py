@@ -85,8 +85,6 @@ def main(download=False, dev_codes=None, date_from=None, date_to=None,
                            download=download,
                            extensions=extensions)
 
-    db_handler.save_db()
-
 
 # execute only if run as a script
 if __name__ == "__main__":
