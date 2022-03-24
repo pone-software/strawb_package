@@ -724,12 +724,15 @@ class SyncDBHandler:
             the dataframe to which i_or_full_path revers. If None, default, it takes the internal dataframe.
         """
         file_handler = self.open_file(i=i, dataframe=dataframe, raise_error=False)
+
         print(i, file_handler)
         if file_handler is not None:
             dataframe.loc[file_handler.file_name, 'file_version'] = file_handler.file_version
         else:
             err = BaseFileHandler.error2codes['FileHandler not implemented']
             dataframe.loc[dataframe.fullPath.iloc[i], 'file_version'] = err
+
+        print(i, file_handler, dataframe.loc[dataframe.fullPath.iloc[i], 'file_version'])
 
     def update_file_version(self, dataframe=None, update_existing=False):
         """Update the file version/state of all items in the dataframe. A negative file version indicate errors.
