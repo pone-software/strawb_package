@@ -589,8 +589,8 @@ class SyncDBHandler:
             self.update_hdf5_attributes(dataframe=dataframe, add_hdf5_attributes2dataframe=True)
 
         if add_file_version:
-            res = np.unique(dataframe.file_version.to_numpy(), return_counts=True)
-            print(f'before add_file_version {res}')
+            # res = np.unique(dataframe.file_version.to_numpy(), return_counts=True)
+            # print(f'before add_file_version {res}')
 
             if output:
                 print('\n-> Update file version')
@@ -781,6 +781,8 @@ class SyncDBHandler:
         dataframe.file_version.where(~items_not_implemented,  # it sets items with False <-> ~
                                      other=BaseFileHandler.error2codes['FileHandler not implemented'],
                                      inplace=True)
+
+        print('items_to_check: ', items_to_check.sum())
 
         # only 1 thread works here otherwise some files are labeled wrong (why?)
         sjt = ShareJobThreads(thread_n=1, unit='files')
