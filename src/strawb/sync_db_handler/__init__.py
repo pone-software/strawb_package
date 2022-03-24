@@ -588,7 +588,6 @@ class SyncDBHandler:
             if output:
                 print('\n-> Update file version')
             self.update_file_version(dataframe=dataframe)
-            res = np.unique(dataframe.file_version.to_numpy(), return_counts=True)
 
         if add_dataframe or save_db:
             if output:
@@ -782,7 +781,7 @@ class SyncDBHandler:
 
         # only 1 thread works here otherwise some files are labeled wrong (why?)
         # + multi threading isn't faster here, use the progress bar only
-        sjt = ShareJobThreads(thread_n=self._threads_, unit='files')
+        sjt = ShareJobThreads(thread_n=1, unit='files')
         sjt.do(self._update_file_version_,
                np.argwhere(items_to_check.to_numpy(dtype=bool)).flatten(),
                dataframe=dataframe)
