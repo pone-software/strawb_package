@@ -792,6 +792,8 @@ class SyncDBHandler:
                np.argwhere(items_to_check.to_numpy(dtype=bool)).flatten(),
                dataframe=dataframe)
 
+        print('return_buffer : ', sjt.return_buffer)
+
         return dataframe
 
     @staticmethod
