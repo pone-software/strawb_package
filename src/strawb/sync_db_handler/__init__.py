@@ -588,9 +588,6 @@ class SyncDBHandler:
             self.update_hdf5_attributes(dataframe=dataframe, add_hdf5_attributes2dataframe=True)
 
         if add_file_version:
-            # res = np.unique(dataframe.file_version.to_numpy(), return_counts=True)
-            # print(f'before add_file_version {res}')
-
             if output:
                 print('\n-> Update file version')
             self.update_file_version(dataframe=dataframe)
