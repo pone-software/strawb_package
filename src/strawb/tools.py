@@ -208,7 +208,6 @@ class ShareJobThreads:
                     if buffer is not None:
                         self.return_buffer.append(buffer)
                     self.i_bar += 1
-        print(f'worker stopped {self.active} {active}')
 
     def _get_next_(self, ):
         """ Get the next item of the iterable with a lock."""
