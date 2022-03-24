@@ -575,16 +575,12 @@ class SyncDBHandler:
                   f'size to download: {human_size(download_size)}, '
                   f'from deviceCode: {pandas.unique(dataframe["deviceCode"])}')
 
-        print(f'before download synced form {dataframe["synced"].sum():10.0f}')
-
         if download:
             if output:
                 print('\n-> Download the files from the ONC server')
             # download the files which passed the filter
             self.onc_downloader.getDirectFiles(filters_or_result=dataframe[~dataframe['synced']])
             self.update_sync_state(dataframe=dataframe)
-
-        print(f'after download synced form {dataframe["synced"].sum():10.0f}')
 
         if add_hdf5_attributes:
             if output:
@@ -598,9 +594,7 @@ class SyncDBHandler:
             if output:
                 print('\n-> Update file version')
             self.update_file_version(dataframe=dataframe)
-
             res = np.unique(dataframe.file_version.to_numpy(), return_counts=True)
-            print(f'after add_file_version {res}')
 
         if add_dataframe or save_db:
             if output:
