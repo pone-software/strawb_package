@@ -274,7 +274,6 @@ class TestSyncDBHandler(TestCase):
         dataframe = db_handler.get_files_from_names(files)
         self.assertTrue(all(dataframe.filename == files))
 
-
     def tearDown(self):
         hdf5_files = glob.glob('./*.hdf5')
         for i in hdf5_files:
