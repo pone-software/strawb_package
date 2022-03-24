@@ -196,7 +196,7 @@ class ShareJobThreads:
         """The worker function for the worker threads. It takes care of executing the target function 'f' with the next
         item of the iterable list and the kwargs. """
         iterable_i = True
-        while self.active and iterable_i:
+        while self.active and iterable_i is not False:
             iterable_i = self._get_next_()
             if iterable_i is not False:
                 try:
