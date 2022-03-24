@@ -725,7 +725,6 @@ class SyncDBHandler:
         """
         file_handler = self.open_file(i=i, dataframe=dataframe, raise_error=False)
 
-        print(i, file_handler)
         if file_handler is not None:
             dataframe.loc[file_handler.file_name, 'file_version'] = file_handler.file_version
         else:
