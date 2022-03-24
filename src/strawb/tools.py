@@ -195,10 +195,10 @@ class ShareJobThreads:
     def _worker_(self, ):
         """The worker function for the worker threads. It takes care of executing the target function 'f' with the next
         item of the iterable list and the kwargs. """
-        iterable_i = True
-        while self.active and iterable_i is not False:
-            iterable_i = self._get_next_()
-            if iterable_i is not False:
+        active = True
+        while self.active and active:
+            iterable_i, active = self._get_next_()
+            if active:
                 try:
                     buffer = self.f(iterable_i, **self.kwargs)
                 except (RuntimeError, Exception) as err:
@@ -208,7 +208,7 @@ class ShareJobThreads:
                     if buffer is not None:
                         self.return_buffer.append(buffer)
                     self.i_bar += 1
-        print(f'worker stopped {self.active} {iterable_i}')
+        print(f'worker stopped {self.active} {active}')
 
     def _get_next_(self, ):
         """ Get the next item of the iterable with a lock."""
@@ -216,10 +216,9 @@ class ShareJobThreads:
             if len(self.iterable) > self.i:
                 iterable_i = self.iterable[self.i]
                 self.i += 1
-                return iterable_i
+                return iterable_i, True
             else:
-                print('end')
-                return False
+                return None, False
 
 
 def hdf5_getunsorted(self, index):
