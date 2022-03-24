@@ -30,7 +30,7 @@ class SyncDBHandler:
         'PMTSD': pmtspec,  # TUMPMTSPECTROMETER001_20211018T200000.000Z-SDAQ-PMTSPEC.hdf5
     }
 
-    def __init__(self, file_name='Default', update=False, threads=5, **kwargs):
+    def __init__(self, file_name='Default', update=False, threads=1, **kwargs):
         """Handle the DB, which holds the metadata from the ONC DB and adds quantities like hdf5 attributes.
         PARAMETER
         file_name: Union[str, None], optional
