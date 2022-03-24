@@ -597,9 +597,11 @@ class SyncDBHandler:
             if output:
                 print('\n-> Add to db')
             # here 'self.dataframe =' is important as it could be None before and that brakes the inplace
-            print(f'DB: {self.dataframe.file_version.isnull().sum()}; {dataframe.file_version.isnull().sum()}')
+            print(f'DB: {np.unique(self.dataframe.file_version.isnull().sum(), return_counts=True)}; '
+                  f'{np.unique(dataframe.file_version.to_numpy(), return_counts=True)}')
             self.dataframe = self.add_new_columns(dataframe2add=dataframe, dataframe=self.dataframe, overwrite=True)
-            print(f'DB: {self.dataframe.file_version.isnull().sum()}; {dataframe.file_version.isnull().sum()}')
+            print(f'DB: {np.unique(self.dataframe.file_version.isnull().sum(), return_counts=True)}; '
+                  f'{np.unique(dataframe.file_version.to_numpy(), return_counts=True)}')
 
         if save_db:
             if output:
