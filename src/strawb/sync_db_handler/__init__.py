@@ -583,16 +583,21 @@ class SyncDBHandler:
 
         print(f'after download synced form {dataframe["synced"].sum():10.0f}')
 
-
         if add_hdf5_attributes:
             if output:
                 print('\n-> Update hdf5 attributes')
             self.update_hdf5_attributes(dataframe=dataframe, add_hdf5_attributes2dataframe=True)
 
         if add_file_version:
+            res = np.unique(dataframe.file_version.to_numpy(), return_counts=True)
+            print(f'before add_file_version {res}')
+
             if output:
                 print('\n-> Update file version')
             self.update_file_version(dataframe=dataframe)
+
+            res = np.unique(dataframe.file_version.to_numpy(), return_counts=True)
+            print(f'after add_file_version {res}')
 
         if add_dataframe or save_db:
             if output:
