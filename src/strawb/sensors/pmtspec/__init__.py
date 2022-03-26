@@ -5,6 +5,7 @@ from typing import Union
 from strawb.sensors.pmtspec.meta_data import PMTMetaData
 from strawb.sensors.pmtspec.pmtspec_trb_rates import PMTSpecTRBRates
 from strawb.sensors.pmtspec.file_handler import FileHandler
+from strawb.sensors.pmtspec.rate_scan import RateScan
 
 
 class PMTSpec:
@@ -21,3 +22,5 @@ class PMTSpec:
         self.trb_rates = PMTSpecTRBRates(file_handler=self.file_handler)
 
         self.pmt_meta_data = PMTMetaData()
+
+        self.rate_scan = RateScan(pmt_spec=self)
