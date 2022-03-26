@@ -1,5 +1,6 @@
 import h5py
 import numpy as np
+import scipy.stats
 
 from strawb import tools
 
@@ -32,6 +33,7 @@ class TRBTools:
         self._interp_frequency_ = None  # artificially readout frequency
         self._interp_time_ = None  # absolute timestamps. Shape: [time_j]
         self._interp_rate_ = None  # rate as a 2d array. Shape: [channel_i, time_j]
+        self._interp_active_ratio_ = None  # rate as a 2d array. Shape: [channel_i, time_j]
 
         # link to file_handler
         self.file_handler = file_handler
@@ -67,6 +69,7 @@ class TRBTools:
         """List of arrays of raw counts, needs to be set in the child class. raw_counts_arr[0] must be the time
         counter of the TRB aka ch0."""
         return None
+
     # ---- END MANDATORY properties ----
 
     # Properties prevent here to load data directly at initialisation and to prevent setting the variables
@@ -359,20 +362,38 @@ class TRBTools:
             raise TypeError(f'frequency_interp must a int or float. Got {type(value)}')
         # set it and calculate the new rates
         if self._interp_frequency_ != value:
-            self._interp_time_, self._interp_rate_ = self.interpolate_rate(value)
+            self._interp_time_, self._interp_rate_, self._interp_active_ratio_ \
+                = self.interpolate_rate(value)
             self._interp_frequency_ = value
 
     @property
     def interp_time(self):
+        """The time array for the interpolated rates as np.ma.array(). shape: [time_i]
+        The masked entries are period, where no counts are stored/available."""
         if self._interp_time_ is None:
-            self._interp_time_, self._interp_rate_ = self.interpolate_rate(self._interp_frequency_)
+            self._interp_time_, self._interp_rate_, self._interp_active_ratio_ \
+                = self.interpolate_rate(self._interp_frequency_)
         return self._interp_time_
 
     @property
     def interp_rate(self):
+        """The rate array for the interpolated rates as np.ma.array(). shape: [channel_i, interp_time.shape]
+        The masked entries are period, where no counts are stored/available."""
         if self._interp_rate_ is None:
-            self._interp_time_, self._interp_rate_ = self.interpolate_rate(self._interp_frequency_)
+            self._interp_time_, self._interp_rate_, self._interp_active_ratio_\
+                = self.interpolate_rate(self._interp_frequency_)
         return self._interp_rate_
+
+    @property
+    def interp_active_ratio(self):
+        """The active read ratio array for the interpolated rates. shape: [channel_i, interp_time.shape].
+        The TRB counter, signalise if a counter was read in active mode. This array gives, the ratio of counter reads,
+        which have been active.
+        The masked entries are period, where no counts are stored/available."""
+        if self._interp_active_ratio_ is None:
+            self._interp_time_, self._interp_rate_, self._interp_active_ratio_\
+                = self.interpolate_rate(self._interp_frequency_)
+        return self._interp_active_ratio_
 
     def interpolate_rate(self, frequency=333., time_probe=None):
         """Interpolates the rate and timestamps to a given 'readout' frequency. It is based on the raw counts from TRB.
@@ -403,16 +424,36 @@ class TRBTools:
         if time_probe is None:
             time_probe = np.arange(timestamps[0], timestamps[-1], 1. / frequency)
 
+        active, b, n = scipy.stats.binned_statistic(timestamps,
+                                                    self.active_read,
+                                                    statistic='sum',
+                                                    bins=time_probe)
+
+        reads, b, n = scipy.stats.binned_statistic(timestamps,
+                                                   None,
+                                                   statistic='count',
+                                                   bins=time_probe)
+        # transform active to active read ratio
+        mask = reads != 0
+        active = active.astype(float)
+        active[:, mask] = active[:, mask] / reads[mask]
+        active[:, ~mask] = np.nan
+
         counts = interp_np(x=time_probe, xp=timestamps, fp=self.counts)
 
         abs_time = np.interp(x=time_probe,
                              xp=timestamps,
                              fp=self.time.astype(float),  # np.interp works only with float, int
-                             ).astype('datetime64[us]')
+                             ).astype(self.time.dtype)
 
         rate_inter = np.diff(counts) / np.diff(time_probe)
         time_inter = abs_time[:-1] + np.diff(abs_time) * .5
-        return time_inter, rate_inter
+
+        # mask the arrays, keep in mind: active and rate_inter are 2D-arrays and time_inter is 1D
+        active = np.ma.masked_invalid(active)
+        rate_inter = np.ma.array(rate_inter, mask=active.mask)
+        time_inter = np.ma.array(time_inter, mask=~mask)
+        return time_inter, rate_inter, active
 
     def __load_interp_rate__(self):
         group = self.file_handler.file['counts_interpolated']
