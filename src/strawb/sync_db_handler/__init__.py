@@ -46,13 +46,10 @@ class SyncDBHandler:
         """
 
         # find handle file_name and fine it.
-        if file_name is None:
-            self.file_name = None
-        elif file_name == 'Default':  # take the default or None if it doesn't exist
+        if file_name is None or file_name == 'Default':  # take the default or None if it doesn't exist
             self.file_name = Config.pandas_file_sync_db
-            if not os.path.exists(self.file_name):  # roll back to None if the file doesn't exist or isn't loaded.
-                print(f"File doesn't exist: {self.file_name} -> file_name set to None.")
-                self.file_name = None
+        elif os.path.isabs(file_name):
+            self.file_name = file_name
         elif os.path.exists(file_name):  # if the file/path exists
             self.file_name = os.path.abspath(file_name)
         elif os.path.exists(os.path.join(Config.raw_data_dir, file_name)):  # maybe with raw_data_dir as path
@@ -63,23 +60,25 @@ class SyncDBHandler:
             if len(file_name_list) == 1:
                 self.file_name = file_name_list[0]
             else:
-                if not file_name_list:
-                    raise FileNotFoundError(f'{file_name} not found nor matches any file in "{Config.raw_data_dir}"')
-                else:
-                    raise FileExistsError(f'{file_name} matches multiple files in "{Config.raw_data_dir}": '
-                                          f'{file_name_list}')
+                if file_name_list:
+                    print(f'{file_name} matches multiple files in "{Config.raw_data_dir}": '
+                          f'{file_name_list}.')
+                self.file_name = os.path.abspath(file_name)
 
+        self.onc_downloader = ONCDownloader(**kwargs)
         self.dataframe = None  # stores the db in a pandas data frame
-
-        self.load_db()  # loads the db if file is valid
 
         self.onc_downloader = ONCDownloader(**kwargs)
 
-        # load the DB only if the file exists, i.e. file_name = 'Default'
-        if update and os.path.exists(self.file_name):
-            self.update_sync_state()
-            self.update_hdf5_attributes()
-            self.update_file_version()
+        if os.path.exists(self.file_name):
+            self.load_db()  # loads the db if file is valid
+            # load the DB only if the file exists, i.e. file_name = 'Default'
+            if update:
+                self.update_sync_state()
+                self.update_hdf5_attributes()
+                self.update_file_version()
+        else:
+            print(f"File doesn't exist: {self.file_name} -> load data and execute .save_db() to create it.")
 
     @property
     def dataframe(self):
@@ -100,15 +99,16 @@ class SyncDBHandler:
 
     def load_db(self):
         """Loads the DB file into a pandas.DataFrame from the file provided at the initialisation."""
-        if self.file_name is not None:
+        #  if self.file_name is not None:
+        if os.path.exists(self.file_name):
             self.dataframe = pandas.read_pickle(self.file_name)
 
     def save_db(self):
         """Saves the DB file into a pandas.DataFrame to the file provided at the initialisation."""
         # store information in a pandas-file
         if self.dataframe is not None:  # only save it, when there is something stored in the dataframe
-            if self.file_name is None:  # in case, set the default file name
-                self.file_name = Config.pandas_file_sync_db
+            # if self.file_name is None:  # in case, set the default file name
+            #     self.file_name = Config.pandas_file_sync_db
             self.dataframe.to_pickle(self.file_name,
                                      protocol=4,  # protocol=4 compatible with python>=3.4
                                      )
@@ -222,11 +222,12 @@ class SyncDBHandler:
         return dataframe
 
     def get_mask_h5_attrs(self, dataframe=None):
-        """Return a mask which mask all indexes where the column 'h5_attrs' is not 'np.nan' nor '{}'."""
+        """Return a mask which mask all indexes where the column 'h5_attrs' is not 'np.nan' """
+        # nor '{}'.
         if dataframe is None:
             dataframe = self.dataframe
 
-        mask = dataframe['h5_attrs'].isnull() + (dataframe['h5_attrs'] == {})
+        mask = dataframe['h5_attrs'].isnull()  # + (dataframe['h5_attrs'] == {})
         return ~mask
 
     @staticmethod
@@ -358,8 +359,10 @@ class SyncDBHandler:
             dataframe = self.dataframe
         if dataframe is None:  # when self.dataframe is None
             return
-
+        synced_0 = dataframe['synced'].sum()
         dataframe['synced'] = np.array([os.path.exists(i) for i in dataframe["fullPath"]], dtype=bool)
+        synced_1 = dataframe['synced'].sum()
+        print(f'update synced form {synced_0:10.0f} to {synced_1:10.0f}; delta: {synced_1-synced_0:10.0f}')
         return dataframe['synced']
 
     def _extract_hdf5_attribute_(self, i, dataframe, entries_converter, keys_converter):
@@ -380,7 +383,6 @@ class SyncDBHandler:
 
         else:
             attrs_dict = self._convert_dict_entries_(attrs_dict, converter=entries_converter)
-
             attrs_dict = self._convert_dict_keys_(attrs_dict, converter=keys_converter)
             dataframe.loc[full_path, 'h5_attrs'] = [attrs_dict]  # [] has to be used to set the dict - (why?)
 
@@ -436,7 +438,7 @@ class SyncDBHandler:
             keys_converter = {'mes_typ': 'measurement_type', 'mes_duration': 'measurement_duration',
                               'mes_steps': 'measurement_steps'}
 
-        sjt = ShareJobThreads(thread_n=5, unit='files')
+        sjt = ShareJobThreads(thread_n=1, unit='files')  # multi threading isn't faster here, use the progress bar only
         sjt.do(self._extract_hdf5_attribute_,
                np.argwhere(items_to_check.to_numpy(dtype=bool)).flatten(),
                dataframe=dataframe,
@@ -719,6 +721,9 @@ class SyncDBHandler:
             err = BaseFileHandler.error2codes['FileHandler not implemented']
             dataframe.loc[dataframe.fullPath.iloc[i], 'file_version'] = err
 
+        # print(i, file_handler, dataframe.loc[dataframe.fullPath.iloc[i], 'file_version'])
+        return dataframe.loc[dataframe.fullPath.iloc[i], 'file_version']
+
     def update_file_version(self, dataframe=None, update_existing=False):
         """Update the file version/state of all items in the dataframe. A negative file version indicate errors.
         The translation of negative file version is located at: strawb.BaseFileHandler.codes2error or
@@ -771,6 +776,7 @@ class SyncDBHandler:
                                      inplace=True)
 
         # only 1 thread works here otherwise some files are labeled wrong (why?)
+        # + multi threading isn't faster here, use the progress bar only
         sjt = ShareJobThreads(thread_n=1, unit='files')
         sjt.do(self._update_file_version_,
                np.argwhere(items_to_check.to_numpy(dtype=bool)).flatten(),

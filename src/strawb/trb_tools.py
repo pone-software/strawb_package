@@ -1,5 +1,6 @@
 import h5py
 import numpy as np
+import scipy.stats
 
 from strawb import tools
 
@@ -24,10 +25,15 @@ class TRBTools:
         self._rate_delta_time = None
         self._rate = None  # stores result of self.calculate_rates() (needs `self._dcounts_arr_`)
 
+        # in some version of the SDAQ there was a bug which leads to a corrupt start of n indexes.
+        # where n is the length of the SDAQ buffer
+        self._index_start_valid_data_ = None
+
         # interpolated rates. Based on the `counts` and interpolated to fit a artificially readout frequency.
         self._interp_frequency_ = None  # artificially readout frequency
         self._interp_time_ = None  # absolute timestamps. Shape: [time_j]
         self._interp_rate_ = None  # rate as a 2d array. Shape: [channel_i, time_j]
+        self._interp_active_ratio_ = None  # rate as a 2d array. Shape: [channel_i, time_j]
 
         # link to file_handler
         self.file_handler = file_handler
@@ -63,18 +69,50 @@ class TRBTools:
         """List of arrays of raw counts, needs to be set in the child class. raw_counts_arr[0] must be the time
         counter of the TRB aka ch0."""
         return None
+
     # ---- END MANDATORY properties ----
 
     # Properties prevent here to load data directly at initialisation and to prevent setting the variables
     @property
+    def _time_(self):
+        """The absolute timestamp in seconds since epoch when the counter are recorded. This time isn't very
+        precise as it comes from the CPU clock, therefore its absolute. See `rate_time` for a very precise but
+        not absolute timestamps from the TRB."""
+        if self.__time__ is None:
+            return None
+
+        return self.__time__[self.index_start_valid_data:]
+
+    @property
     def time(self):
-        """The absolute timestamp when the counter are recorded. This time isn't very precise as it comes from the CPU
-        clock, therefore its absolute. See `rate_time` for a very precise but not absolute timestamps from the TRB."""
-        if isinstance(self.__time__, h5py.Dataset):
-            # noinspection PyUnresolvedReferences
-            return self.__time__.asdatetime()[:]
-        else:
-            return tools.asdatetime(self.__time__)
+        """The absolute timestamp as datetime when the counter are recorded. This time isn't very
+        precise as it comes from the CPU clock, therefore its absolute. See `rate_time` for a very precise but
+        not absolute timestamps from the TRB."""
+        if self.__time__ is None:
+            return
+
+        # if isinstance(self.__time__, h5py.Dataset):
+        #     # noinspection PyUnresolvedReferences
+        #     return self.__time__.asdatetime()[self.index_start_valid_data:]
+        # else:
+        return tools.asdatetime(self._time_)
+
+    @property
+    def index_start_valid_data(self):
+        """ Workaround for a bug in SDAQ, which writes at initialisation the buffer size to the file.
+        This means, the first n (=buffer size) entries are corrupt, which can detected by looking for the sorting
+        """
+        if self.__time__ is None:
+            return None
+        elif self._index_start_valid_data_ is None:
+            # noinspection PyTypeChecker
+            sort_args = np.argsort(self.__time__)
+            unordered_indexes = np.argwhere(np.diff(sort_args) != 1).flatten()
+            if len(unordered_indexes) != 0:
+                self._index_start_valid_data_ = unordered_indexes[-1] + 1
+            else:
+                self._index_start_valid_data_ = 0
+        return self._index_start_valid_data_
 
     @property
     def time_middle(self):
@@ -198,8 +236,13 @@ class TRBTools:
 
     def diff_counts(self):
         if self.raw_counts_arr is not None:
+            # noinspection PyTypeChecker
+            raw_counts_arr = np.array(self.raw_counts_arr)[:, self.index_start_valid_data:]
+
             # noinspection PyArgumentList
-            self.__dcounts_arr__, self._active_read_arr_ = self._diff_counts_(*self.raw_counts_arr)
+            self.__dcounts_arr__, self._active_read_arr_ = self._diff_counts_(*raw_counts_arr)
+            self._active_read_arr_ = self._active_read_arr_[1:]  # ch0 can't be active
+
             return self._dcounts_arr_
         return None
 
@@ -299,10 +342,10 @@ class TRBTools:
                     ][0]
 
         daq_frequency_readout = float(daq_frequency_readout)  # must be a float
-        dcounts_arr = np.array(dcounts_arr, dtype=np.int64)  # must be of int64
+        dcounts_arr = np.array(dcounts_arr, dtype=np.float)  # must be of int64
 
         # Calculate Rates
-        delta_time = dcounts_time / daq_frequency_readout  # seconds
+        delta_time = dcounts_time.astype(float) / daq_frequency_readout  # seconds
         rate_arr = dcounts_arr.astype(float) / delta_time
 
         return delta_time, rate_arr
@@ -319,34 +362,56 @@ class TRBTools:
             raise TypeError(f'frequency_interp must a int or float. Got {type(value)}')
         # set it and calculate the new rates
         if self._interp_frequency_ != value:
+            self._interp_time_, self._interp_rate_, self._interp_active_ratio_ \
+                = self.interpolate_rate(value)
             self._interp_frequency_ = value
-            self._interp_time_, self._interp_rate_ = self.interpolate_rate(self._interp_frequency_)
 
     @property
     def interp_time(self):
+        """The time array for the interpolated rates as np.ma.array(). shape: [time_i]
+        The masked entries are period, where no counts are stored/available."""
         if self._interp_time_ is None:
-            self._interp_time_, self._interp_rate_ = self.interpolate_rate(self._interp_frequency_)
+            self._interp_time_, self._interp_rate_, self._interp_active_ratio_ \
+                = self.interpolate_rate(self._interp_frequency_)
         return self._interp_time_
 
     @property
     def interp_rate(self):
+        """The rate array for the interpolated rates as np.ma.array(). shape: [channel_i, interp_time.shape]
+        The masked entries are period, where no counts are stored/available."""
         if self._interp_rate_ is None:
-            self._interp_time_, self._interp_rate_ = self.interpolate_rate(self._interp_frequency_)
+            self._interp_time_, self._interp_rate_, self._interp_active_ratio_\
+                = self.interpolate_rate(self._interp_frequency_)
         return self._interp_rate_
 
-    def interpolate_rate(self, frequency=333.):
+    @property
+    def interp_active_ratio(self):
+        """The active read ratio array for the interpolated rates. shape: [channel_i, interp_time.shape].
+        The TRB counter, signalise if a counter was read in active mode. This array gives, the ratio of counter reads,
+        which have been active.
+        The masked entries are period, where no counts are stored/available."""
+        if self._interp_active_ratio_ is None:
+            self._interp_time_, self._interp_rate_, self._interp_active_ratio_\
+                = self.interpolate_rate(self._interp_frequency_)
+        return self._interp_active_ratio_
+
+    def interpolate_rate(self, frequency=333., time_probe=None):
         """Interpolates the rate and timestamps to a given 'readout' frequency. It is based on the raw counts from TRB.
         The process is the following. It interpolates the cumulative counts and calculates the rate based on it.
         PARAMETER
         ---------
         frequency: float, optional
-            the frequency to which the data is interpolated in Hz. Default is 333 Hz.
+            the frequency to which the data is interpolated in Hz. Default is 333 Hz. `time_probe` must be None.
+        time_probe: ndarray, optional
+            the timestamps in seconds since the file start and at which the counts should be interpolated to calculate
+            the rates. For absolute timestamps subtract: strawb.tools.datetime2float(pmt.trb_rates.time)[0].
         RETURN
         ------
         time_inter: np.array
-            the interpolated absolute time
+            the interpolated absolute timestamp in seconds since the epoch. It corresponds to the middle of time_probe.
+            Therefore len(time_probe) -1 == len(time_inter)
         rate_inter: np.array
-            the interpolated rate
+            the interpolated rate as a 2d array with shape [channel_i, rate_j] and len(rate_j) == len(time_inter).
         """
 
         def interp_np(x, xp, fp):
@@ -356,18 +421,39 @@ class TRBTools:
             return y
 
         timestamps = self.rate_time  # seconds since file started
-        time_probe = np.arange(timestamps[0], timestamps[-1], 1. / frequency)
+        if time_probe is None:
+            time_probe = np.arange(timestamps[0], timestamps[-1], 1. / frequency)
+
+        active, b, n = scipy.stats.binned_statistic(timestamps,
+                                                    self.active_read,
+                                                    statistic='sum',
+                                                    bins=time_probe)
+
+        reads, b, n = scipy.stats.binned_statistic(timestamps,
+                                                   None,
+                                                   statistic='count',
+                                                   bins=time_probe)
+        # transform active to active read ratio
+        mask = reads != 0
+        active = active.astype(float)
+        active[:, mask] = active[:, mask] / reads[mask]
+        active[:, ~mask] = np.nan
 
         counts = interp_np(x=time_probe, xp=timestamps, fp=self.counts)
 
         abs_time = np.interp(x=time_probe,
                              xp=timestamps,
                              fp=self.time.astype(float),  # np.interp works only with float, int
-                             ).astype('datetime64[us]')
+                             ).astype(self.time.dtype)
 
         rate_inter = np.diff(counts) / np.diff(time_probe)
         time_inter = abs_time[:-1] + np.diff(abs_time) * .5
-        return time_inter, rate_inter
+
+        # mask the arrays, keep in mind: active and rate_inter are 2D-arrays and time_inter is 1D
+        active = np.ma.masked_invalid(active)
+        rate_inter = np.ma.array(rate_inter, mask=active.mask)
+        time_inter = np.ma.array(time_inter, mask=~mask)
+        return time_inter, rate_inter, active
 
     def __load_interp_rate__(self):
         group = self.file_handler.file['counts_interpolated']

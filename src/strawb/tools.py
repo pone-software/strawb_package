@@ -7,7 +7,7 @@ import scipy.stats
 from matplotlib import pyplot as plt
 #  ---- HDF5 Helper ----
 # add new asdatetime to h5py Dataset similar to asdtype for datetime64 when time is given as float in seconds
-from tqdm import tqdm
+import tqdm
 
 
 class AsDatetimeWrapper(object):
@@ -170,9 +170,9 @@ class ShareJobThreads:
         """The function for the thread 'thread_bar' which takes care of the bar updates."""
         last_i = 0
 
-        with tqdm(self.iterable,
-                  file=sys.stdout,
-                  unit=self.unit) as bar:
+        with tqdm.tqdm(self.iterable,
+                       file=sys.stdout,
+                       unit=self.unit) as bar:
             while any([thread_i.is_alive() for thread_i in self.threads]) or last_i != self.i_bar:
                 with self.lock:
                     # print(self.i, self.active)
@@ -195,10 +195,10 @@ class ShareJobThreads:
     def _worker_(self, ):
         """The worker function for the worker threads. It takes care of executing the target function 'f' with the next
         item of the iterable list and the kwargs. """
-        iterable_i = True
-        while self.active and iterable_i:
-            iterable_i = self._get_next_()
-            if iterable_i is not False:
+        active = True
+        while self.active and active:
+            iterable_i, active = self._get_next_()
+            if active:
                 try:
                     buffer = self.f(iterable_i, **self.kwargs)
                 except (RuntimeError, Exception) as err:
@@ -215,9 +215,9 @@ class ShareJobThreads:
             if len(self.iterable) > self.i:
                 iterable_i = self.iterable[self.i]
                 self.i += 1
-                return iterable_i
+                return iterable_i, True
             else:
-                return False
+                return None, False
 
 
 def hdf5_getunsorted(self, index):
@@ -357,3 +357,54 @@ def wavelength_to_rgb(channel, gamma=0.8):
     else:
         return_this = alt_color
     return return_this
+
+
+def unique_steps(t, state, ratio_steps_len_1=.75, plot=False):
+    """ Each step (same state in a row) get a start and end time if there is only one time for one step,
+    the end is calculated as a ratio (ratio_steps_len_1)
+    PARAMETERS
+    ----------
+    t: ndarray
+        the time series of len N
+    state: ndarray
+        the state series of len N
+    ratio_steps_len_1: float, optional
+        if a step has only one point and not start + end, the one point is defined as starting point and the end is
+        defined by the ratio to the next step. [..., t_0, t_1,...] -> [..., t_0, (t_1-t_0)*ratio_steps_len_1, t_1,...]
+    plot: bool, optional
+        if a plot t vs state should be plotted to show how it works.
+
+    RETURNS
+    --------
+    t_steps: ndarray
+        [[t_0, t_1], [t_2, t_3],...,[t_(2*i),t_(2*i+1)]]
+    state: ndarray
+        [[s_0, s_0], [s_1, s_1],...,[s_i,s_i]]
+    """
+    # cumsum over the bool array of changes
+    change_cumsum = np.cumsum([0, *np.diff(state).astype(bool)])
+
+    mask_changes = np.ones_like(change_cumsum, dtype=bool)
+    mask_changes[-1] = change_cumsum[-1] != change_cumsum[-2]
+    mask_changes[1:-1] = np.diff(change_cumsum[:-1]) != 0
+
+    index_steps = np.array([np.argwhere(mask_changes), np.argwhere(mask_changes)]).T.reshape(-1, 2)
+    index_steps[:-1, 1] = index_steps[1:, 0] - 1
+    index_steps[-1, 1] = len(state) - 1
+
+    t_steps = t[index_steps].astype(float)
+
+    step_len_1 = np.argwhere(t_steps[:, 0] == t_steps[:, 1]).flatten()
+    t_steps[step_len_1[:-1], 1] += (t_steps[step_len_1[:-1] + 1, 0] - t_steps[step_len_1[:-1], 0]) * ratio_steps_len_1
+
+    if plot:
+        plt.figure()
+        plt.plot(t, state, 'o-', label='raw')
+        plt.plot(t[mask_changes], state[mask_changes], 'o-', label='mask changes')
+        plt.plot(t[index_steps.flatten()], state[index_steps.flatten()], 's', label='index_steps')
+        plt.plot(t_steps.flatten(), state[index_steps.flatten()], 'x-', label='t_steps')
+        # plt.plot(tt.T, state[mm].T, 'o--')-
+        # tt, state[mm].T, m, mm
+        plt.legend()
+
+    return t_steps, state[index_steps]
