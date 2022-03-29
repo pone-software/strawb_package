@@ -276,3 +276,22 @@ class BaseFileHandler:
             load_function(fake)
 
         return fake
+
+    def explore_sdaq_file(self, show_attributes=True):
+        """Show the internal structure of the SDAQ hdf5 file.
+        PARAMETER
+        ---------
+        show_attributes: bol, optional
+            if hdf5 attributes should be printed
+        """
+        if show_attributes:
+            print(f'File Attributes: {dict(self.file.attrs)}')
+
+        for i in self.file:
+            group = self.file[i]
+            print(f'Group: {i}')
+            if show_attributes:
+                print(f' Attributes: {dict(group.attrs)}')
+            print(' Datasets:')
+            for j in group:
+                print(f'  {j:27}; shape: {group[j].shape}')
