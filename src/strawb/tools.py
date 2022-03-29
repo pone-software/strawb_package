@@ -56,6 +56,10 @@ def asdatetime(array, precision='us', date_type='datetime'):
     if date_type.lower() not in ['datetime', 'timedelta']:
         raise ValueError(f'date_type has to be out of: `datetime` or `timedelta`. Got: {date_type}')
 
+    if not isinstance(array, np.ndarray):
+        # try to convert it to a numpy array
+        array = np.array(array)
+
     dtype = np.dtype(f'{date_type.lower()}64[{precision.lower()}]')
     scale = float(unit_dict[precision.lower()])
 
