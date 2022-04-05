@@ -3,6 +3,25 @@ import h5py
 
 class VirtualHDF5:
     def __init__(self, file_name, file_name_list, obj_dict_filter=None):
+        """Creates a virtual hdf5 file. A virtual hdf5 file can link data from multiple hdf5 files to one file.
+        It also supports datasets, and a dataset in a virtual hdf5 file can be composed from
+        different hdf5 datasets.
+
+        PARAMETER
+        ---------
+        file_name: str,
+            filename for the virtual hdf5 file.
+        file_name_list: list[str]
+            a list of hdf5 filenames which are the source of the virtual hdf5 file
+        obj_dict_filter: dict, optional
+            a filter class to detect invalid files from file_name_list.
+            The class must have a 'filter' function which takes the 'obj_dict' and returns the modified obj_dict.
+            i.e. obj_dict_filter.filter(obj_dict)
+
+        EXAMPLE
+        -------
+
+        """
         self.file_name = file_name
         self.file_name_list = file_name_list
         self.obj_dict_filter = obj_dict_filter
@@ -64,6 +83,26 @@ class VirtualHDF5:
         return [i for i, item in obj_dict.items() if 'VDataSets' in item]
 
     def get_obj_dict(self, file_name_list=None):
+        """Generates the obj_dict for the given files. The dictionary has the path as key and each value is another
+        dictionary, i.e. obj_dict[key_i] = {..}, which holds information about the path. There are two types:
+        Group (hdf5 directory): '/path/to/group': {'attrs': <group attrs>}
+        DataSet               : '/path/to/dataset': {'attrs': <group attrs>,
+                                                     'VDataSets': [VirtualSource0],
+                                                     'total_length': <int>}
+        If multiple files have a dataset with the identical </path/to/dataset>, 'VDataSets': [VirtualSource0, ...] holds
+        the links to the dataset in the different files and the 'total_length' of all dataset along axis0 is calculated.
+
+        The obj_dict looks like:
+        {'/': {'attrs': {'dev_code': 'DEVICE001'}},
+         '/group0': {'attrs': {'sensor_code': 1234}},
+         '/group0/dataset0': {'VDataSets': [ < h5py._hl.vds.VirtualSource at 0x7fbb26959410 >,  # dataset file1
+                                             < h5py._hl.vds.VirtualSource at 0x7fbb26972510 >],  # dataset file2
+                              'total_length': 100,
+                              'attrs': {'unit': 'ms'}
+                             },
+        '/group1': {'attrs': {}},
+        ...
+        }"""
         if file_name_list is not None:  # file_name_list can be updated later
             self.file_name_list = file_name_list
 
