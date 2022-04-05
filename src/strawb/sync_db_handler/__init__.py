@@ -221,15 +221,6 @@ class SyncDBHandler:
 
         return dataframe
 
-    def get_mask_h5_attrs(self, dataframe=None):
-        """Return a mask which mask all indexes where the column 'h5_attrs' is not 'np.nan' """
-        # nor '{}'.
-        if dataframe is None:
-            dataframe = self.dataframe
-
-        mask = dataframe['h5_attrs'].isnull()  # + (dataframe['h5_attrs'] == {})
-        return ~mask
-
     @staticmethod
     def _check_double_indexes_(a, b):
         """Check if two datasets have the same indexes and delete this index (drop=pop index) from one of the datasets.
@@ -362,11 +353,11 @@ class SyncDBHandler:
         synced_0 = dataframe['synced'].sum()
         dataframe['synced'] = np.array([os.path.exists(i) for i in dataframe["fullPath"]], dtype=bool)
         synced_1 = dataframe['synced'].sum()
-        print(f'update synced form {synced_0:10.0f} to {synced_1:10.0f}; delta: {synced_1-synced_0:10.0f}')
+        print(f'update synced form {synced_0:10.0f} to {synced_1:10.0f}; delta: {synced_1 - synced_0:10.0f}')
         return dataframe['synced']
 
     def _extract_hdf5_attribute_(self, i, dataframe, entries_converter, keys_converter):
-        full_path = dataframe['fullPath'].iloc[i]
+        full_path = dataframe.fullPath.iloc[i]
         try:
             with h5py.File(full_path, 'r') as f:
                 attrs_dict = dict(f.attrs)
@@ -374,17 +365,27 @@ class SyncDBHandler:
         except OSError as err:  # file not found or can't load it
             for err_i in err.args:
                 if isinstance(err_i, str) and 'file signature not found' in err_i:  # no hdf5 file
-                    pass
+                    continue
                 if isinstance(err_i, str) and 'No such file or directory' in err_i:  # filed doesn't exist
-                    pass
+                    continue
+            print(f'WARNING: {dataframe.filename.iloc[i]} - {err}')
 
         except Exception as err:
-            print(f'WARNING: {err}')
+            print(f'WARNING: {dataframe.filename.iloc[i]} - {err}')
 
         else:
             attrs_dict = self._convert_dict_entries_(attrs_dict, converter=entries_converter)
             attrs_dict = self._convert_dict_keys_(attrs_dict, converter=keys_converter)
             dataframe.loc[full_path, 'h5_attrs'] = [attrs_dict]  # [] has to be used to set the dict - (why?)
+
+    def get_mask_h5_attrs(self, dataframe=None):
+        """Return a mask which mask all indexes where the column 'h5_attrs' is not 'np.nan' """
+        # nor '{}'.
+        if dataframe is None:
+            dataframe = self.dataframe
+
+        mask = dataframe['h5_attrs'].isnull()  # + (dataframe['h5_attrs'] == {})
+        return ~mask
 
     def update_hdf5_attributes(self, dataframe=None, update_existing=False,
                                entries_converter=None, keys_converter=None, add_hdf5_attributes2dataframe=True):
@@ -426,7 +427,7 @@ class SyncDBHandler:
             items_to_check = dataframe.h5_attrs.isnull()  # takes all None or np.nan
 
         # include only file which ends with 'hdf5' or 'h5'
-        items_to_check &= dataframe.fullPath.str.endswith('hdf5') | dataframe.fullPath.str.endswith('h5')
+        items_to_check &= dataframe.filename.str.endswith('hdf5') | dataframe.filename.str.endswith('h5')
         items_to_check &= dataframe['synced']  # exclude non existing files
 
         # convert file_id's with nan to int. Otherwise pandas interprets the Series as float and the resolution
@@ -484,8 +485,10 @@ class SyncDBHandler:
             h5_dataframe[i] = None
 
         # format the columns
-        h5_dataframe.rollover_interval.apply(
-            lambda x: ast.literal_eval(str(x)))  # is dataframe string like "{'days': 1}"
+        # some values are np.nan (why?), remove them here
+        h5_dataframe.loc[h5_dataframe.rollover_interval.isnull(), 'rollover_interval'] = None
+        # rollover_interval is dataframe string like "{'days': 1}" change it here to dict
+        h5_dataframe.rollover_interval.apply(lambda x: ast.literal_eval(str(x)) if x is not None else None)
         h5_dataframe.file_start = pandas.to_datetime(h5_dataframe.file_start,
                                                      unit='s', errors='coerce', utc=True, infer_datetime_format=True)
         h5_dataframe.file_end = pandas.to_datetime(h5_dataframe.file_end,
