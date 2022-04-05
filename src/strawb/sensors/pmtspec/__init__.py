@@ -12,6 +12,14 @@ class PMTSpec:
     # FileHandler = FileHandler
 
     def __init__(self, file: Union[str, FileHandler] = None, name=''):
+        """The PMTSpec class.
+        PARAMETER
+        ---------
+        file: Union[str, FileHandler], optional
+            The filename as string or a instance of the pmtspec.FileHandler
+        name: str, optional
+            to give the class a name
+        """
         self.name = name
 
         if isinstance(file, str):
