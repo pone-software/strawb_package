@@ -87,12 +87,20 @@ class BaseFileHandler:
                                           f'{file_name_list}')
 
         # in case, extract the module name from the filename
-        if module is None and file_name is not None:
-            try:
-                # '...le_data/TUMMINISPECTROMETER001_202104...' -> 'MINISPECTROMETER001'
-                self.module = file_name.rsplit('/', 1)[-1].split('_', 1)[0].replace('TUM', '')
-            except (KeyError, ValueError, TypeError):
-                pass
+        if module is None:
+            if self.file_attributes is not None:
+                try:
+                    self.module = self.file_attributes['dev_code']
+                except KeyError:
+                    pass
+            if file_name is not None and self.module is None:
+                try:
+                    # '...le_data/TUMMINISPECTROMETER001_202104...' -> 'MINISPECTROMETER001'
+                    self.module = file_name.rsplit('/', 1)[-1].split('_', 1)[0].replace('TUM', '')
+                except (KeyError, ValueError, TypeError):
+                    pass
+        else:
+            self.module = module
 
     def close(self):
         """Close the file if it is open."""
