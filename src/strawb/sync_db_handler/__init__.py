@@ -30,7 +30,7 @@ class SyncDBHandler:
         'PMTSD': pmtspec,  # TUMPMTSPECTROMETER001_20211018T200000.000Z-SDAQ-PMTSPEC.hdf5
     }
 
-    def __init__(self, file_name='Default', update=False, **kwargs):
+    def __init__(self, file_name='Default', update=False, load_db=True, **kwargs):
         """Handle the DB, which holds the metadata from the ONC DB and adds quantities like hdf5 attributes.
         PARAMETER
         file_name: Union[str, None], optional
@@ -41,12 +41,16 @@ class SyncDBHandler:
             - a file name which is anywhere located in the strawb.Config.raw_data_dir
         update: bool, optional
             defines if the entries should be checked against existing files
+        load_db: bool, update
+            True (default) loads the DB if it exists if `file_name` is not None. False doesn't load it.
         kwargs: dict, optional
             parsed to ONCDownloader(**kwargs), e.g.: token, outPath, download_threads
         """
 
         # find handle file_name and fine it.
-        if file_name is None or file_name == 'Default':  # take the default or None if it doesn't exist
+        if file_name is None:  # non, doesn't load the DB
+            self.file_name = None
+        elif file_name == 'Default':  # take the default
             self.file_name = Config.pandas_file_sync_db
         elif os.path.isabs(file_name):
             self.file_name = file_name
@@ -70,15 +74,16 @@ class SyncDBHandler:
 
         self.onc_downloader = ONCDownloader(**kwargs)
 
-        if os.path.exists(self.file_name):
-            self.load_db()  # loads the db if file is valid
-            # load the DB only if the file exists, i.e. file_name = 'Default'
-            if update:
-                self.update_sync_state()
-                self.update_hdf5_attributes()
-                self.update_file_version()
-        else:
-            print(f"File doesn't exist: {self.file_name} -> load data and execute .save_db() to create it.")
+        if self.file_name is not None and load_db:
+            if os.path.exists(self.file_name):
+                self.load_db()  # loads the db if file is valid
+                # load the DB only if the file exists, i.e. file_name = 'Default'
+                if update:
+                    self.update_sync_state()
+                    self.update_hdf5_attributes()
+                    self.update_file_version()
+            else:
+                print(f"File doesn't exist: {self.file_name} -> load data and execute .save_db() to create it.")
 
     @property
     def dataframe(self):
@@ -148,7 +153,7 @@ class SyncDBHandler:
             self._check_index_(dataframe)  # check the new dataframe
             # append it
             self._check_double_indexes_(self.dataframe, dataframe2add)
-            dataframe = dataframe.append(dataframe2add,
+            dataframe = dataframe.append(dataframe2add,  # for newer pandas versions: concat = append
                                          ignore_index=False,
                                          verify_integrity=True)
             if to_self:
@@ -217,7 +222,7 @@ class SyncDBHandler:
             difference = dataframe2add.index.difference(dataframe.index)
             if difference.shape[0] != 0:
                 dataframe2add_diff = dataframe2add.loc[difference]
-                dataframe = dataframe.append(dataframe2add_diff)
+                dataframe = dataframe.append(dataframe2add_diff)  # for newer pandas versions: concat = append
 
         if in_place:
             self.dataframe = dataframe
@@ -430,7 +435,7 @@ class SyncDBHandler:
             items_to_check = dataframe.h5_attrs.isnull()  # takes all None or np.nan
 
         # include only file which ends with 'hdf5' or 'h5'
-        items_to_check &= dataframe.filename.str.endswith('hdf5') | dataframe.filename.str.endswith('h5')
+        items_to_check &= dataframe.fullPath.str.endswith('hdf5') | dataframe.fullPath.str.endswith('h5')
         items_to_check &= dataframe['synced']  # exclude non existing files
 
         # convert file_id's with nan to int. Otherwise pandas interprets the Series as float and the resolution
