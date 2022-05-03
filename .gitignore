@@ -19,3 +19,4 @@ no_git/
 .vscode/settings.json
 settings.py
 .venv/
+**/*.pyc
