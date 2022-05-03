@@ -18,3 +18,4 @@ config-* # personal config files
 no_git/
 .vscode/settings.json
 settings.py
+.venv/
