@@ -26,19 +26,30 @@ class Scan:
 
 
 class RateScan:
-    def __init__(self, pmt_spec):
+    def __init__(self, trb_rates, pmt_meta_data=None):
         """Class which takes separates the steps of a rate scan and calculate the average rates per threshold.
 
         PARAMETER
         ---------
-        pmt_spec: strawb.sensors.PMTSpec
-            link to the strawb.sensors.PMTSpec instance (parent of the class)
+        trb_rates: strawb.sensors.pmtspec.PMTSpecTRBRates
+            link to the strawb.sensors.pmtspec.PMTSpecTRBRates instance
+        pmt_meta_data: strawb.sensors.pmtspec.PMTMetaData, optional
         """
-        self.pmt_spec = pmt_spec
+        self.trb_rates = trb_rates
+        if pmt_meta_data is None:
+            self.pmt_meta_data = strawb.sensors.pmtspec.PMTMetaData()
+        else:
+            self.pmt_meta_data = pmt_meta_data
 
         # store the instances of `Scan` for both scans and the properties
         self._scan_on_ = None
         self._scan_off_ = None
+
+    def __del__(self):
+        del self.trb_rates
+        del self._scan_on_
+        del self._scan_off_
+        del self.pmt_meta_data
 
     @property
     def scan_on(self):
@@ -88,15 +99,15 @@ class RateScan:
         if time_padiwa[-2] == time_padiwa[-1]:
             time_padiwa[-1] += time_padiwa[-3] - time_padiwa[-4]
 
-        t_0 = strawb.tools.datetime2float(self.pmt_spec.trb_rates.time)[0]
-        t, r, a = self.pmt_spec.trb_rates.interpolate_rate(time_probe=time_padiwa - t_0)
+        t_0 = strawb.tools.datetime2float(self.trb_rates.time)[0]
+        t, r, a = self.trb_rates.interpolate_rate(time_probe=time_padiwa - t_0)
 
         # count how often the channel is active
-        active, b, n = scipy.stats.binned_statistic(self.pmt_spec.file_handler.counts_time,
-                                                    self.pmt_spec.trb_rates.active_read,
+        active, b, n = scipy.stats.binned_statistic(self.trb_rates.file_handler.counts_time,
+                                                    self.trb_rates.active_read,
                                                     statistic='sum',
                                                     bins=time_padiwa)
-        reads, b, n = scipy.stats.binned_statistic(self.pmt_spec.file_handler.counts_time,
+        reads, b, n = scipy.stats.binned_statistic(self.trb_rates.file_handler.counts_time,
                                                    None,
                                                    statistic='count',
                                                    bins=time_padiwa)
@@ -110,14 +121,14 @@ class RateScan:
         scan_threshold_dict = {}
 
         # mask the time of the scan
-        mask_th = (self.pmt_spec.file_handler.padiwa_time[:] >= time_padiwa[0])
-        mask_th &= (self.pmt_spec.file_handler.padiwa_time[:] <= time_padiwa[-1])
+        mask_th = (self.trb_rates.file_handler.padiwa_time[:] >= time_padiwa[0])
+        mask_th &= (self.trb_rates.file_handler.padiwa_time[:] <= time_padiwa[-1])
 
-        for ch in self.pmt_spec.pmt_meta_data.channel_meta_array:
+        for ch in self.pmt_meta_data.channel_meta_array:
             # get the parameters from the file
-            scan_threshold = self.pmt_spec.file_handler.__getattribute__(f"padiwa_th{ch['padiwa']}")
+            scan_threshold = self.trb_rates.file_handler.__getattribute__(f"padiwa_th{ch['padiwa']}")
             # older version haven't logged the scan_threshold, and 'file_id' == 17343680081235907706 is special
-            if self.pmt_spec.file_handler.file_attributes['file_id'] == 17343680081235907706:
+            if self.trb_rates.file_handler.file_attributes['file_id'] == 17343680081235907706:
                 scan_threshold_dict[ch['padiwa']] = 65000
 
             # older version haven't logged the scan_threshold but they all used 34000 with one exception (s. above)
@@ -157,10 +168,10 @@ class RateScan:
         # get unique_steps: each step (same values in a row) get a start and end time
         # if there is only one time for one step, the end is calculated as a ratio (ratio_steps_len_1)
         # to the next step, for more information see above
-        t_steps_padiwa, state_steps_padiwa = strawb.tools.unique_steps(self.pmt_spec.file_handler.padiwa_time[:],
-                                                                       self.pmt_spec.file_handler.padiwa_offset[:])
-        t_steps_hv, state_steps_hv = strawb.tools.unique_steps(self.pmt_spec.file_handler.hv_time[:],
-                                                               self.pmt_spec.file_handler.hv_power[:])
+        t_steps_padiwa, state_steps_padiwa = strawb.tools.unique_steps(self.trb_rates.file_handler.padiwa_time[:],
+                                                                       self.trb_rates.file_handler.padiwa_offset[:])
+        t_steps_hv, state_steps_hv = strawb.tools.unique_steps(self.trb_rates.file_handler.hv_time[:],
+                                                               self.trb_rates.file_handler.hv_power[:])
 
         # t_steps_padiwa     = [[t_0, t_1], [t_2, t_3],...,[t_(2*i),t_(2*i+1)]]
         # state_steps_padiwa = [[s_0, s_0], [s_1, s_1],...,[s_i,s_i]]
