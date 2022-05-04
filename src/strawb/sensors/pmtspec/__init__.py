@@ -32,3 +32,9 @@ class PMTSpec:
         self.pmt_meta_data = PMTMetaData()
 
         self.rate_scan = RateScan(pmt_spec=self)
+
+    def __del__(self):
+        del self.trb_rates
+        del self.file_handler
+        del self.pmt_meta_data
+        del self.rate_scan

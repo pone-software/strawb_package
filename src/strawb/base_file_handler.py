@@ -120,6 +120,9 @@ class BaseFileHandler:
     def __del__(self):
         """When object is not deleted, e.g. when program ends, variable deleted, deleted by the garbage collector."""
         self.close()
+        for i in self.__members__:
+            a = self.__getattribute__(i)
+            del a
 
     def _open_(self, mode='r'):
         """Opens the file if it is not open.
