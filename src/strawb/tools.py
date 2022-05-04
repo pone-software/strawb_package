@@ -412,3 +412,50 @@ def unique_steps(t, state, ratio_steps_len_1=.75, plot=False):
         plt.legend()
 
     return t_steps, state[index_steps]
+
+
+def append_hdf5(file, dataset_name, data, axis=0, **kwargs):
+    """Append a hdf5 dataset.
+    PARAMETER
+    ---------
+    file: h5py.File
+        must be open
+    dataset_name: str
+        the name of the dataset including the path
+    data: ndarray
+        the data to append
+    axis: int, optional
+        the axis which should be extended
+    **kwargs: optional
+        parsed to create_dataset"""
+    d = file.get(dataset_name)
+    if d is None:
+        max_shape = list(data.shape).copy()
+        max_shape[axis] = None
+        init_shape = list(data.shape).copy()
+        init_shape[axis] = 0
+
+        d = file.create_dataset(dataset_name, data=data,
+                                maxshape=max_shape,  # int(1e12),
+                                #                              dtype=float, chunks=(10)
+                                **kwargs
+                                )
+    elif data.shape[axis] != 0:
+        len_append_items = data.shape[axis]
+        d.resize(d.shape[axis] + len_append_items, axis=axis)
+
+        # TODO: is there a way to get this nicer?
+        if axis == 0:
+            d[-len_append_items:] = data
+        elif axis == 1:
+            d[:, -len_append_items:] = data
+        elif axis == 2:
+            d[:, :, -len_append_items:] = data
+        elif axis == 3:
+            d[:, :, :, -len_append_items:] = data
+        elif axis == 4:
+            d[:, :, :, :, -len_append_items:] = data
+        elif axis == 5:
+            d[:, :, :, :, :, -len_append_items:] = data
+        elif axis == 6:
+            d[:, :, :, :, :, :, -len_append_items:] = data
