@@ -20,5 +20,6 @@ no_git/
 .vscode/settings.json
 settings.py
 .venv/
+example/figures/
 **/*.pyc
 **/__pycache__/
