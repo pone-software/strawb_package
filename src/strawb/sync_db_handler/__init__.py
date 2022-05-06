@@ -366,6 +366,7 @@ class SyncDBHandler:
 
     def _extract_hdf5_attribute_(self, i, dataframe, entries_converter, keys_converter):
         full_path = dataframe.fullPath.iloc[i]
+        buffer = None  # must be None for SharedThreadJob
         try:
             with h5py.File(full_path, 'r') as f:
                 attrs_dict = dict(f.attrs)
@@ -376,15 +377,19 @@ class SyncDBHandler:
                     continue
                 if isinstance(err_i, str) and 'No such file or directory' in err_i:  # filed doesn't exist
                     continue
-            print(f'WARNING: {dataframe.filename.iloc[i]} - {err}')
+            buffer = [full_path, err]
+            # print(f' WARNING: {dataframe.filename.iloc[i]} - {err}')
 
         except Exception as err:
-            print(f'WARNING: {dataframe.filename.iloc[i]} - {err}')
+            buffer = [full_path, err]
+            # print(f' WARNING: {dataframe.filename.iloc[i]} - {err}')
 
         else:
             attrs_dict = self._convert_dict_entries_(attrs_dict, converter=entries_converter)
             attrs_dict = self._convert_dict_keys_(attrs_dict, converter=keys_converter)
             dataframe.loc[full_path, 'h5_attrs'] = [attrs_dict]  # [] has to be used to set the dict - (why?)
+
+        return buffer
 
     def get_mask_h5_attrs(self, dataframe=None):
         """Return a mask which mask all indexes where the column 'h5_attrs' is not 'np.nan' """
@@ -453,6 +458,9 @@ class SyncDBHandler:
                dataframe=dataframe,
                entries_converter=entries_converter,
                keys_converter=keys_converter)
+
+        if sjt.return_buffer:
+            print(f'hdf5 attributes failed for {len(sjt.return_buffer)} files')
 
         if add_hdf5_attributes2dataframe:
             h5_dataframe = self.dataframe_from_hdf5_attributes(dataframe=dataframe)
