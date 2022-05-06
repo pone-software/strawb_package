@@ -100,7 +100,7 @@ class TRBTools:
     @property
     def index_start_valid_data(self):
         """ Workaround for a bug in SDAQ, which writes at initialisation the buffer size to the file.
-        This means, the first n (=buffer size) entries are corrupt, which can detected by looking for the sorting
+        This means, the first n (=buffer size) entries are corrupt, which can be detected by sorting the time
         """
         if self.__time__ is None:
             return None
@@ -180,7 +180,8 @@ class TRBTools:
         counters are read. It starts with 0. Attention: len(rate_time) = len(rate) + 1!
         The time is calculated from the TRB channel_0 counts and the counting frequency, which is usually 10 kHz, see
         self.file_handler.daq_frequency_readout. This delivers a more precise time because it is based on the raw
-        delta_t from the TRB and its more than the np.datetime64 can deliver. However, it's not an absolute timestamp.
+        delta_t when the counters are read. In contrast, the absolute time is CPU time which can have some delay.
+        However, it's not an absolute timestamp.
         """
         return np.append([0], np.cumsum(self.rate_delta_time))
 
@@ -190,7 +191,8 @@ class TRBTools:
         interval when two counters are read.
         The time is calculated from the TRB channel_0 counts and the counting frequency, which is usually 10 kHz, see
         self.file_handler.daq_frequency_readout. This delivers a more precise time because it is based on the raw
-        delta_t from the TRB and its more than the np.datetime64 can deliver. However, it's not an absolute timestamp.
+        delta_t when the counters are read. In contrast, the absolute time is CPU time which can have some delay.
+        However, it's not an absolute timestamp.
         """
         return np.cumsum(self.rate_delta_time) - self.rate_delta_time * 0.5
 
@@ -199,7 +201,8 @@ class TRBTools:
         """The time delta (in seconds) which corresponds to the rates. The time delta is calculated from the TRB
         channel_0 counts and the counting frequency, which is usually 10 kHz, see
         self.file_handler.daq_frequency_readout. This delivers a more precise time because it is based on the raw
-        delta_t from the TRB and its more than the np.datetime64 can deliver. However, it's not an absolute timestamp.
+        delta_t when the counters are read. In contrast, the absolute time is CPU time which can have some delay.
+        However, it's not an absolute timestamp.
         """
         if self._rate_delta_time is None:
             self.calculate_rates()
@@ -433,7 +436,7 @@ class TRBTools:
                                                    None,
                                                    statistic='count',
                                                    bins=time_probe)
-        # transform active to active read ratio
+        # transform active to active read ratio, active is np.nan when there is no data (counter read) in the interval
         mask = reads != 0
         active = active.astype(float)
         active[:, mask] = active[:, mask] / reads[mask]
@@ -450,7 +453,7 @@ class TRBTools:
         time_inter = abs_time[:-1] + np.diff(abs_time) * .5
 
         # mask the arrays, keep in mind: active and rate_inter are 2D-arrays and time_inter is 1D
-        active = np.ma.masked_invalid(active)
+        active = np.ma.masked_invalid(active)  #
         rate_inter = np.ma.array(rate_inter, mask=active.mask)
         time_inter = np.ma.array(time_inter, mask=~mask)
         return time_inter, rate_inter, active
