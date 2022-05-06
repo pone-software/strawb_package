@@ -10,7 +10,7 @@ from ...config_parser import Config
 
 class Images:
     """Everything related to a single hdf5 file. The RAW image data is accessed directly
-    form the hdf5 file to save RAM. It is capable of determine invalid pictures (property: invalid_mask)
+    form the hdf5 file to save RAM. It is capable of determine invalid pictures (property: valid_mask)
     and takes the n darkest pictures as an average for a dark frame. It also includes the
     basic functions to demosaic the raw data into RGB values for both, multiple frames or a single frame"""
     bayer_pattern_dict = {  # "COLOR_BAYER_BG2BGR_EA":cv2.COLOR_BAYER_BG2BGR_EA,
@@ -39,7 +39,7 @@ class Images:
         self._integrated_raw = None
         self._raw_dark_frame = None  # for property
         self._rgb_dark_frame = None  # for property
-        self._invalid_mask = None  # for property
+        self._valid_mask = None  # for property
         self._integrated_minus_dark = None  # for property
         self._max_value_minus_dark = None
 
@@ -60,13 +60,23 @@ class Images:
         return self._integrated_minus_dark
 
     @property
-    def invalid_mask(self, ):
-        if self._invalid_mask is None:
-            self.create_invalid_mask()
-        return self._invalid_mask
+    def valid_mask(self, ):
+        """Images which are not detected as corrupt"""
+        if self._valid_mask is None:
+            self.create_valid_mask()
+        return self._valid_mask
 
-    def create_invalid_mask(self, limit=2e10):
-        self._invalid_mask = self.integrated_raw > limit
+    def create_valid_mask(self, limit=None):
+        """Detect which images which are corrupt if the intergrated_raw is below the limit.
+        With limit=None it takes:
+        For gain=50 end exposure time= ~60s: limit = 2e10
+        For gain=30 end exposure time= ~60s: limit = 4e9
+        """
+        if limit is None and np.unique(self.file_handler.gain)[0] == 30.:
+            limit = 4e9
+        elif limit is None and np.unique(self.file_handler.gain)[0] == 50.:
+            limit = 2e10
+        self._valid_mask = self.integrated_raw > limit
 
     @property
     def raw_dark_frame(self):
@@ -95,7 +105,7 @@ class Images:
         if n is None:
             n = 10
         n = int(n)
-        integrated_raw_masked = np.ma.array(self.integrated_raw, mask=~self.invalid_mask)
+        integrated_raw_masked = np.ma.array(self.integrated_raw, mask=~self.valid_mask)
         index = np.ma.argsort(integrated_raw_masked)  # masked items count as greatest
         self._raw_dark_frame = np.average(self.load_raw(index[:n]), axis=0)  # n=10
 
@@ -103,11 +113,14 @@ class Images:
         if index is None:
             index = np.arange(self.file_handler.time.shape[0])
 
-        elif type(index) is int:
-            index = [index]
+        elif isinstance(index, (int, float)):
+            index = np.array([int(index)])
+        
+        elif isinstance(index, list):
+            index = np.array([index], dtype=int)
 
         if exclude_invalid:
-            index = index[self.invalid_mask[index]]
+            index = index[self.valid_mask[index]]
 
         return index
 
@@ -150,7 +163,53 @@ class Images:
             image_list.append(self.frame_raw_to_rgb(raw_i))
 
         image_arr = self.cut2effective_pixel_arr(image_list)
+
         return image_arr
+
+    def normalize_rgb(self, image_arr, bit_out=0, bit_in=None, ):
+        """Get the rgb values to the range 0->1. or 0,1...->255
+        PARAMETERS
+        ----------
+        image_arr: ndarray
+            array of images values. Can be a single image (2D array) or multiple (>3D array)
+        bit_in: int, optional
+            defines the range of the input values.
+            - None: determins the bit from the dtype. Supports np.uint8, np.uint16, np.uint32, float 
+            - 0 : (default) maps the values to the range [0, 1] as float
+            - 8 : maps the values to the range [0, 255] as int
+            - 16: maps the values to the range [0, 2**16-1] as int 
+        bit_out: int, optional
+            - 0 : (default) maps the values to the range [0, 1[ as float
+            - 8 : maps the values to the range [0, 255] as int
+            - 16: maps the values to the range [0, 2**16-1] as int  
+        """
+        bit_dict = {8: np.uint8, 16: np.uint16, 32: np.uint32, 64: np.uint64}
+        bit_dict_inv = {np.dtype(j): i for i, j in bit_dict.items()}
+
+        bit_in = 0
+        max_in = 1.
+
+        if image_arr.dtype in bit_dict_inv:
+            bit_in = bit_dict_inv[image_arr.dtype]
+            max_in = 2**bit_in-1
+        else:
+            bit_in = 0
+            max_in = 1.
+
+        if bit_out in bit_dict:
+            type_out = bit_dict[bit_out]
+            max_out = 2**bit_out-1
+        else:
+            type_out = np.float64
+            max_out = 1.
+
+        if max_out != max_in:
+            image_arr = image_arr / max_in * max_out
+            image_arr = image_arr.astype(type_out)
+            image_arr[image_arr>max_out] = max_out
+
+        return image_arr
+
 
     def image2png(self, f_name_formatter='{datetime}', directory='{proc_data_dir}/{module_lower}',
                   bit=8, index=None, overwrite=False, file_name_iterator=None, ending='.png', **kwargs):
@@ -183,16 +242,16 @@ class Images:
 
         index = self.get_index(index=index, **kwargs)
 
-        self._rgb = self.load_rgb(index=index, **kwargs)
+        image_arr = self.load_rgb(index=index, **kwargs)
 
         # get bit's right, default is 16bit
         bit = int(bit)
         bit_dict = {8: np.uint8, 16: np.uint16}
         if bit == 8:
-            self._rgb = self._rgb / 2 ** 16 * 2 ** 8  # - 1
+            image_arr = image_arr / 2 ** 16 * 2 ** 8  # - 1
 
-        self._rgb[self._rgb == 2 ** bit] = self._rgb[self._rgb == 2 ** bit] - 1
-        self._rgb = self._rgb.astype(bit_dict[bit])
+        image_arr[image_arr == 2 ** bit] = image_arr[image_arr == 2 ** bit] - 1
+        image_arr = image_arr.astype(bit_dict[bit])
 
         # prepare directory
         directory = os.path.abspath(directory.format(proc_data_dir=Config.proc_data_dir,
@@ -217,7 +276,7 @@ class Images:
                 # print('skip:', f_name_target_i)
             else:
                 # print('save:', f_name_target_i)
-                cv2.imwrite(f_name_i, self._rgb[i, :, :, ::-1])  # [:,:,::-1] as cv2 takes BGR and not RGB
+                cv2.imwrite(f_name_i, image_arr[i, :, :, ::-1])  # [:,:,::-1] as cv2 takes BGR and not RGB
                 shutil.move(os.path.join(os.path.abspath('.'), f_name_i), f_name_target_i)  # move file
 
             file_name_list.append(f_name_target_i)
