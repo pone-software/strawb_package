@@ -76,3 +76,23 @@ class TestCameraImages(TestCase):
         index = index[mask[index]]  # remove invalid items  & cam_module.invalid_mask
         index = index[::-1]  # revers the order
         self.picture_handler.image2png(index=index, f_name_formatter='{i}_{datetime}.png')
+
+    def test_normalize(self,):
+        arr = np.linspace(0, 2**16-1, 10, dtype=np.uint16)
+
+        self.assertEqual(self.picture_handler.normalize_rgb(arr, bit_out=8)[-1], 255)
+        self.assertEqual(self.picture_handler.normalize_rgb(arr, bit_out=16)[-1], int(2**16-1))
+        self.assertEqual(self.picture_handler.normalize_rgb(arr, bit_out=0)[-1], 1)
+                
+        arr = np.linspace(0, 2**8-1, 10, dtype=np.uint8)
+
+        self.assertEqual(self.picture_handler.normalize_rgb(arr, bit_out=8)[-1], 255)
+        self.assertEqual(self.picture_handler.normalize_rgb(arr, bit_out=16)[-1], int(2**16-1))
+        self.assertEqual(self.picture_handler.normalize_rgb(arr, bit_out=0)[-1], 1)
+
+        arr = np.linspace(0, 1, 10, dtype=np.float64)
+
+        self.assertEqual(self.picture_handler.normalize_rgb(arr, bit_out=8)[-1], 255)
+        self.assertEqual(self.picture_handler.normalize_rgb(arr, bit_out=16)[-1], int(2**16-1))
+        self.assertEqual(self.picture_handler.normalize_rgb(arr, bit_out=0)[-1], 1)
+

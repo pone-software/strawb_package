@@ -6,7 +6,7 @@ import numpy as np
 
 from src.strawb.config_parser import Config
 from src.strawb.base_file_handler import BaseFileHandler
-from strawb.tools import unique_steps
+from src.strawb.tools import unique_steps
 
 
 class TestTools(TestCase):

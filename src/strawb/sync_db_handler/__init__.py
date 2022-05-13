@@ -30,7 +30,7 @@ class SyncDBHandler:
         'PMTSD': pmtspec,  # TUMPMTSPECTROMETER001_20211018T200000.000Z-SDAQ-PMTSPEC.hdf5
     }
 
-    def __init__(self, file_name='Default', update=False, **kwargs):
+    def __init__(self, file_name='Default', update=False, load_db=True, **kwargs):
         """Handle the DB, which holds the metadata from the ONC DB and adds quantities like hdf5 attributes.
         PARAMETER
         file_name: Union[str, None], optional
@@ -41,12 +41,16 @@ class SyncDBHandler:
             - a file name which is anywhere located in the strawb.Config.raw_data_dir
         update: bool, optional
             defines if the entries should be checked against existing files
+        load_db: bool, update
+            True (default) loads the DB if it exists if `file_name` is not None. False doesn't load it.
         kwargs: dict, optional
             parsed to ONCDownloader(**kwargs), e.g.: token, outPath, download_threads
         """
 
         # find handle file_name and fine it.
-        if file_name is None or file_name == 'Default':  # take the default or None if it doesn't exist
+        if file_name is None:  # non, doesn't load the DB
+            self.file_name = None
+        elif file_name == 'Default':  # take the default
             self.file_name = Config.pandas_file_sync_db
         elif os.path.isabs(file_name):
             self.file_name = file_name
@@ -70,15 +74,16 @@ class SyncDBHandler:
 
         self.onc_downloader = ONCDownloader(**kwargs)
 
-        if os.path.exists(self.file_name):
-            self.load_db()  # loads the db if file is valid
-            # load the DB only if the file exists, i.e. file_name = 'Default'
-            if update:
-                self.update_sync_state()
-                self.update_hdf5_attributes()
-                self.update_file_version()
-        else:
-            print(f"File doesn't exist: {self.file_name} -> load data and execute .save_db() to create it.")
+        if self.file_name is not None and load_db:
+            if os.path.exists(self.file_name):
+                self.load_db()  # loads the db if file is valid
+                # load the DB only if the file exists, i.e. file_name = 'Default'
+                if update:
+                    self.update_sync_state()
+                    self.update_hdf5_attributes()
+                    self.update_file_version()
+            else:
+                print(f"File doesn't exist: {self.file_name} -> load data and execute .save_db() to create it.")
 
     @property
     def dataframe(self):
@@ -107,6 +112,9 @@ class SyncDBHandler:
         """Saves the DB file into a pandas.DataFrame to the file provided at the initialisation."""
         # store information in a pandas-file
         if self.dataframe is not None:  # only save it, when there is something stored in the dataframe
+            # check if the directory exits, if not create it
+            os.makedirs(os.path.dirname(self.file_name), exist_ok=True)  # exist_ok, doesn't raise an error if it exists
+
             # if self.file_name is None:  # in case, set the default file name
             #     self.file_name = Config.pandas_file_sync_db
             self.dataframe.to_pickle(self.file_name,
@@ -145,7 +153,7 @@ class SyncDBHandler:
             self._check_index_(dataframe)  # check the new dataframe
             # append it
             self._check_double_indexes_(self.dataframe, dataframe2add)
-            dataframe = dataframe.append(dataframe2add,
+            dataframe = dataframe.append(dataframe2add,  # for newer pandas versions: concat = append
                                          ignore_index=False,
                                          verify_integrity=True)
             if to_self:
@@ -214,7 +222,7 @@ class SyncDBHandler:
             difference = dataframe2add.index.difference(dataframe.index)
             if difference.shape[0] != 0:
                 dataframe2add_diff = dataframe2add.loc[difference]
-                dataframe = dataframe.append(dataframe2add_diff)
+                dataframe = dataframe.append(dataframe2add_diff)  # for newer pandas versions: concat = append
 
         if in_place:
             self.dataframe = dataframe
@@ -358,6 +366,7 @@ class SyncDBHandler:
 
     def _extract_hdf5_attribute_(self, i, dataframe, entries_converter, keys_converter):
         full_path = dataframe.fullPath.iloc[i]
+        buffer = None  # must be None for SharedThreadJob
         try:
             with h5py.File(full_path, 'r') as f:
                 attrs_dict = dict(f.attrs)
@@ -368,15 +377,19 @@ class SyncDBHandler:
                     continue
                 if isinstance(err_i, str) and 'No such file or directory' in err_i:  # filed doesn't exist
                     continue
-            print(f'WARNING: {dataframe.filename.iloc[i]} - {err}')
+            buffer = [full_path, err]
+            # print(f' WARNING: {dataframe.filename.iloc[i]} - {err}')
 
         except Exception as err:
-            print(f'WARNING: {dataframe.filename.iloc[i]} - {err}')
+            buffer = [full_path, err]
+            # print(f' WARNING: {dataframe.filename.iloc[i]} - {err}')
 
         else:
             attrs_dict = self._convert_dict_entries_(attrs_dict, converter=entries_converter)
             attrs_dict = self._convert_dict_keys_(attrs_dict, converter=keys_converter)
             dataframe.loc[full_path, 'h5_attrs'] = [attrs_dict]  # [] has to be used to set the dict - (why?)
+
+        return buffer
 
     def get_mask_h5_attrs(self, dataframe=None):
         """Return a mask which mask all indexes where the column 'h5_attrs' is not 'np.nan' """
@@ -427,7 +440,7 @@ class SyncDBHandler:
             items_to_check = dataframe.h5_attrs.isnull()  # takes all None or np.nan
 
         # include only file which ends with 'hdf5' or 'h5'
-        items_to_check &= dataframe.filename.str.endswith('hdf5') | dataframe.filename.str.endswith('h5')
+        items_to_check &= dataframe.fullPath.str.endswith('hdf5') | dataframe.fullPath.str.endswith('h5')
         items_to_check &= dataframe['synced']  # exclude non existing files
 
         # convert file_id's with nan to int. Otherwise pandas interprets the Series as float and the resolution
@@ -445,6 +458,9 @@ class SyncDBHandler:
                dataframe=dataframe,
                entries_converter=entries_converter,
                keys_converter=keys_converter)
+
+        if sjt.return_buffer:
+            print(f'hdf5 attributes failed for {len(sjt.return_buffer)} files')
 
         if add_hdf5_attributes2dataframe:
             h5_dataframe = self.dataframe_from_hdf5_attributes(dataframe=dataframe)
@@ -499,43 +515,6 @@ class SyncDBHandler:
                                                   unit='s', errors='coerce', utc=True, infer_datetime_format=True)
         return h5_dataframe
 
-    def load_onc_db(self, output=False, download=False, add_hdf5_attributes=True, add_file_version=True,
-                    add_dataframe=True, save_db=False,
-                    **kwargs):
-        """Loads and downloads the db directly from the ONC server.
-
-        PARAMETER
-        ---------
-        output: bool, optional
-            if information about the progress should be printed
-        download: bool, optional
-            if the missing files should be downloaded.
-        add_hdf5_attributes: bool, optional
-            scan files for hdf5 attributes and adds to the dataframe as new columns
-        add_file_version: bool, optional
-            scan files for the file version and adds to the dataframe as new columns
-        add_dataframe: bool, optional
-            if the dataframe should be added to the internal dataframe or not. Default is True.
-        save_db: bool, optional
-            if it saves the DB on disc. Default: False
-        kwargs: dict, optional
-            parsed to ONCDownloader().get_files_structured(**kwargs) to filter the files. Parameters are e.g.:
-            dev_codes, date_from, date_to, extensions, min_file_size, and max_file_size.
-        """
-        if output:
-            print('-> Get metadata from ONC DB')
-
-        dataframe = self.onc_downloader.get_files_structured(**kwargs)
-        dataframe = self.update_db_and_load_files(dataframe,
-                                                  output=output,
-                                                  download=download,
-                                                  add_hdf5_attributes=add_hdf5_attributes,
-                                                  add_file_version=add_file_version,
-                                                  add_dataframe=add_dataframe,
-                                                  save_db=save_db)
-
-        return dataframe
-
     def update_db_and_load_files(self, dataframe=None, output=False, download=False, add_hdf5_attributes=True,
                                  add_dataframe=True, add_file_version=True, save_db=False):
         """Depending which options are set, this function does any combination of the following 4 tasks:
@@ -548,6 +527,9 @@ class SyncDBHandler:
 
         PARAMETER
         ---------
+        dataframe: pandas.DataFrame, optional
+            the above steps are executeted for the files defined in the dataframe. E.g. if `download=True` all files
+            are downloaded. None (default) takes the internal dataframe.
         download: bool, optional
             if the missing files should be downloaded.
         add_hdf5_attributes: bool, optional
@@ -620,17 +602,18 @@ class SyncDBHandler:
         return self.load_onc_db(**kwargs)
 
     def load_onc_db_update(self, **kwargs):
-        """Load the newest entries of the ONC DB. If the local DB doesn't exists, it loads the entire db:
-        load_onc_db_entirely(**kwargs). If the local DB exists, it takes the time of the latest entry. If this time is
+        """Load the newest entries of the ONC DB. If the local DB doesn't exists, it loads the entire db
+        `date_from='strawb_all'`. If the local DB exists, it takes the time of the latest entry. If this time is
         older than a day, it updated the entries from that date incl. the day before. If it is less than a day, it
         doesn't load something.
         PARAMETER
         ---------
         kwargs: dict, optional
-            parsed to load_onc_db(**kwargs). If 'date_from' in kwargs, it is updated to accordingly.
+            parsed to load_onc_db(**kwargs). If 'date_from' is in kwargs, it is overwritten accordingly.
         """
         if self.dataframe is None:
-            return self.load_onc_db_entirely(**kwargs)
+            kwargs.update(dict(date_from='strawb_all'))
+            return self.load_onc_db(**kwargs)
         else:
             delta_last_entire = datetime.datetime.now(tz=datetime.timezone.utc) - self.dataframe.dateFrom.max()
             if datetime.timedelta(days=1) < delta_last_entire:
@@ -639,6 +622,43 @@ class SyncDBHandler:
                 return self.load_onc_db(**kwargs)
 
             return None  # nothing loaded
+
+    def load_onc_db(self, output=False, download=False, add_hdf5_attributes=True, add_file_version=True,
+                    add_dataframe=True, save_db=False,
+                    **kwargs):
+        """Loads and downloads the db directly from the ONC server.
+
+        PARAMETER
+        ---------
+        output: bool, optional
+            if information about the progress should be printed
+        download: bool, optional
+            if the missing files should be downloaded.
+        add_hdf5_attributes: bool, optional
+            scan files for hdf5 attributes and adds to the dataframe as new columns
+        add_file_version: bool, optional
+            scan files for the file version and adds to the dataframe as new columns
+        add_dataframe: bool, optional
+            if the dataframe should be added to the internal dataframe or not. Default is True.
+        save_db: bool, optional
+            if it saves the DB on disc. Default: False
+        kwargs: dict, optional
+            parsed to ONCDownloader().get_files_structured(**kwargs) to filter the files. Parameters are e.g.:
+            dev_codes, date_from, date_to, extensions, min_file_size, and max_file_size.
+        """
+        if output:
+            print('-> Get metadata from ONC DB')
+
+        dataframe = self.onc_downloader.get_files_structured(**kwargs)
+        dataframe = self.update_db_and_load_files(dataframe,
+                                                  output=output,
+                                                  download=download,
+                                                  add_hdf5_attributes=add_hdf5_attributes,
+                                                  add_file_version=add_file_version,
+                                                  add_dataframe=add_dataframe,
+                                                  save_db=save_db)
+
+        return dataframe
 
     def get_files_from_names(self, file_names):
         """Checks:

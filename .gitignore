@@ -11,6 +11,7 @@ venv/
 .DS_Store
 **/.DS_Store
 **/*.h5
+**/*.hdf5
 **/__pycache__
 Pipfile
 Pipfile.lock
@@ -18,3 +19,7 @@ config-* # personal config files
 no_git/
 .vscode/settings.json
 settings.py
+.venv/
+example/figures/
+**/*.pyc
+**/__pycache__/

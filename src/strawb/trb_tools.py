@@ -1,3 +1,5 @@
+import os
+
 import h5py
 import numpy as np
 import scipy.stats
@@ -100,7 +102,7 @@ class TRBTools:
     @property
     def index_start_valid_data(self):
         """ Workaround for a bug in SDAQ, which writes at initialisation the buffer size to the file.
-        This means, the first n (=buffer size) entries are corrupt, which can detected by looking for the sorting
+        This means, the first n (=buffer size) entries are corrupt, which can be detected by sorting the time
         """
         if self.__time__ is None:
             return None
@@ -180,7 +182,8 @@ class TRBTools:
         counters are read. It starts with 0. Attention: len(rate_time) = len(rate) + 1!
         The time is calculated from the TRB channel_0 counts and the counting frequency, which is usually 10 kHz, see
         self.file_handler.daq_frequency_readout. This delivers a more precise time because it is based on the raw
-        delta_t from the TRB and its more than the np.datetime64 can deliver. However, it's not an absolute timestamp.
+        delta_t when the counters are read. In contrast, the absolute time is CPU time which can have some delay.
+        However, it's not an absolute timestamp.
         """
         return np.append([0], np.cumsum(self.rate_delta_time))
 
@@ -190,7 +193,8 @@ class TRBTools:
         interval when two counters are read.
         The time is calculated from the TRB channel_0 counts and the counting frequency, which is usually 10 kHz, see
         self.file_handler.daq_frequency_readout. This delivers a more precise time because it is based on the raw
-        delta_t from the TRB and its more than the np.datetime64 can deliver. However, it's not an absolute timestamp.
+        delta_t when the counters are read. In contrast, the absolute time is CPU time which can have some delay.
+        However, it's not an absolute timestamp.
         """
         return np.cumsum(self.rate_delta_time) - self.rate_delta_time * 0.5
 
@@ -199,7 +203,8 @@ class TRBTools:
         """The time delta (in seconds) which corresponds to the rates. The time delta is calculated from the TRB
         channel_0 counts and the counting frequency, which is usually 10 kHz, see
         self.file_handler.daq_frequency_readout. This delivers a more precise time because it is based on the raw
-        delta_t from the TRB and its more than the np.datetime64 can deliver. However, it's not an absolute timestamp.
+        delta_t when the counters are read. In contrast, the absolute time is CPU time which can have some delay.
+        However, it's not an absolute timestamp.
         """
         if self._rate_delta_time is None:
             self.calculate_rates()
@@ -380,7 +385,7 @@ class TRBTools:
         """The rate array for the interpolated rates as np.ma.array(). shape: [channel_i, interp_time.shape]
         The masked entries are period, where no counts are stored/available."""
         if self._interp_rate_ is None:
-            self._interp_time_, self._interp_rate_, self._interp_active_ratio_\
+            self._interp_time_, self._interp_rate_, self._interp_active_ratio_ \
                 = self.interpolate_rate(self._interp_frequency_)
         return self._interp_rate_
 
@@ -391,7 +396,7 @@ class TRBTools:
         which have been active.
         The masked entries are period, where no counts are stored/available."""
         if self._interp_active_ratio_ is None:
-            self._interp_time_, self._interp_rate_, self._interp_active_ratio_\
+            self._interp_time_, self._interp_rate_, self._interp_active_ratio_ \
                 = self.interpolate_rate(self._interp_frequency_)
         return self._interp_active_ratio_
 
@@ -433,13 +438,13 @@ class TRBTools:
                                                    None,
                                                    statistic='count',
                                                    bins=time_probe)
-        # transform active to active read ratio
+        # transform active to active read ratio, active is np.nan when there is no data (counter read) in the interval
         mask = reads != 0
         active = active.astype(float)
         active[:, mask] = active[:, mask] / reads[mask]
         active[:, ~mask] = np.nan
 
-        counts = interp_np(x=time_probe, xp=timestamps, fp=self.counts)
+        counts = interp_np(x=time_probe, xp=timestamps, fp=self.counts.astype(float))
 
         abs_time = np.interp(x=time_probe,
                              xp=timestamps,
@@ -450,7 +455,7 @@ class TRBTools:
         time_inter = abs_time[:-1] + np.diff(abs_time) * .5
 
         # mask the arrays, keep in mind: active and rate_inter are 2D-arrays and time_inter is 1D
-        active = np.ma.masked_invalid(active)
+        active = np.ma.masked_invalid(active)  #
         rate_inter = np.ma.array(rate_inter, mask=active.mask)
         time_inter = np.ma.array(time_inter, mask=~mask)
         return time_inter, rate_inter, active
@@ -516,3 +521,161 @@ class TRBTools:
         finally:
             self.file_handler.close()  # close write mode
             self.file_handler.open()  # open in read only mode
+
+
+class InterpolatedRatesFile:
+    def __init__(self, file_name, version=2, read_data=True):
+        """Loads or write the interpolated rate data to a hdf5 file."""
+
+        self.file_name = os.path.abspath(file_name)
+
+        self.time = None
+        self.rate = None
+
+        self.file_start = None
+        self.file_end = None
+
+        self._t_probe_, self._active_ = None, None
+
+        self.version = version
+        if read_data and os.path.exists(self.file_name):
+            self.read()
+        elif read_data and not os.path.exists(self.file_name):
+            print(f"WARNING: file doesn't exist {self.file_name}")
+
+    def write_to_file(self, pmt, file_attrs=None, group_attrs=None):
+        """Write interpolated data of PMT to the file. It generates a hdf5 file and adds the data as follows:
+        group: /rates_interpolated
+        data_Set: /rates_interpolated/rate - with shape [channels, time]
+                  /rates_interpolated/time - with shape time
+                  /rates_interpolated/mask - with shape time
+        If a dataset exists, it adds the data to the dataset.
+
+        PARAMETER
+        ---------
+        pmt: strawb.sensors.PMTSpec
+            class which holds the PMT Data and process code.
+            To change the interpolation frequency, do it before you execute this function.
+        file_attrs: dict, optional
+            hdf5 file attributes
+        group_attrs: dict, optional
+            hdf5 group attributes
+        """
+        if group_attrs is None:
+            group_attrs = {}
+        if file_attrs is None:
+            file_attrs = {}
+
+        h5py_dataset_options = {'compression': 'gzip',
+                                'compression_opts': 6,
+                                'shuffle': True,
+                                'fletcher32': True,
+                                'chunks': (2, 2 ** 13)}
+
+        with h5py.File(self.file_name, 'a') as f:  # libver='latest'
+            for i in set(file_attrs).difference(f.attrs):
+                f.attrs.update({i: file_attrs[i]})
+
+            group = f.require_group('rates_interpolated')
+            for i in set(group_attrs).difference(group.attrs):
+                group.attrs.update({i: group_attrs[i]})
+
+            tools.append_hdf5(f, '/rates_interpolated/rate',
+                              data=pmt.trb_rates.interp_rate.data,
+                              axis=1,
+                              **h5py_dataset_options)
+
+            h5py_opt_1d = h5py_dataset_options.copy()
+            if 'chunks' in h5py_opt_1d:
+                h5py_opt_1d['chunks'] = (h5py_opt_1d['chunks'][1],)
+
+            tools.append_hdf5(f, '/rates_interpolated/time',
+                              data=tools.datetime2float(pmt.trb_rates.interp_time.data),
+                              **h5py_opt_1d)
+
+            tools.append_hdf5(f, '/rates_interpolated/mask',
+                              data=pmt.trb_rates.interp_time.mask,
+                              **h5py_opt_1d)
+
+    def read(self, ):
+        """ Reads the file. """
+        with h5py.File(self.file_name, 'r') as f:
+            if self.version == 2:
+                self.time = np.ma.array(f['/rates_interpolated/time'][:],
+                                        mask=f['/rates_interpolated/mask'][:])
+            else:
+                self.time = f['/rates_interpolated/time'][:]
+            self.rate = np.ma.array(f['/rates_interpolated/rate'][:])
+
+            self.file_start = f.attrs['file_start']
+            self.file_end = f.attrs['file_end']
+
+    def get_active(self, step_size=3600, **kwargs):
+        bins = np.arange(self.file_start, self.file_end + step_size, step_size)
+        self._t_probe_, self._active_ = self._get_active_(self.time, bins=bins, **kwargs)
+
+    @property
+    def t_probe(self):
+        if self._t_probe_ is None:
+            self.get_active()
+        return self._t_probe_
+
+    @property
+    def t_probe_middle(self):
+        return .5 * (self.t_probe[:-1] + self.t_probe[1:])
+
+    @property
+    def active(self):
+        if self._active_ is None:
+            self.get_active()
+        return self._active_
+
+    @staticmethod
+    def _get_active_(t, bins=None, step_size=None, max_delta_t=1.5):
+        """Calculate the active (up time) time of the measurement within the periods (bins). If the time between two
+        measurements is greater as the `max_delta_t`, the period is counted as inactive.
+        PARAMETER
+        t: ndarray
+            timestamps of the measurements in seconds.
+        bins: float, int, list, ndarray
+            sets the bins within the active ratio is calculated, directly.
+        step_size:
+            sets the bins with `np.arange(t[0], t[-1] + step_size, step_size)` within the active ratio is calculated.
+            bins must be None otherwise step_size is ignored.
+        max_delta_t:
+            the maximum between two measurements to be counted as active time. If the time between two measurements is
+            greater as the `max_delta_t`, the period is counted as inactive.
+        """
+        t_mask = ~t.mask
+        t = t.data
+
+        if isinstance(bins, (int, float)):
+            t_probe = np.linspace(t[0], t[-1], bins)
+        elif isinstance(bins, (list, np.ndarray)):
+            t_probe = bins
+        elif isinstance(step_size, (int, float)):
+            # add one step to the end. <-> .5*(t_probe[:-1]+t_probe[1:])
+            t_probe = np.arange(t[0], t[-1] + step_size, step_size)
+        else:
+            raise ValueError('Either bins must be [int, float, list, ndarray] or steps [int, float].')
+
+        active = np.zeros_like(t_probe[1:])
+
+        # remove invalid entries
+        t = t[t_mask]
+
+        if t.shape[0] == 0:
+            return .5 * (t_probe[:-1] + t_probe[1:]), active
+
+        # calculate the total elapsed time
+        delta_t = np.diff(t)
+        tot = np.interp(t_probe, t, np.append([0], np.cumsum(delta_t)))
+
+        # calculate the total elapsed time when the readout frequency is under 1./max_delta_t
+        delta_t[delta_t > max_delta_t] = 0
+        t_a = np.interp(t_probe, t, np.append([0], np.cumsum(delta_t)))
+
+        mask_nan = np.diff(tot) == 0
+        active[mask_nan] = np.nan
+        active[~mask_nan] = np.diff(t_a)[~mask_nan] / np.diff(tot)[~mask_nan]
+        return t_probe, active

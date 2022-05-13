@@ -127,29 +127,33 @@ class TestSyncDBHandler(TestCase):
 
         # ---- set 'h5_attrs' and load from file ----
         db_handler.update_hdf5_attributes()
-        self.assertTrue(db_handler.dataframe.loc['TEST_1.hdf5', 'h5_attrs'] == {'a': 1})  # take 'file' value
-        self.assertTrue(db_handler.dataframe.loc['TEST_2.hdf5', 'h5_attrs'] == {})  # take 'file' value
-        self.assertTrue(db_handler.dataframe.loc['TEST_5.hdf5', 'h5_attrs'] is None)  # file doesn't exist
+        a = db_handler.dataframe.loc['TEST_1.hdf5', 'h5_attrs']
+        self.assertEqual(db_handler.dataframe.loc['TEST_1.hdf5', 'h5_attrs'], {'a': 1})  # take 'file' value
+        self.assertEqual(db_handler.dataframe.loc['TEST_2.hdf5', 'h5_attrs'], {})  # take 'file' value
+        self.assertEqual(db_handler.dataframe.loc['TEST_5.hdf5', 'h5_attrs'], None)  # file doesn't exist
 
         # ---- exiting values should NOT be updated ----
         # [] has to be used to set a dict with loc. (Why? No idea)
         db_handler.dataframe.loc['TEST_1.hdf5', 'h5_attrs'] = [{'a': 2}]  # different attrs
+        a = db_handler.dataframe.loc['TEST_1.hdf5', 'h5_attrs']
         db_handler.dataframe.loc['TEST_2.hdf5', 'h5_attrs'] = [{'a': 2}]  # attrs doesn't exist
         db_handler.dataframe.loc['TEST_5.hdf5', 'h5_attrs'] = [{'a': 2}]  # file doesn't exist
 
-        db_handler.update_hdf5_attributes(entries_converter={'previous_file_id': {np.nan: 0}})
         # 'previous_file_id' has a special roll, therefore np.nan must be converted to 0
-        self.assertTrue(db_handler.dataframe.loc['TEST_0.hdf5', 'h5_attrs'] == {'previous_file_id': 0})
-        self.assertTrue(db_handler.dataframe.loc['TEST_1.hdf5', 'h5_attrs'] == {'a': 2})
-        self.assertTrue(db_handler.dataframe.loc['TEST_2.hdf5', 'h5_attrs'] == {'a': 2})
-        self.assertTrue(db_handler.dataframe.loc['TEST_5.hdf5', 'h5_attrs'] == {'a': 2})
+        # entries_converter={'previous_file_id': {np.nan: 0}}: {'previous_file_id': np.nan} -> {'previous_file_id': 0}
+        db_handler.update_hdf5_attributes(entries_converter=[{'previous_file_id': {np.nan: 0}}])
+        self.assertEqual(db_handler.dataframe.loc['TEST_0.hdf5', 'h5_attrs'], {'previous_file_id': 0})
+        self.assertEqual(db_handler.dataframe.loc['TEST_1.hdf5', 'h5_attrs'], {'a': 2})
+        self.assertEqual(db_handler.dataframe.loc['TEST_2.hdf5', 'h5_attrs'], {'a': 2})
+        self.assertEqual(db_handler.dataframe.loc['TEST_5.hdf5', 'h5_attrs'], {'a': 2})
 
         # ---- force exiting values to updated ----
+        # keys_converter={'previous_file_id': 'file_id'}: {'previous_file_id': 0} -> {'file_id': 0}
         db_handler.update_hdf5_attributes(update_existing=True, keys_converter={'previous_file_id': 'file_id'})
-        self.assertTrue(db_handler.dataframe.loc['TEST_0.hdf5', 'h5_attrs'] == {'file_id': 0})
-        self.assertTrue(db_handler.dataframe.loc['TEST_1.hdf5', 'h5_attrs'] == {'a': 1})  # take 'file' value
-        self.assertTrue(db_handler.dataframe.loc['TEST_2.hdf5', 'h5_attrs'] == {})  # take 'file' value
-        self.assertTrue(db_handler.dataframe.loc['TEST_5.hdf5', 'h5_attrs'] == {'a': 2})  # take 'old' value
+        self.assertEqual(db_handler.dataframe.loc['TEST_0.hdf5', 'h5_attrs'], {'file_id': 0})
+        self.assertEqual(db_handler.dataframe.loc['TEST_1.hdf5', 'h5_attrs'], {'a': 1})  # take 'file' value
+        self.assertEqual(db_handler.dataframe.loc['TEST_2.hdf5', 'h5_attrs'], {})  # take 'file' value
+        self.assertEqual(db_handler.dataframe.loc['TEST_5.hdf5', 'h5_attrs'], {'a': 2})  # take 'old' value
 
     def test_load_db_from_onc(self):
         # ---- Version 1 ----
@@ -226,7 +230,7 @@ class TestSyncDBHandler(TestCase):
                                          {'fullPath': 'TEST_3.hdf5', 'col_1': 4, 'synced': None},  # drop
                                          {'fullPath': 'TEST_4.hdf5', 'col_1': 5, 'synced': False},  # drop
                                          ])
-        pd_result_0 = pd_result_00.copy()  # as add_new_columns does things inplace
+        pd_result_0 = pd_result_00.copy()  # as add_new_columns does things in place
 
         pd_result_1 = pandas.DataFrame([{'fullPath': 'TEST_0.hdf5', 'col_2': 10, 'synced': True},  # drop
                                         {'fullPath': 'TEST_1.hdf5', 'col_2': 20, 'synced': True},  # take
@@ -247,7 +251,7 @@ class TestSyncDBHandler(TestCase):
         self.assertEqual(pd_result_0.loc['TEST_5.hdf5', 'col_2'], pd_result_1.loc['TEST_5.hdf5', 'col_2'])
         self.assertEqual(pd_result_0.loc['TEST_5.hdf5', 'synced'], pd_result_1.loc['TEST_5.hdf5', 'synced'])
 
-        pd_result_0 = pd_result_00.copy()  # as add_new_columns does things inplace
+        pd_result_0 = pd_result_00.copy()  # as add_new_columns does things in place
         pd_result_0 = SyncDBHandler(file_name=None).add_new_columns(dataframe2add=pd_result_1, dataframe=pd_result_0, overwrite=True)
         self.assertEqual(pd_result_0.loc['TEST_0.hdf5', 'col_2'], pd_result_1.loc['TEST_0.hdf5', 'col_2'])
         self.assertEqual(pd_result_0.loc['TEST_0.hdf5', 'col_1'], 1)
