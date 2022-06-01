@@ -8,7 +8,8 @@ class Config:
     Examples
     --------
     You can list all parameters with:
-    >>>
+    >>> print(Config())  # also without print in Notebooks
+    or
     >>> for config_item in Config.to_list():
     >>>     print(f'{config_item.name:30s} : {config_item.value}')
     """
@@ -34,3 +35,8 @@ class Config:
         """Returns a dict with {variable name: variable value} of all variables in the Config class"""
         return {attr: getattr(cls, attr) for attr in dir(cls) if
                 not callable(getattr(cls, attr)) and not attr.startswith("__")}
+
+    def __repr__(self):
+        out = 'STRAWb Config\n-------------\n'
+        out += '\n'.join([f'{k:21}: {v}' for k, v in self.to_dict().items()])
+        return out

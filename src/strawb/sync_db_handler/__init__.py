@@ -33,6 +33,7 @@ class SyncDBHandler:
     def __init__(self, file_name='Default', update=False, load_db=True, **kwargs):
         """Handle the DB, which holds the metadata from the ONC DB and adds quantities like hdf5 attributes.
         PARAMETER
+        ---------
         file_name: Union[str, None], optional
             If None, it doesn't load the DB. If it is a string, it can be:
             - 'Default' it takes Config.pandas_file_sync_db
@@ -42,9 +43,19 @@ class SyncDBHandler:
         update: bool, optional
             defines if the entries should be checked against existing files
         load_db: bool, update
-            True (default) loads the DB if it exists if `file_name` is not None. False doesn't load it.
+            True (default) loads the DB if it exists and if `file_name` is not None. False doesn't load it.
         kwargs: dict, optional
             parsed to ONCDownloader(**kwargs), e.g.: token, outPath, download_threads
+
+        EXAMPLES
+        --------
+        Load the DB from disc (also works if there non on disc), update it and store it on disc
+        >>> db = strawb.SyncDBHandler(load_db=False)  # loads the db
+        >>> db.load_onc_db_update(output=True, save_db=True)
+
+        Overwrites the existing DB, also works if there is no DB on disc.
+        >>> db = strawb.SyncDBHandler(load_db=False)  # loads the db
+        >>> db.load_onc_db_update(output=True, save_db=True)
         """
 
         # find handle file_name and fine it.
@@ -820,3 +831,35 @@ class SyncDBHandler:
                 count = (pandas_series == j).sum()
             res.append([j, count])
         return res
+
+    @property
+    def synced_file_size(self):
+        """Returns the total file size of all synced files."""
+        return human_size(self.dataframe.fileSize[self.dataframe.synced].sum())
+
+    def __repr__(self):
+        out_dict = {'path_db': self.file_name,
+                    'path_raw': Config.raw_data_dir,
+                    'path_proc': Config.proc_data_dir,
+                    'total_size': human_size(self.dataframe.fileSize.sum()),
+                    'total_files': len(self.dataframe.synced),
+                    'synced_size': human_size(self.dataframe.fileSize[self.dataframe.synced].sum()),
+                    'synced_files': self.dataframe.synced.sum()}
+
+        out_format = '''STRAWb DataBase
+        ---------------
+        Path
+          DB File  : {path_db}
+          RAW Data : {path_raw}
+          Processed: {path_proc}
+
+        Total Files
+          number: {total_files}
+          size  : {total_size}
+
+        Loaded Files
+          number: {synced_files}
+          size  : {synced_size}
+        '''
+
+        return out_format.format(**out_dict)
