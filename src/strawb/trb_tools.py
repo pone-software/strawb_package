@@ -605,7 +605,7 @@ class InterpolatedRatesFile:
                                         mask=f['/rates_interpolated/mask'][:])
             else:
                 self.time = f['/rates_interpolated/time'][:]
-            self.rate = np.ma.array(f['/rates_interpolated/rate'][:])
+            self.rate = np.array(f['/rates_interpolated/rate'][:])
 
             self.file_start = f.attrs['file_start']
             self.file_end = f.attrs['file_end']
