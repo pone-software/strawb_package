@@ -438,7 +438,7 @@ class FileHandler(BaseFileHandler):
     #         self.counts_raw = self.counts_raw[:, index_sort]
     #         self.time_read = self.time_read[index_sort]
     #
-    # def get_datetime64(self, precision='us'):
+    # def get_datetime64(self, precision='ns'):
     #     unit_dict = {'Y': 0, 'M': 0, 'D': 0, 'h': 0, 'm': 0, 's': 0, 'ms': -3, 'us': -6, 'ns': -6, 'as': -9}
     #     if precision in unit_dict:
     #         return (self.time_read / 10 ** unit_dict[precision]).astype(f'datetime64[{precision}]')

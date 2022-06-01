@@ -11,12 +11,12 @@ import tqdm
 
 
 class AsDatetimeWrapper(object):
-    def __init__(self, dset, precision='us'):
+    def __init__(self, dset, precision='ns'):
         """Wrapper to convert data on reading from a dataset. 'asdatetime' is similar to asdtype of h5py Datasets for
         and can handle datetime64 when time is given as float in seconds.
         a = np.array([1624751981.4857635], float)  # time in seconds since epoch
-        a.asdatetime('ms')
-        -> np.array('2021-06-26T23:59:41.485763', datetime64[ms])
+        a.asdatetime('us')
+        -> np.array('2021-06-26T23:59:41.485763', datetime64[us])
         """
         self._dset = dset
 
@@ -31,11 +31,11 @@ class AsDatetimeWrapper(object):
         return (self._dset.__getitem__(args, ) * self.scale).astype(self._dtype)
 
     # @staticmethod
-    def asdatetime(self, unit='us'):
+    def asdatetime(self, unit='ns'):
         return AsDatetimeWrapper(dset=self, precision=unit)
 
 
-def asdatetime(array, precision='us', date_type='datetime'):
+def asdatetime(array, precision='ns', date_type='datetime'):
     """Converts timestamps of floats with precision seconds to numpy.datetime of the defined precision.
     PARAMETER
     ---------
