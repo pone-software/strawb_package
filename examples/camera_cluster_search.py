@@ -71,7 +71,7 @@ for ident in dates:
         print(pic_path)
     all_files = sorted(
         glob(
-            f'/dss/strawb/raw_module_data/tumpmtspectrometer001/{ident}/{key}??????.???Z-SDAQ-CAMERA.hdf5'
+            f'{Config.raw_data_dir}/tumpmtspectrometer001/{ident}/{key}??????.???Z-SDAQ-CAMERA.hdf5'
         )
     )
     print("number of files:", len(all_files))
