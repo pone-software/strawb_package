@@ -13,6 +13,7 @@ from welford import Welford
 import pandas as pd
 
 import strawb.sensors.camera as camera
+from strawb.config_parser import Config
 
 
 ## this function is also in camera.Images, but I adapted it a bit for this analysis
@@ -34,7 +35,7 @@ def rgb_standalone(cam_run, picture_handler, bit=8, look_at=None, **kwargs):
 ### find all files and dates
 ff = sorted(
     glob(
-        f'/dss/strawb/raw_module_data/tumpmtspectrometer001/????_??/TUMPMTSPECTROMETER001_*Z-SDAQ-CAMERA.hdf5'
+        f'{Config.raw_data_dir}/tumpmtspectrometer001/????_??/TUMPMTSPECTROMETER001_*Z-SDAQ-CAMERA.hdf5'
     )
 )
 dates = []
@@ -49,7 +50,7 @@ print(dates)
 for ident in dates:
     print("analyzing", ident)
     key = f"TUMPMTSPECTROMETER001_{ident.replace('_', '')}??T"
-    savepath = f"/dss/strawb/processed_data/pmtspectrometer001/dark_{ident}/"
+    savepath = f"{Config.proc_data_dir}/pmtspectrometer001/dark_{ident}/"
     if os.path.isfile(join(savepath, f"{key}_biolumi_activity_info.pckl").replace("?", "x")):
         print("biolumi file already exists. continue...")
         continue
@@ -98,8 +99,9 @@ for ident in dates:
                 ident = f.split("/")[-1].split(".")[0]
                 filename = join(savepath, f"{ident}_rgb.pckl")
                 ok_files.append({"fname": f, "n_frames_tot": len(cam_run.time)})
-            except:
+            except Exception as e:
                 print("Could not load file:", f)
+                raise e
                 broken_files.append(f)
                 continue
             # check if the RGB file already exists, and add it to the welford object
@@ -113,8 +115,9 @@ for ident in dates:
             try:
                 this = np.where(cam_run.lucifer_options[:,0] == -125)[0]
                 ok_files[-1]["n_frames_selected"] = len(cam_run.time[this])
-            except:
+            except Exception as e:
                 print(cam_run.lucifer_options)
+                raise e
                 continue
             if this.size==0:
                 print("No good pictures found.")
@@ -122,9 +125,10 @@ for ident in dates:
             try:
                 tmp = rgb_standalone(cam_run, picture_handler, look_at=this, subtract_dark=False)        
                 ok_files[-1]["n_frames_rgb"] = len(tmp)
-            except:
+            except IndexError as e:
                 print(this)
                 print("Could not compute RGB")
+                raise e
                 continue
             # write the RBG data + timestamp to disc, so that it can be easier analyzed later on
             if tmp is not None:
