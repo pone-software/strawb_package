@@ -1,0 +1,128 @@
+# Publications listed at: https://omlc.org/spectra/water/data
+# [AutorYear, water typ, citation]
+publications = {
+    "bricaud95": [
+        "plankton",
+        """A. Bricaud and M. Babin and A. Morel and H. Claustre, "Variability in the chlorophyll-specific absorption 
+        coefficients of natural phytoplankton: analysis and parameterization," Journal of Geophysical Research, 
+        100, 13321-13332, (1995).""",
+    ],
+    "buiteveld94": [
+        "pure water",
+        """H. Buiteveld and J. M. H. Hakvoort and M. Donze, "The optical properties of pure water," 
+        in SPIE Proceedings on Ocean Optics XII, edited by J. S. Jaffe, 2258, 174--183, (1994).""",
+    ],
+    "hale73": [
+        "pure water",
+        """G. M. Hale and M. R. Querry, "Optical constants of water in the 200nm to 200 micron wavelength region," 
+        Appl. Opt., 12, 555--563, (1973).""",
+    ],
+    "irvine68": [
+        "pure water",
+        """W. M. Irvine and J. B. Pollack, "Infrared optical properties of water and ice spheres," 
+        Icarus, 8, 324--360, (1968).""",
+    ],
+    "kopelevich76": [
+        "pure water",
+        """O. V. Kopelevich, "Optical properties of pure water in the 250-600nm range," 
+        Opt. Spectrosc., 41, 391--392, (1976).""",
+    ],
+    "kou93b": [
+        "pure water",
+        """L. Kou and D. Labrie and P. Chylek, "Refractive indices of water and ice in the 0.65-2.5 Um spectral range," 
+        Appl. Opt., 32, 3531--3540, (1993).""",
+    ],
+    # get values direct
+    "morel77": [
+        "pure water",
+        """A. Morel and L. Prieur, "Analysis of variations in ocean color," Limnol. Oceanogr., 22, 709--722, (1977). 
+        Comment: explains colorshift of whater whith plankton and unorganic material""",
+    ],
+    "quickenden80": [
+        "pure water",
+        """T. I. Quickenden and J. A. Irvin, "The ultraviolet absorption spectrum of liquid water," 
+        J. Chem Phys., 72, 4416--4428, (1980).
+        Derived from Table II Decadic absorptivities for the highest purity water by multiplying by ln(10) and 
+        converting from 1/m to 1/cm lambda ln(Transmission)""",
+    ],
+    "quickenden-decadic": [
+        "pure water",
+        """T. I. Quickenden and J. A. Irvin, "The ultraviolet absorption spectrum of liquid water," 
+        J. Chem Phys., 72, 4416--4428, (1980). 
+        Table II Decadic absorptivities for the highest purity water lambda log10(Transmission)""",
+    ],
+    "palmer74": [
+        "",
+        """K. F. Palmer and D. Williams, "Optical properties of water in the near infrared," 
+        J. Opt. Soc. Am., 64, 1107--1110, (1974).""",
+    ],
+    "pope93": [
+        "pure water",
+        """R. M. Pope, "Optical absorption of pure water and sea water using the integrating cavity absorption meter," 
+        Texas A&M University, (1993).""",
+    ],
+    "pope97": [
+        "pure water",
+        """R. M. Pope and E. S. Fry, "Absorption spectrum (380-700nm) of pure water. II. 
+        Integrating cavity measurements," Appl. Opt., 36, 8710--8723, 1997).
+        Comment: Table with absorption Coefficients and Standard Deviations""",
+    ],
+    "querry78": [
+        "",
+        ""
+    ],
+    "querry91": [
+        "",
+        ""
+    ],
+    "segelstein81": [
+        "",
+        """D. J. Segelstein, "The complex refractive index of water," 
+                     University of Missouri-Kansas City, (1981).""",
+    ],
+    # -> where to get?
+    "shifrin88": [
+        "",
+        """K. S. Shifrin, "Physical Optics of Ocean Water," , , , (1988).""",
+    ],
+    "smith81": [
+        "pure water",
+        """R. C. Smith and K. S. Baker, "Optical properties of the clearest natural 
+     waters (200-800nm)," Appl. Opt., 20, 177--184, (1981).""",
+    ],
+    "sogandares97": [
+        "pure water",
+        """F. M. Sogandares and E. S. Fry, "Absorption spectrum (340-640nm) of pure 
+     water. I. Photothermal Measurements," Appl. Opt., 36, 8699--8709, (1997).""",
+    ],
+    # -> where to get?
+    "sullivan63": [
+        "",
+        """S. A. Sullivan, "Experimental study of the absorption in distilled water, artificial sea water, 
+        and heavy water in the visible region of the spectrum," Opt. Soc. Am. J., 53, 962--968, (1963).""",
+    ],
+    "tam79": [
+        "",
+        """A. C. Tam and C. K. N. Patel, "Optical absorption of light and heavy
+        water by laser optoacoustic spectroscopy," Appl. Opt., 18, 3348--3358, (1979).""",
+    ],
+    "warren95": [
+        "ice",
+        """S. G. Warren, "Optical constants of ice from the ultraviolet to the microwave," 
+         Appl. Opt., 23, 1026--1225, (1984). This data is based on the revised 1995 data of Warren.
+         It was revised from the original data in the 1984 paper to account for misinterpretations of 
+         data by others. It also includes new data from Kou.""",
+    ],
+    "wieliczka89": [
+        "",
+        """D. M. Wieliczka and S. Weng and M. R. Querry, "Wedge shaped cell for highly absorbent liquids: 
+        infrared optical constants of water," Appl. Opt., 28, 1714--1719, (1989).""",
+    ],
+    "zolotarev69": [
+        "",
+        """V. M. Zolotarev, B. A. Mikhilov, L. L. Alperovich, and S. I. Popov, 
+        "Dispersion and absorption of liquid water in the infrared and radio regions of the spectrum," 
+        Optics and Spectroscopy, 27, 430--432, (1969).""",
+    ],
+
+}
