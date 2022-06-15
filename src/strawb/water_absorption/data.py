@@ -1,7 +1,7 @@
 import pandas
 
 publications = {
-    'morel77': [
+    'morel77_b': [
         'pure water',
         """https://aslopubs.onlinelibrary.wiley.com/doi/pdf/10.4319/lo.1977.22.4.0709
       Attenuation (c_w), scattering (b_w), and absorption (a_w) coefficients
@@ -82,7 +82,7 @@ morel77_df = pandas.DataFrame(
           [690, 0.500, 0.00055, 0.500],
           [700, 0.650, 0.00052, 0.650]])
 
-morel77_df['publication'] = 'morel77'
+morel77_df['publication'] = 'morel77_b'
 morel77_df['medium'] = 'pure water'
 
 # The following two datasets come from:
