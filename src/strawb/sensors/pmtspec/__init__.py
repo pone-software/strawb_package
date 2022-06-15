@@ -38,3 +38,4 @@ class PMTSpec:
         del self.trb_rates
         del self.file_handler
         del self.pmt_meta_data
+
