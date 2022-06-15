@@ -310,57 +310,46 @@ def human_size(size_bytes, units=None, base=1024, precision=2):
     return f'{size_bytes:.{precision}f} {units[0]}' if size_bytes < base else human_size(size_bytes / base, units[1:])
 
 
-def wavelength_to_rgb(channel, gamma=0.8):
-    """This converts a given wavelength of light to an
-    approximate RGB color value. The wavelength must be given
-    in nanometers in the range from 380 nm through 750 nm
-    (789 THz through 400 THz).
-    Based on code by Dan Bruton
-    http://www.physics.sfasu.edu/astro/color/spectra.html
+def wavelength_to_rgb(wavelength, gamma=1., alpha_outside=.5):
+    """This converts a given wavelength of light to an approximate RGB color value.
+    A visible wavelength in nanometers is in the range from 350 nm through 780 nm.
+
+    Based on code by Dan Bruton: http://www.physics.sfasu.edu/astro/color/spectra.html
+    Mod. from: http://www.noah.org/wiki/Wavelength_to_RGB_in_Python
+
+    PARAMTERS
+    ---------
+    wavelength: float,
+        wavelength in nm
+    gamma: float, optional
+        Gamma correction implemented as a power law ([r,g,b]**gamma). Default: gamma=1.
+    alpha_outside: float< optional
+        alpha outside the visible range. In the range [380, 750]: alpha=1
+        for <350 and >780: alpha=alpha_outside
+        and [350, 380] & [750, 780] it lineary fades from alpha=1 to alpha=alpha_outside.
+
+    RETURNS
+    -------
+    rgba: ndarray
+        [[r_i, g_i, b_i, alpha_i], ...] for all given wavelengths.
     """
 
-    try:
-        wavelength = float(channel["wavelength"])
-        alt_color = channel["color"]
-    except:
-        wavelength = channel
-        alt_color = "red"
+    wavelength_map = [350, 380, 440, 490, 510, 580, 645, 750, 780]
+    # calc. alpha              wavelength_map = [350,380,440,490,510,580,645,750,780]
+    alpha = np.interp(wavelength, wavelength_map, [0, 1, 1, 1, 1, 1, 1, 1, 0])
+    alpha = alpha * (1 - alpha_outside) + alpha_outside
 
-    if 380 <= wavelength <= 440:
-        attenuation = 0.3 + 0.7 * (wavelength - 380) / (440 - 380)
-        R = ((-(wavelength - 440) / (440 - 380)) * attenuation) ** gamma
-        G = 0.0
-        B = (1.0 * attenuation) ** gamma
-        return_this = (R, G, B)
-    elif 440 <= wavelength <= 490:
-        R = 0.0
-        G = ((wavelength - 440) / (490 - 440)) ** gamma
-        B = 1.0
-        return_this = (R, G, B)
-    elif 490 <= wavelength <= 510:
-        R = 0.0
-        G = 1.0
-        B = (-(wavelength - 510) / (510 - 490)) ** gamma
-        return_this = (R, G, B)
-    elif 510 <= wavelength <= 580:
-        R = ((wavelength - 510) / (580 - 510)) ** gamma
-        G = 1.0
-        B = 0.0
-        return_this = (R, G, B)
-    elif 580 <= wavelength <= 645:
-        R = 1.0
-        G = (-(wavelength - 645) / (645 - 580)) ** gamma
-        B = 0.0
-        return_this = (R, G, B)
-    elif 645 <= wavelength <= 750:
-        attenuation = 0.3 + 0.7 * (750 - wavelength) / (750 - 645)
-        R = (1.0 * attenuation) ** gamma
-        G = 0.0
-        B = 0.0
-        return_this = (R, G, B)
-    else:
-        return_this = alt_color
-    return return_this
+    # attenuation at visible limits, wavelength_map = [350,380,440,490,510,580,645,750,780]
+    attenuation = np.interp(wavelength, wavelength_map, [0, 0, 1, 1, 1, 1, 1, 0, 0]) * .7 + .3
+
+    # calc. colors             wavelength_map = [350,380,440,490,510,580,645,750,780]
+    red = np.interp(wavelength, wavelength_map, [1, 1, 0, 0, 0, 1, 1, 1, 1]) * attenuation
+    green = np.interp(wavelength, wavelength_map, [0, 0, 0, 1, 1, 1, 0, 0, 0]) * attenuation
+    blue = np.interp(wavelength, wavelength_map, [1, 1, 1, 1, 0, 0, 0, 0, 0]) * attenuation
+
+    # pack it into one np array
+    rgba = np.array([red ** gamma, green ** gamma, blue ** gamma, alpha])
+    return rgba.transpose()
 
 
 def unique_steps(t, state, ratio_steps_len_1=.75, plot=False):
@@ -435,7 +424,7 @@ def append_hdf5(file, dataset_name, data, axis=0, **kwargs):
         init_shape = list(data.shape).copy()
         init_shape[axis] = 0
 
-        d = file.create_dataset(dataset_name, data=data,
+        file.create_dataset(dataset_name, data=data,
                                 maxshape=max_shape,  # int(1e12),
                                 #                              dtype=float, chunks=(10)
                                 **kwargs
