@@ -44,6 +44,11 @@ publications = {
       in the Cascadia Basin" (2021)"""
     ],
 
+    'km3net15': [
+        'deep sea water',
+        """KM3NeT: Technical Design Report (2015); Sites: Pylos (N4.5),and Capo Passero (CP1 and CP2)
+        https://www.km3net.org/wp-content/uploads/2015/07/KM3NeT-TDR-Part-2.pdf"""]
+
 }
 
 morel77_df = pandas.DataFrame(
@@ -162,3 +167,29 @@ straw21_df = pandas.DataFrame(
           [585, 1. / 7.1]])
 straw21_df['publication'] = 'straw21'
 straw21_df['medium'] = 'deep sea water'
+
+# https://www.km3net.org/wp-content/uploads/2015/07/KM3NeT-TDR-Part-2.pdf
+# KM3NeT: Technical Design Report (2015)
+# 'Site' ,'Depth',
+# Sites: Pylos (N4.5),and Capo Passero (CP1 and CP2)
+wavelength = [376, 386, 400, 425, 445, 463, 502, 520]
+km3net15_data = [
+    # site, depth, [abs, abs_err, abs, abs_err,...]
+    ['N4.5', 4100, [21.0, 0.5, 24.8, 0.7, 29.2, 0.9, 36.0, 1.3, 42.3, 1.8, 46.1, 2.0, 28.7, 0.8, 21.3, 0.5]],
+    ['CP2', 3400, [18.6, 0.4, 21.8, 0.5, 25.6, 0.7, 32.4, 1.1, 38.5, 1.5, 42.0, 1.7, 27.1, 0.8, 20.9, 0.5]],
+    ['N4.5', 3000, [21.9, 0.5, 25.7, 0.7, 30.5, 1.0, 37.8, 1.5, 43.8, 1.9, 47.2, 2.2, 29.3, 0.9, 21.5, 0.6]],
+    ['CP1', 3100, [19.9, 0.4, 23.2, 0.6, 27.8, 0.8, 34.6, 1.2, 41.5, 1.7, 44.1, 1.9, 28.5, 0.8, 21.8, 0.5]],
+    ['CP2', 3000, [19.5, 0.4, 23.0, 0.5, 27.3, 0.8, 34.1, 1.2, 39.6, 1.6, 43.7, 1.8, 27.6, 0.8, 21.1, 0.5]], ]
+
+km3net15_df = pandas.DataFrame()
+for site_i, depth_i, abs_len in km3net15_data:
+    abs_len = np.array(abs_len)
+    df_i = pandas.DataFrame(dict(
+        wavelength=wavelength,
+        absorption=1. / abs_len[::2],  # abs <- [::2] as [abs, abs_err, abs, abs_err,...]
+        error=1. / abs_len[::2] ** 2 * abs_len[1::2],  # abs_err <- [1::2] as [abs, abs_err, abs, abs_err,...]
+        depth=depth_i, publication=f'Km3Net-{site_i}-{depth_i}m'),
+    )
+    km3net15_df = km3net15_df.append(df_i, ignore_index=True)
+
+km3net15_df.sort_values(inplace=True, by='wavelength')
