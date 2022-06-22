@@ -3,6 +3,7 @@ from .module import Module
 from .lidar import Lidar
 from .pmtspec import PMTSpec
 from .minispec import MiniSpectrometer
+from .adcp import ADCP
 
 
 # class BaseSensor:

@@ -136,7 +136,7 @@ class BaseFileHandler:
             a	   : Read/write if exists, create otherwise
         """
         if self.file is None:
-            if self.file_typ in ['h5', 'hdf5']:
+            if self.file_typ in ['h5', 'hdf5', 'nc']:
                 if mode in ['r']:
                     try:
                         self.file = h5py.File(self.file_name, mode, libver='latest',

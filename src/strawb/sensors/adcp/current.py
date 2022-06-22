@@ -1,7 +1,7 @@
 import numpy as np
 import pandas
 
-from strawb.sensors.adcp import FileHandler
+from strawb.sensors.adcp.file_handler import FileHandler
 
 
 class Current:
