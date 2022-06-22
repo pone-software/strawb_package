@@ -11,31 +11,70 @@ import tqdm
 
 
 class AsDatetimeWrapper(object):
-    def __init__(self, dset, precision='ns'):
+    def __init__(self, dset, precision='ns', date_type='datetime', scale2seconds=1.):
         """Wrapper to convert data on reading from a dataset. 'asdatetime' is similar to asdtype of h5py Datasets for
         and can handle datetime64 when time is given as float in seconds.
+        PARAMETER
+        ---------
+        array: ndarray
+            input array of timestamp as floats in the precision seconds.
+        precision: str, optional
+            defines the precision of the timestamp. Valid precisions are: 's', 'ms', 'us', 'ns' and 'ps'
+        date_type: str, optional
+            either `datetime` or `timedelta`
+        scale2seconds: float, optional
+            if the input array of timestamp is not in unit 'seconds', scale2seconds can correct the input.
+            E.g.: if the input is in units:
+            - 'hours' -> scale2seconds=3600. # seconds/hour
+            - 'days' -> scale2seconds=24*3600. # seconds/days
+
         a = np.array([1624751981.4857635], float)  # time in seconds since epoch
         a.asdatetime('us')
         -> np.array('2021-06-26T23:59:41.485763', datetime64[us])
         """
         self._dset = dset
 
-        self.unit_dict = {'s': 1, 'ms': 1e3, 'us': 1e6, 'ns': 1e9}
+        self.unit_dict = {'s': 1, 'ms': 1e3, 'us': 1e6, 'ns': 1e9, 'ps': 1e12}
+
         if precision.lower() not in self.unit_dict:
             raise ValueError(f'precision not in unit_dict (unit_dict), got: {precision}')
+        if date_type.lower() not in ['datetime', 'timedelta']:
+            raise ValueError(f'date_type has to be out of: `datetime` or `timedelta`. Got: {date_type}')
 
-        self._dtype = np.dtype(f'datetime64[{precision.lower()}]')
+        self._dtype = np.dtype(f'{date_type.lower()}64[{precision.lower()}]')
         self.scale = float(self.unit_dict[precision.lower()])
+        self.scale2seconds = scale2seconds
 
     def __getitem__(self, args):
-        return (self._dset.__getitem__(args, ) * self.scale).astype(self._dtype)
+        return (self._dset.__getitem__(args, ) * self.scale * self.scale2seconds).astype(self._dtype)
 
     # @staticmethod
-    def asdatetime(self, unit='ns'):
-        return AsDatetimeWrapper(dset=self, precision=unit)
+    def asdatetime(self, unit=None, precision='ns', date_type='datetime', scale2seconds=1.):
+        """Converts timestamps of floats with precision seconds to numpy.datetime of the defined precision.
+        PARAMETER
+        ---------
+        array: ndarray
+            input array of timestamp as floats in the precision seconds.
+        precision: str, optional
+            defines the precision of the timestamp. Valid precisions are: 's', 'ms', 'us', 'ns' and 'ps'
+        date_type: str, optional
+            either `datetime` or `timedelta`
+        scale2seconds: float, optional
+            if the input array of timestamp is not in unit 'seconds', scale2seconds can correct the input.
+            E.g.: if the input is in units:
+            - 'hours' -> scale2seconds=3600. # seconds/hour
+            - 'days' -> scale2seconds=24*3600. # seconds/days
+        RETURNS
+        -------
+        array: ndarray
+            numpy array with as dtype=datetime64 and the defined precision
+        """
+        if unit is not None:
+            precision = unit
+        return AsDatetimeWrapper(dset=self, precision=precision, date_type=date_type, scale2seconds=scale2seconds)
 
 
-def asdatetime(array, precision='ns', date_type='datetime'):
+def asdatetime(array, precision='ns', date_type='datetime', scale2seconds=1.):
     """Converts timestamps of floats with precision seconds to numpy.datetime of the defined precision.
     PARAMETER
     ---------
@@ -45,6 +84,11 @@ def asdatetime(array, precision='ns', date_type='datetime'):
         defines the precision of the timestamp. Valid precisions are: 's', 'ms', 'us', 'ns' and 'ps'
     date_type: str, optional
         either `datetime` or `timedelta`
+    scale2seconds: float, optional
+        if the input array of timestamp is not in unit 'seconds', scale2seconds can correct the input.
+        E.g.: if the input is in units:
+        - 'hours' -> scale2seconds=3600. # seconds/hour
+        - 'days' -> scale2seconds=24*3600. # seconds/days
     RETURNS
     -------
     array: ndarray
@@ -63,7 +107,7 @@ def asdatetime(array, precision='ns', date_type='datetime'):
     dtype = np.dtype(f'{date_type.lower()}64[{precision.lower()}]')
     scale = float(unit_dict[precision.lower()])
 
-    return (array * scale).astype(dtype)
+    return (array * scale * scale2seconds).astype(dtype)
 
 
 def datetime2float(array):
@@ -326,7 +370,7 @@ def wavelength_to_rgb(wavelength, gamma=1., alpha_outside=.5):
     alpha_outside: float< optional
         alpha outside the visible range. In the range [380, 750]: alpha=1
         for <350 and >780: alpha=alpha_outside
-        and [350, 380] & [750, 780] it lineary fades from alpha=1 to alpha=alpha_outside.
+        and [350, 380] & [750, 780] it linearly fades from alpha=1 to alpha=alpha_outside.
 
     RETURNS
     -------
@@ -425,10 +469,10 @@ def append_hdf5(file, dataset_name, data, axis=0, **kwargs):
         init_shape[axis] = 0
 
         file.create_dataset(dataset_name, data=data,
-                                maxshape=max_shape,  # int(1e12),
-                                #                              dtype=float, chunks=(10)
-                                **kwargs
-                                )
+                            maxshape=max_shape,  # int(1e12),
+                            #                              dtype=float, chunks=(10)
+                            **kwargs
+                            )
     elif data.shape[axis] != 0:
         len_append_items = data.shape[axis]
         d.resize(d.shape[axis] + len_append_items, axis=axis)
