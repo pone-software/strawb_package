@@ -13,7 +13,7 @@ class PMTSpecTRBRates(TRBTools):
         else:
             raise TypeError(f"Expected `strawb.sensors.pmtspec.FileHandler` got: {type(file_handler)}")
 
-    @ property
+    @property
     def __daq_frequency_readout__(self):
         """Overwrite the property of TRBTools"""
         return self.file_handler.daq_frequency_readout
