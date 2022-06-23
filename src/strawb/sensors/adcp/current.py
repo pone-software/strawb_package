@@ -2,6 +2,7 @@ import numpy as np
 import pandas
 
 from strawb.sensors.adcp.file_handler import FileHandler
+import strawb.tools
 
 
 class Current:
@@ -13,16 +14,26 @@ class Current:
             raise TypeError(f"Expected `strawb.sensors.adcp.FileHandler` got: {type(file_handler)}")
 
         # properties store
+        self._timestamp_ = None
         self._vel_abs = None
         self._theta = None
         self._phi = None
+
+    @property
+    def timestamp(self):
+        """The absolute timestamp as seconds since epooch."""
+        if self.file_handler.time is None:
+            return None
+        if self._timestamp_ is None:
+            self._timestamp_ = self.file_handler.time[:] * 24. * 3600.
+        return self._timestamp_
 
     @property
     def time(self):
         """The absolute timestamp as datetime."""
         if self.file_handler.time is None:
             return None
-        return self.file_handler.time.asdatetime(scale2seconds=24. * 3600.)
+        return strawb.tools.asdatetime(self.timestamp)
 
     @property
     def velocity_abs(self, ):
@@ -37,15 +48,18 @@ class Current:
     def theta(self, ):
         """Theta of velocity. Theta=0 -> upwards, Theta=np.pi=downwards."""
         if self._theta is None:
-            self._theta = np.arccos(self.file_handler.velocity_up[:] / self.velocity_abs)
+            self._theta = np.zeros_like(self.file_handler.velocity_up)
+            mask = self.velocity_abs != 0
+            self._theta[mask] = np.arccos(self.file_handler.velocity_up[mask] / self.velocity_abs[mask])
+            self._theta[~mask] = 0
         return self._theta
 
     @property
     def phi(self, ):
-        """Theta of velocity. Theta=0 -> upwards, Theta=np.pi=downwards."""
+        """Phi of velocity. phi=0 -> north, phi=np.pi -> south"""
         if self._phi is None:
-            self._phi = np.ma.arctan2(self.file_handler.velocity_east[:],
-                                      self.file_handler.velocity_north[:])
+            self._phi = np.arctan2(self.file_handler.velocity_east[:],
+                                   self.file_handler.velocity_north[:])
             self._phi[self._phi < 0] += 2 * np.pi
         return self._phi
 
