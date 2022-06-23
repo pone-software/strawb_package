@@ -63,28 +63,24 @@ class BaseFileHandler:
             pass
         elif os.path.exists(file_name):
             self.file_name = os.path.abspath(file_name)
-            self.file_typ = self.file_name.rsplit('.', 1)[-1]
-            if not skipp_init_open:
-                self.file_version = self._init_open_(raise_error=raise_error)
         elif os.path.exists(os.path.join(Config.raw_data_dir, file_name)):
             path = os.path.join(Config.raw_data_dir, file_name)
             self.file_name = os.path.abspath(path)
-            self.file_typ = self.file_name.rsplit('.', 1)[-1]
-            if not skipp_init_open:
-                self.file_version = self._init_open_(raise_error=raise_error)
         else:
             file_name_list = glob.glob(Config.raw_data_dir + "/**/" + file_name, recursive=True)
             if len(file_name_list) == 1:
                 self.file_name = file_name_list[0]
-                self.file_typ = self.file_name.rsplit('.', 1)[-1]
-                if not skipp_init_open:
-                    self.file_version = self._init_open_(raise_error=raise_error)
             else:
                 if not file_name_list:
                     raise FileNotFoundError(f'{file_name} not found nor matches any file in "{Config.raw_data_dir}"')
                 else:
                     raise FileExistsError(f'{file_name} matches multiple files in "{Config.raw_data_dir}": '
                                           f'{file_name_list}')
+
+        if file_name is not None:
+            self.file_typ = self.file_name.rsplit('.', 1)[-1]
+            if not skipp_init_open:
+                self.file_version = self._init_open_(raise_error=raise_error)
 
         # in case, extract the module name from the filename
         if module is None:
@@ -178,7 +174,7 @@ class BaseFileHandler:
         self._open_(mode=mode)
 
         self.is_empty = True
-        if self.file_typ in ['h5', 'hdf5']:
+        if self.file_typ in ['h5', 'hdf5', 'nc']:
             if not list(self.file.keys()):  # no groups inside the file -> empty file
                 self.is_empty = True
             else:
