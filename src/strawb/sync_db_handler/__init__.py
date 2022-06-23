@@ -57,10 +57,13 @@ class SyncDBHandler:
         >>> db = strawb.SyncDBHandler(load_db=False)  # loads the db
         >>> db.load_onc_db_update(output=True, save_db=True)
         """
+        self.onc_downloader = ONCDownloader(**kwargs)
+        self.dataframe = None  # stores the db in a pandas data frame
 
-        # find handle file_name and fine it.
+        # handle file_name or try to find it.
+        self.file_name = None
         if file_name is None:  # non, doesn't load the DB
-            self.file_name = None
+            pass
         elif file_name == 'Default':  # take the default
             self.file_name = Config.pandas_file_sync_db
         elif os.path.isabs(file_name):
@@ -76,25 +79,87 @@ class SyncDBHandler:
                 self.file_name = file_name_list[0]
             else:
                 if file_name_list:
-                    print(f'{file_name} matches multiple files in "{Config.raw_data_dir}": '
-                          f'{file_name_list}.')
-                self.file_name = os.path.abspath(file_name)
+                    raise FileExistsError(f'{file_name} matches multiple files in "{Config.raw_data_dir}": '
+                                          f'{file_name_list}')
 
-        self.onc_downloader = ONCDownloader(**kwargs)
-        self.dataframe = None  # stores the db in a pandas data frame
+        if load_db:
+            self.load_db()  # loads the db if file is valid
+            # load the DB only if the file exists, i.e. file_name = 'Default'
+            if update:
+                self.update_sync_state()
+                self.update_hdf5_attributes()
+                self.update_file_version()
 
-        self.onc_downloader = ONCDownloader(**kwargs)
+    def load_db(self):
+        """Loads the DB file into a pandas.DataFrame from the file provided at the initialisation."""
+        #  if self.file_name is not None:
+        if self.file_name is None:
+            raise ValueError(f"File_name is None. Can't load the file.")
+        elif not os.path.exists(self.file_name):
+            raise FileNotFoundError(f"{self.file_name} doesn't exist -> load data and execute .save_db() to create it.")
+        else:
+            self.dataframe = pandas.read_pickle(self.file_name)
 
-        if self.file_name is not None and load_db:
-            if os.path.exists(self.file_name):
-                self.load_db()  # loads the db if file is valid
-                # load the DB only if the file exists, i.e. file_name = 'Default'
-                if update:
-                    self.update_sync_state()
-                    self.update_hdf5_attributes()
-                    self.update_file_version()
+    def save_db(self):
+        """Saves the DB file into a pandas.DataFrame to the file provided at the initialisation."""
+        # store information in a pandas-file
+        if self.file_name is None:
+            raise ValueError(f"File_name is None -> save_db can't be executed")
+        if self.dataframe is not None:  # only save it, when there is something stored in the dataframe
+            # check if the directory exits, if not create it
+            os.makedirs(os.path.dirname(self.file_name), exist_ok=True)  # exist_ok, doesn't raise an error if it exists
+
+            # if self.file_name is None:  # in case, set the default file name
+            #     self.file_name = Config.pandas_file_sync_db
+            self.dataframe.to_pickle(self.file_name,
+                                     protocol=4,  # protocol=4 compatible with python>=3.4
+                                     )
+
+    @staticmethod
+    def unique_with_count(pandas_series):
+        """Return the unique items and how often they exist."""
+        res = []
+        unique = pandas_series.unique()
+        unique.sort()
+        for j in unique:
+            if j is None or np.isnan(j):
+                count = pandas_series.isnull().sum()
             else:
-                print(f"File doesn't exist: {self.file_name} -> load data and execute .save_db() to create it.")
+                count = (pandas_series == j).sum()
+            res.append([j, count])
+        return res
+
+    @property
+    def synced_file_size(self):
+        """Returns the total file size of all synced files."""
+        return human_size(self.dataframe.fileSize[self.dataframe.synced].sum())
+
+    def __repr__(self):
+        out_dict = {'path_db': self.file_name,
+                    'path_raw': Config.raw_data_dir,
+                    'path_proc': Config.proc_data_dir,
+                    'total_size': human_size(self.dataframe.fileSize.sum()),
+                    'total_files': len(self.dataframe.synced),
+                    'synced_size': human_size(self.dataframe.fileSize[self.dataframe.synced].sum()),
+                    'synced_files': self.dataframe.synced.sum()}
+
+        out_format = '''STRAWb DataBase
+        ---------------
+        Path
+          DB File  : {path_db}
+          RAW Data : {path_raw}
+          Processed: {path_proc}
+
+        Total Files
+          number: {total_files}
+          size  : {total_size}
+
+        Loaded Files
+          number: {synced_files}
+          size  : {synced_size}
+        '''
+
+        return out_format.format(**out_dict)
 
     @property
     def dataframe(self):
@@ -112,25 +177,6 @@ class SyncDBHandler:
                 pass
             # dataframe.sort_index(inplace=True, ignore_index=False)  # and sort it inplace
         self._dataframe = dataframe
-
-    def load_db(self):
-        """Loads the DB file into a pandas.DataFrame from the file provided at the initialisation."""
-        #  if self.file_name is not None:
-        if os.path.exists(self.file_name):
-            self.dataframe = pandas.read_pickle(self.file_name)
-
-    def save_db(self):
-        """Saves the DB file into a pandas.DataFrame to the file provided at the initialisation."""
-        # store information in a pandas-file
-        if self.dataframe is not None:  # only save it, when there is something stored in the dataframe
-            # check if the directory exits, if not create it
-            os.makedirs(os.path.dirname(self.file_name), exist_ok=True)  # exist_ok, doesn't raise an error if it exists
-
-            # if self.file_name is None:  # in case, set the default file name
-            #     self.file_name = Config.pandas_file_sync_db
-            self.dataframe.to_pickle(self.file_name,
-                                     protocol=4,  # protocol=4 compatible with python>=3.4
-                                     )
 
     def add_new_db(self, dataframe2add, dataframe=None, ):
         """Updates a pandas.DataFrame to the internal pandas.DataFrame. If there is no internal pandas.DataFrame it set
@@ -160,10 +206,10 @@ class SyncDBHandler:
             return dataframe2add  # no second dataframe defined -> nothing to add
 
         else:
-            self._check_index_(dataframe2add)  # check the new dataframe
-            self._check_index_(dataframe)  # check the new dataframe
+            self._check_index_(dataframe2add)  # check the to add dataframe
+            self._check_index_(dataframe)  # check the existing dataframe
             # append it
-            self._check_double_indexes_(self.dataframe, dataframe2add)
+            self._check_double_indexes_(self.dataframe, dataframe2add, priority_column='h5_attrs')
             dataframe = dataframe.append(dataframe2add,  # for newer pandas versions: concat = append
                                          ignore_index=False,
                                          verify_integrity=True)
@@ -241,30 +287,37 @@ class SyncDBHandler:
         return dataframe
 
     @staticmethod
-    def _check_double_indexes_(a, b):
+    def _check_double_indexes_(a, b, priority_column=None):
         """Check if two datasets have the same indexes and delete this index (drop=pop index) from one of the datasets.
-        The dataset to delete from, is chosen if the datasets has something stored in column 'h5_attrs', with a higher
-        priority for a. The indexes are deleted 'inplace' for both datasets.
+        The dataset to delete from, is chosen if the datasets has something stored in `priority_column`, with a higher
+        priority for `a`. The indexes are deleted 'inplace' for both datasets.
         PARAMETER
         ---------
         a: dataset
         b: dataset
+        priority_column: str
+            the column to detect from which dataset (`a` or `b`) to delete the index.
+            `a` has an higher priority then `b`. If None, delete all intersections from `b`.
         """
-        if 'h5_attrs' not in a:
-            a['h5_attrs'] = None
-        if 'h5_attrs' not in b:
-            b['h5_attrs'] = None
+        if priority_column not in a:
+            a[priority_column] = None
+        if priority_column not in b:
+            b[priority_column] = None
 
-        for i, b_i in enumerate(b.index):
-            if b_i in a.index:
-                # if 'h5_attrs' are available in b but not in db_handler.dataframe -> db_handler.dataframe.drop
-                if a['h5_attrs'][b_i] is None and not b['h5_attrs'][b_i] is None:
-                    a.drop(index=b_i, inplace=True)
+        # for i, b_i in enumerate(b.index):
+        #     if b_i in a.index:
+        for b_i in a.index.intersection(b.index):
+            if priority_column is None:
+                b.drop(index=b_i, inplace=True)
 
-                # if 'h5_attrs' are available in db_handler.dataframe but not in b -> b.drop
-                # or if 'h5_attrs' is not available in db_handler.dataframe nor b -> b.drop
-                else:
-                    b.drop(index=b_i, inplace=True)
+            # if values in the priority_column are available in `b` but not in `a` -> `a.drop`
+            elif a[priority_column][b_i] is None and not b[priority_column][b_i] is None:
+                a.drop(index=b_i, inplace=True)
+
+            # if values in the priority_column are available in `a` but not in `b` -> `b.drop`
+            # or if values in the priority_column are not available in `a` nor `b` -> `b.drop`
+            else:
+                b.drop(index=b_i, inplace=True)
 
     @staticmethod
     def _check_index_(dataframe):
@@ -817,49 +870,3 @@ class SyncDBHandler:
                dataframe=dataframe)
 
         return dataframe
-
-    @staticmethod
-    def unique_with_count(pandas_series):
-        """Return the unique items and how often they exist."""
-        res = []
-        unique = pandas_series.unique()
-        unique.sort()
-        for j in unique:
-            if j is None or np.isnan(j):
-                count = pandas_series.isnull().sum()
-            else:
-                count = (pandas_series == j).sum()
-            res.append([j, count])
-        return res
-
-    @property
-    def synced_file_size(self):
-        """Returns the total file size of all synced files."""
-        return human_size(self.dataframe.fileSize[self.dataframe.synced].sum())
-
-    def __repr__(self):
-        out_dict = {'path_db': self.file_name,
-                    'path_raw': Config.raw_data_dir,
-                    'path_proc': Config.proc_data_dir,
-                    'total_size': human_size(self.dataframe.fileSize.sum()),
-                    'total_files': len(self.dataframe.synced),
-                    'synced_size': human_size(self.dataframe.fileSize[self.dataframe.synced].sum()),
-                    'synced_files': self.dataframe.synced.sum()}
-
-        out_format = '''STRAWb DataBase
-        ---------------
-        Path
-          DB File  : {path_db}
-          RAW Data : {path_raw}
-          Processed: {path_proc}
-
-        Total Files
-          number: {total_files}
-          size  : {total_size}
-
-        Loaded Files
-          number: {synced_files}
-          size  : {synced_size}
-        '''
-
-        return out_format.format(**out_dict)
