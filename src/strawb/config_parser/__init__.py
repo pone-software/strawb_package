@@ -19,6 +19,7 @@ class Config:
     proc_data_dir = ConfigParser.config.get('Paths', 'proc_data_dir')
     virtual_hdf5_dir = ConfigParser.config.get('Paths', 'virtual_hdf5_dir')
     pandas_file_sync_db = ConfigParser.config.get('Paths', 'pandas_file_sync_db')
+    onc_device_db = ConfigParser.config.get('Paths', 'onc_device_db')
 
     # ONC
     onc_token = ConfigParser.config.get('ONC', 'token')
