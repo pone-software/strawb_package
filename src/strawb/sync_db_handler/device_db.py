@@ -62,7 +62,7 @@ class ONCDeviceDB(BaseDBHandler):
         force: bool, optional
             if the positions should be loaded if they exist already. Default, False.
         """
-        if self.dataframe is None and not force:
+        if self.dataframe is not None and not force:
             return self.dataframe
 
         if df_devices is None:
