@@ -8,6 +8,7 @@ proc_data_dir: %(home_dir)s/processed_data
 virtual_hdf5_dir: %(proc_data_dir)s/virtual_hdf5_dir
 pandas_file_sync_db: %(raw_data_dir)s/pandas_file_sync_db.gz
 onc_device_db: %(raw_data_dir)s/onc_device_db.gz
+onc_data_product_backup: %(raw_data_dir)s/onc_data_product_backup.gz
 
 
 [ONC]
