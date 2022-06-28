@@ -8,7 +8,7 @@ For the installation you have two options.
 `Pip` can directly install the package from the repository. As `pip` only compares the version number and not the code, uninstall an existing installation before you install it from the repository. For updating the package just rerun the same commands. You can also specify the branch by changing `master` accordingly. The commands are:
 ```bash
 pip3 uninstall -y strawb  # Uninstall an existing installation
-pip3 install -U git+git://github.com/pone-software/strawb_package.git@master  # Install it from the repository
+pip3 install -U git+https://github.com/pone-software/strawb_package.git@master  # Install it from the repository
 ```
 
 ### Installation for developers
