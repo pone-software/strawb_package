@@ -477,18 +477,28 @@ def append_hdf5(file, dataset_name, data, axis=0, **kwargs):
         len_append_items = data.shape[axis]
         d.resize(d.shape[axis] + len_append_items, axis=axis)
 
-        # TODO: is there a way to get this nicer?
-        if axis == 0:
-            d[-len_append_items:] = data
-        elif axis == 1:
-            d[:, -len_append_items:] = data
-        elif axis == 2:
-            d[:, :, -len_append_items:] = data
-        elif axis == 3:
-            d[:, :, :, -len_append_items:] = data
-        elif axis == 4:
-            d[:, :, :, :, -len_append_items:] = data
-        elif axis == 5:
-            d[:, :, :, :, :, -len_append_items:] = data
-        elif axis == 6:
-            d[:, :, :, :, :, :, -len_append_items:] = data
+        if axis < 0:
+            axis = len(d.shape) - axis
+
+        # slice must be a tuple
+        # slice(-len_append_items, None) = [-len_append_items:]
+        # slice(None) = [:]
+        # (slice(None), slice(-len_append_items, None)) = [:, -len_append_items:]
+        slicer = (*(axis * [slice(None)]), slice(-len_append_items, None))
+        d[slicer] = data
+
+        # # TODO: is there a way to get this nicer?
+        # if axis == 0:
+        #     d[-len_append_items:] = data
+        # elif axis == 1:
+        #     d[:, -len_append_items:] = data
+        # elif axis == 2:
+        #     d[:, :, -len_append_items:] = data
+        # elif axis == 3:
+        #     d[:, :, :, -len_append_items:] = data
+        # elif axis == 4:
+        #     d[:, :, :, :, -len_append_items:] = data
+        # elif axis == 5:
+        #     d[:, :, :, :, :, -len_append_items:] = data
+        # elif axis == 6:
+        #     d[:, :, :, :, :, :, -len_append_items:] = data
