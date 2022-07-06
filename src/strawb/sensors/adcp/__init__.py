@@ -2,7 +2,7 @@
 
 from typing import Union
 
-from strawb.sensors.adcp.current import Current
+from strawb.sensors.adcp.current import CurrentFile
 from strawb.sensors.adcp.file_handler import FileHandler
 
 
@@ -25,7 +25,7 @@ class ADCP:
         else:
             self.file_handler = file
 
-        self.current = Current(file_handler=self.file_handler)
+        self.current = CurrentFile(file_handler=self.file_handler)
 
     def __del__(self):
         del self.current
