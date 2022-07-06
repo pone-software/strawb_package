@@ -4,6 +4,7 @@ import time
 
 import numpy as np
 import scipy.stats
+import scipy.signal
 from matplotlib import pyplot as plt
 #  ---- HDF5 Helper ----
 # add new asdatetime to h5py Dataset similar to asdtype for datetime64 when time is given as float in seconds
@@ -502,3 +503,142 @@ def append_hdf5(file, dataset_name, data, axis=0, **kwargs):
         #     d[:, :, :, :, :, -len_append_items:] = data
         # elif axis == 6:
         #     d[:, :, :, :, :, :, -len_append_items:] = data
+
+
+def periodic2plot(x, y, period=(0., np.pi * 2.)):
+    """A function to prepare periodic y-data for a plot. Everytime the y-data is crossing the boundary's 3 data-points
+    are added to x and y. They represent the position when the data is crossing the boundary. For the y-data this means,
+    [0, 0, period] or [period, 0, 0], depending on the direction. For x it's [x_i, x_i, x_i] and x_i is the position
+    of the transits determined by linear interpolation. The middle datapoint in x and y are added and
+    masked (np.ma.MaskedArray) to cut the plot at this position. This works for matplotlib.
+
+    The perodicity range in y is: [0, period[
+
+    PARAMETER
+    ---------
+    x: ndarray, list
+        x-data as an array with same shape as y
+    y: ndarray, list
+        periodic data as an array with same shape as x. If it's not periodic it will be chnged to periodic data within
+        the range [0, period[
+    period: float, optional
+        The period for the y-coordinates. The range is set to: [0, period[
+
+    RETURNS
+    -------
+    x: MaskedArray
+        x-data with added perioodic transitions
+    y: MaskedArray
+        y-data with added perioodic transitions
+
+    EXAMPLE
+    --------
+    >>> import matplotlib.pyplot as plt
+    >>> import numpy as np
+    generate some periodic data crossing the boundaries
+    >>> period = 1.
+    >>> x = np.linspace(0., np.pi*4, 40)
+    >>> y = (np.sin(x)+1) % period
+    and plot the difference
+    >>> plt.figure()
+    >>> plt.plot(x, y, 'o-')
+    >>> plt.plot(*periodic2plot(x,y, period=1))
+    >>> plt.axhline(period, color='gray')
+    >>> plt.axhline(0, color='gray')
+    """
+    dtype_convert_x, dtype_convert_y = None, None
+    if not isinstance(x, np.ndarray):
+        x = np.array(x)
+
+    if not isinstance(y, np.ndarray):
+        y = np.array(y)
+
+    if np.issubdtype(x.dtype, np.timedelta64) or np.issubdtype(x.dtype, np.datetime64):
+        dtype_convert_x = x.dtype
+        x = x.astype(float)
+
+    if np.issubdtype(y.dtype, np.timedelta64) or np.issubdtype(y.dtype, np.datetime64):
+        dtype_convert_y = y.dtype
+        y = y.astype(float)
+
+    y %= period
+    indexes = np.argwhere(np.abs(np.diff(y)) > .5 * period).flatten()
+    index_shift = 0
+    for i in indexes:
+        i += index_shift
+        index_shift += 3  # in every loop it adds 3 elements
+        x_transit = np.interp(period, y[i:i + 2], x[i:i + 2], period=period)
+
+        y_add = np.ma.array([period, 0., 0.] if y[i] > .5 * period else [0., 0., period], mask=[0, 1, 0])
+        x_add = np.ma.array([x_transit] * 3, mask=[0, 1, 0])
+
+        x = np.ma.hstack((x[:i + 1], x_add, x[i + 1:]))
+        y = np.ma.hstack((y[:i + 1], y_add, y[i + 1:]))
+
+    if dtype_convert_x is not None:
+        x = x.astype(dtype_convert_x)
+    if dtype_convert_y is not None:
+        y = y.astype(dtype_convert_y)
+    return x, y
+
+
+def masked_convolve2d(in1, in2, correct_missing=True, norm=True, valid_ratio=1. / 3, *args, **kwargs):
+    """A workaround for np.ma.MaskedArray in scipy.signal.convolve2d.
+    It converts the masked values to complex values=1j. The complex space allows to set a limit
+    for the imaginary convolution. The function use a ratio `valid_ratio` of np.sum(in2) to set a lower limit
+    on the imaginary part to mask the values.
+    I.e. in1=[[1.,1.,--,--]] in2=[[1.,1.]] -> imaginary_part/sum(in2): [[1., 1., .5, 0.]]
+    -> valid_ratio=.5 -> out:[[1., 1., .5, --]].
+    PARAMETERS
+    ---------
+    in1 : array_like
+        First input.
+    in2 : array_like
+        Second input. Should have the same number of dimensions as `in1`.
+    correct_missing : bool, optional
+        correct the value of the convolution as a sum over valid data only,
+        as masked values account 0 in the real space of the convolution.
+    norm : bool, optional
+        if the output should be normalized to np.sum(in2).
+    valid_ratio: float, optional
+        the upper limit of the imaginary convolution to mask values. Defined by the ratio of np.sum(in2).
+    *args, **kwargs: optional
+        parsed to scipy.signal.convolve(..., *args, **kwargs)
+    """
+    if not isinstance(in1, np.ma.MaskedArray):
+        in1 = np.ma.array(in1)
+
+    # np.complex128 -> stores real as np.float64
+    con = scipy.signal.convolve2d(in1.astype(np.complex128).filled(fill_value=1j),
+                                  in2.astype(np.complex128),
+                                  *args, **kwargs
+                                  )
+
+    # split complex128 to two float64s
+    con_imag = con.imag
+    con = con.real
+    mask = np.abs(con_imag / np.sum(in2)) > valid_ratio
+
+    # con_east.real / (1. - con_east.imag): correction, to get the mean over all valid values
+    # con_east.imag > percent: how many percent of the single convolution value have to be from valid values
+    if correct_missing:
+        correction = np.sum(in2) - con_imag
+        con[correction != 0] *= np.sum(in2) / correction[correction != 0]
+
+    if norm:
+        con /= np.sum(in2)
+
+    return np.ma.array(con, mask=mask)
+
+
+def cal_middle(x):
+    """Calculates: (x[1:]+x[:-1])*.5"""
+    return (x[1:] + x[:-1]) * .5
+
+
+def connect_polar(x):
+    """Connect data for a polar plot, i.e. np.append(x, x[0])."""
+    if isinstance(x, np.ma.MaskedArray):
+        return np.ma.append(x, x[0])
+    else:
+        return np.append(x, x[0])
