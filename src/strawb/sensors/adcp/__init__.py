@@ -2,7 +2,7 @@
 
 from typing import Union
 
-from strawb.sensors.adcp.current import CurrentFile
+from strawb.sensors.adcp.current import CurrentFile, BaseCurrent, CurrentData
 from strawb.sensors.adcp.file_handler import FileHandler
 
 
