@@ -634,6 +634,9 @@ class SyncDBHandler(BaseDBHandler):
             kwargs.update(dict(date_from='strawb_all'))
             return self.load_onc_db(**kwargs)
         else:
+            for i in ['dateFrom', 'dateTo']:
+                self.dataframe[i] = pandas.to_datetime(self.dataframe[i], utc=True)  # get types right
+
             delta_last_entire = datetime.datetime.now(tz=datetime.timezone.utc) - self.dataframe.dateFrom.max()
             if datetime.timedelta(days=1) < delta_last_entire:
                 # take the latest dateFrom - 1 day
