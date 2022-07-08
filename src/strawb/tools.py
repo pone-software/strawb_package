@@ -3,6 +3,7 @@ import threading
 import time
 
 import numpy as np
+import pandas
 import scipy.stats
 import scipy.signal
 from matplotlib import pyplot as plt
@@ -642,3 +643,34 @@ def connect_polar(x):
         return np.ma.append(x, x[0])
     else:
         return np.append(x, x[0])
+
+
+def pd_timestamp_mask_between(series_start, series_stop, time_from, time_to, tz="UTC"):
+    """Mask time-extended entries which overlap with a time range: [time_from, time_to].
+    time-extended entries are specified with series_start, series_stop.
+    PARAMETER
+    ---------
+    series_start, series_stop: pandas.Series
+        two series with the same length indicating the start and stop time of each entry
+    time_from, time_to: datetime-like, str, int, float
+        Value to be converted to Timestamp.
+    tz : str, pytz.timezone, dateutil.tz.tzfile or None, optional
+        Time zone for time_from, time_to. Default: "UTC"
+    RETURNS
+    -------
+    mask: bool pandas.Series
+        masked series of entires which overlap with the time range
+    """
+    time_from = pandas.Timestamp(time_from, tz=tz)
+    time_to = pandas.Timestamp(time_to, tz=tz)
+
+    # files which cover the start time
+    mask = (series_start <= time_from) & (series_stop >= time_from)
+
+    # files which cover the end time
+    mask |= (series_start <= time_to) & (series_stop >= time_to)
+
+    # files in-between start and end time
+    mask |= (series_start >= time_from) & (series_stop <= time_to)
+
+    return mask

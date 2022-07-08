@@ -11,7 +11,7 @@ from ..base_file_handler import BaseFileHandler
 from ..config_parser import Config
 from ..onc_downloader import ONCDownloader
 from ..sensors import lidar, minispec, module, camera, pmtspec
-from ..tools import human_size, ShareJobThreads
+from ..tools import human_size, ShareJobThreads, pd_timestamp_mask_between
 
 
 class SyncDBHandler(BaseDBHandler):
@@ -828,3 +828,24 @@ class SyncDBHandler(BaseDBHandler):
                dataframe=dataframe)
 
         return dataframe
+
+    def date_mask_between(self, time_from, time_to, dataframe=None, tz="UTC"):
+        """Mask files based on 'dateFrom' and 'dateTo' which overlap with a time range: [time_from, time_to].
+        It is based on strawb.tools.pd_timestamp_mask_between.
+        PARAMETER
+        ---------
+        time_from, time_to: datetime-like, str, int, float
+            Value to be converted to Timestamp.
+        dataframe: Union[None, pandas.DataFrame], optional
+            If None (default) it checks the internal dataframe. Otherwise it checks the provided dataframe.
+        tz : str, pytz.timezone, dateutil.tz.tzfile or None, optional
+            Time zone for time_from, time_to. Default: "UTC"
+        RETURNS
+        -------
+        mask: bool pandas.Series
+            masked series of entires which overlap with the time range
+        """
+        if dataframe is None:
+            dataframe = self.dataframe
+
+        return pd_timestamp_mask_between(dataframe.dateFrom, dataframe.dateTo, time_from, time_to, tz=tz)
