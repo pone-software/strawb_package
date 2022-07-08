@@ -12,6 +12,10 @@ class PowerDevice:
     def watt(self):
         return self.current * self.voltage  # its hdf5.datasets -> [:]
 
+    @property
+    def power(self):
+        return self.watt
+
 
 class Power:
     def __init__(self, file):
