@@ -279,7 +279,16 @@ def hdf5_getunsorted(self, index):
 
 # ---- statistic and plotting ----
 def binned_mean_std(x, y, bins=100, min_count=.1):
-    """Calculate the binned mean and std (standard deviation) for the given data."""
+    """Calculate the binned mean and std (standard deviation) for the given data.
+    PARAMETER
+    ----------
+    x, y: ndarray, list
+        input data in x and y as dtype float or int but not datetime64
+    bins: int or sequence of scalars, optional
+        parsed to scipy.stats.binned_statistic
+    min_count: float, optional
+        set the minimum count threshold as percentage of the max(bin_counts)
+    """
     bin_means, bin_edges, binnumber = scipy.stats.binned_statistic(x, y, statistic='mean', bins=bins)
     bin_std, bin_edges, binnumber = scipy.stats.binned_statistic(x, y, statistic='std', bins=bins)
     bin_counts, bin_edges, binnumber = scipy.stats.binned_statistic(x, y, statistic='count', bins=bins)
@@ -298,17 +307,32 @@ def binned_mean_std(x, y, bins=100, min_count=.1):
     return bin_means, bin_std, bin_centers
 
 
-def plot_binned_mean(x, y, bins=10000, ax=None, *args, **kwargs):
-    """Plot the binned mean as line and the std (standard deviation) as filled area for the given data."""
+def plot_binned_mean(x, y, bins=10000, ax=None, x_asdatetime=True, *args, **kwargs):
+    """Plot the binned mean as line and the std (standard deviation) as filled area for the given data.
+    PARAMETER
+    ----------
+    x, y: ndarray, list
+        input data in x and y as dtype float or int but not datetime64
+    bins: int or sequence of scalars, optional
+        parsed to scipy.stats.binned_statistic
+    ax: None or plt.Axes, optional
+        the axes to add the plot. If None, default it takes plt.plot
+    x_asdatetime: bool, optional
+        if the x-data should be interpreted as datetime
+    *args, **kwargs: list or dict, optional
+        parsed to ax.plot(..., *args, **kwargs)
+    """
     # cal. moving average with std
     bin_means, bin_std, bin_mid = binned_mean_std(x, y, bins=bins)
 
     if ax is None:  # use 'plt' if ax isn't set
         ax = plt
 
-    lin, = ax.plot(AsDatetimeWrapper.asdatetime(bin_mid)[:],
+    if x_asdatetime:
+        bin_mid = AsDatetimeWrapper.asdatetime(bin_mid)[:]
+    lin, = ax.plot(bin_mid,
                    bin_means, *args, **kwargs)
-    ax.fill_between(AsDatetimeWrapper.asdatetime(bin_mid)[:],
+    ax.fill_between(bin_mid,
                     y1=bin_means + bin_std, y2=bin_means - bin_std,
                     color=lin.get_color(), alpha=.2)
 
@@ -659,7 +683,7 @@ def pd_timestamp_mask_between(series_start, series_stop, time_from, time_to, tz=
     RETURNS
     -------
     mask: bool pandas.Series
-        masked series of entires which overlap with the time range
+        masked series of entries which overlap with the time range
     """
     time_from = pandas.Timestamp(time_from, tz=tz)
     time_to = pandas.Timestamp(time_to, tz=tz)
