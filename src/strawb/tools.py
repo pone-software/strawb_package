@@ -333,7 +333,8 @@ def plot_binned_mean(x, y, bins=10000, ax=None, x_asdatetime=True, *args, **kwar
     lin, = ax.plot(bin_mid,
                    bin_means, *args, **kwargs)
     ax.fill_between(bin_mid,
-                    y1=bin_means + bin_std, y2=bin_means - bin_std,
+                    y1=bin_means + bin_std,
+                    y2=bin_means - bin_std,
                     color=lin.get_color(), alpha=.2)
 
 
