@@ -1,8 +1,10 @@
 # Author: Kilian Holzapfel <kilian.holzapfel@tum.de>
+import os.path
 from typing import Union
 
 from .file_handler import FileHandler
 from .images import Images
+from .find_cluster import FindCluster
 
 
 class Camera:
@@ -15,3 +17,5 @@ class Camera:
             self.file_handler = file
 
         self.images = Images(file_handler=self.file_handler)
+
+        self.find_cluster = FindCluster(camera=self)

@@ -22,6 +22,8 @@ class Config:
     onc_device_db = ConfigParser.config.get('Paths', 'onc_device_db')
     onc_data_product_backup = ConfigParser.config.get('Paths', 'onc_data_product_backup')
 
+    image_cluster_db = ConfigParser.config.get('Paths', 'image_cluster_db')
+
     # ONC
     onc_token = ConfigParser.config.get('ONC', 'token')
     onc_download_threads = ConfigParser.config.get('ONC', 'threads', dtype=int)

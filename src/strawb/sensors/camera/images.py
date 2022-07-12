@@ -67,7 +67,7 @@ class Images:
         return self._valid_mask
 
     def create_valid_mask(self, limit=None):
-        """Detect which images which are corrupt if the intergrated_raw is below the limit.
+        """Detect which images which are corrupt if the integrated_raw is below the limit.
         With limit=None it takes:
         For gain=50 end exposure time= ~60s: limit = 2e10
         For gain=30 end exposure time= ~60s: limit = 4e9

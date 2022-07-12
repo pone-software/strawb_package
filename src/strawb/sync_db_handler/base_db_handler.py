@@ -15,7 +15,7 @@ class BaseDBHandler:
         ---------
         file_name: Union[str, None], optional
             If None, it doesn't load the DB. If it is a string, it can be:
-            - 'Default' it takes Config.pandas_file_sync_db
+            - 'Default' it takes <self._default_file_name_>
             - the full path to the DB
             - a relative path to the DB
             - a file name which is anywhere located in the strawb.Config.raw_data_dir
