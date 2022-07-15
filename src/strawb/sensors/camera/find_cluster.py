@@ -146,11 +146,10 @@ class FindCluster:
         # coordinates of the corners of the minimal bounding rectangle
         points = cv2.boxPoints(box).astype(np.float64)
 
-        return {'box_angle_to_x-axis': box[2],
-                'box_center_x_y': box[0],
-                'box_width_height': box[1],
-                'box_corners_x': points[:, 0],
-                'box_corners_y': points[:, 1]}
+        return {'angle': box[2],
+                'box_center': box[0],
+                'box_size': box[1],
+                'box_corners': points}
 
     def get_sigma_deviation(self, pic_index, labels=None, index=None):
         """
@@ -246,11 +245,10 @@ class FindCluster:
                       np.ones_like(labeled_cluster),
                       labels=labeled_cluster,
                       index=unique_labeled_cluster),
-                  'box_angle_to_x-axis': None,
-                  'box_center_x_y': None,
-                  'box_width_height': None,
-                  'box_corners_x': None,
-                  'box_corners_y': None,
+                  'angle': None,
+                  'box_center': None,
+                  'box_size': None,
+                  'box_corners': None,
                   })
 
         df_box = pd.json_normalize([self.get_box(labeled_cluster == i) for i in unique_labeled_cluster])
