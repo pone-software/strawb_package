@@ -665,9 +665,9 @@ def cal_middle(x):
 def connect_polar(x):
     """Connect data for a polar plot, i.e. np.append(x, x[0])."""
     if isinstance(x, np.ma.MaskedArray):
-        return np.ma.append(x, x[0])
+        return np.ma.append(x, [x[0]], axis=0)
     else:
-        return np.append(x, x[0])
+        return np.append(x, [x[0]], axis=0)
 
 
 def pd_timestamp_mask_between(series_start, series_stop, time_from, time_to, tz="UTC"):
