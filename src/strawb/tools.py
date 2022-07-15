@@ -710,8 +710,8 @@ def pd_timestamp_mask_between(series_start, series_stop, time_from, time_to, tz=
     mask: bool pandas.Series
         masked series of entries which overlap with the time range
     """
-    time_from = pd_timestamp_convert(time_from)
-    time_to = pd_timestamp_convert(time_to)
+    time_from = pd_timestamp_convert(time_from, tz=tz)
+    time_to = pd_timestamp_convert(time_to, tz=tz)
 
     # files which cover the start time
     mask = (series_start <= time_from) & (series_stop >= time_from)
