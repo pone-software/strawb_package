@@ -1,0 +1,169 @@
+import cv2
+import numpy as np
+
+
+def img_rectangle_cut(img, rect=None, angle=None, angle_normalize=True):
+    """Translate an image, defined by a rectangle. The image is cropped to the size of the rectangle
+    and the cropped image can be rotated.
+    The rect must be of the from (tuple(center_xy), tuple(width_xy), angle).
+    The angle are in degrees.
+
+    PARAMETER
+    ---------
+    img: ndarray
+    rect: tuple, optional
+        define the region of interest. If None, it takes the whole picture
+    angle: float, optional
+        angle of the output image in respect to the rectangle.
+        I.e. angle=0 will return an image where the rectangle is parallel to the image array axes
+        If None, no rotation is applied.
+    angle_normalize: bool, optional
+        normalize angle that angel=0 is vertical, and angel=90 is horizontal.
+        Otherwise, this isn't fixed and depends on the rect.
+
+
+    RETURNS
+    -------
+    img_return: ndarray
+    rect_return: tuple
+        the rectangle in the returned image
+    t_matrix: ndarray
+        the translation matrix
+    """
+    if rect is None:
+        if angle is None:
+            angle = 0
+        rect = (tuple(np.array(img.shape) * .5), img.shape, 0)
+    box = cv2.boxPoints(rect)
+
+    rect_target = rect_rotate(rect, angle=angle, angle_normalize=angle_normalize)
+    pts_target = cv2.boxPoints(rect_target)
+
+    # get max dimensions
+    size_target = np.int0(np.ceil(np.max(pts_target, axis=0) - np.min(pts_target, axis=0)))
+
+    # translation matrix
+    t_matrix = cv2.getAffineTransform(box[:3].astype(np.float32),
+                                      pts_target[:3].astype(np.float32))
+
+    # cv2 needs the image transposed
+    img_target = cv2.warpAffine(cv2.transpose(img), t_matrix, tuple(size_target))
+
+    # undo transpose
+    img_target = cv2.transpose(img_target)
+    return img_target, rect_target, t_matrix
+
+
+def reshape_cv(x, axis=-1):
+    """openCV and numpy have a different array indexing (row, cols) vs (cols, rows), compensate it here."""
+    x = np.array(x).astype(np.float32)
+    if axis < 0:
+        axis = len(x.shape) + axis
+    return x[(*[slice(None)] * axis, slice(None, None, -1))]
+
+
+def transform_np(x, t_matrix):
+    """Apply a transform on a openCV indexed array and return a numpy indexed array."""
+    return transform_cv2np(reshape_cv(x), t_matrix)
+
+
+def transform_cv2np(x, t_matrix):
+    """Apply a transform on a numpy indexed array and return a numpy indexed array."""
+    return reshape_cv(cv2.transform(np.array([x]).astype(np.float32), t_matrix)[0])
+
+
+def rect_scale_pad(rect, scale=1., pad=40.):
+    """Scale and/or pad a rectangle."""
+    return (rect[0],
+            tuple((np.array(rect[1]) + pad) * scale),
+            rect[2])
+
+
+def rect_rotate(rect, angle=None, angle_normalize=True):
+    """Rotate a rectangle by an angle in respect to it's center.
+    The rect must be of the from (tuple(center_xy), tuple(width_xy), angle).
+    The angle is in degrees.
+
+    PARAMETER
+    ---------
+    rect: tuple
+        cv2 rect with format: (tuple(center_xy), tuple(width_xy), angle). Angle in [deg].
+    angle: float, optional
+        angle to rotate the rect in degree. With angle=0, the rect is parallel to the axes.
+        If angle is None, default, it takes the angle of the input rect.
+    angle_normalize: bool, optional
+        normalize angle that angel=0 is vertical, and angel=90 is horizontal.
+        Otherwise, this isn't fixed and depends on the rect.
+
+    RETURN
+    ------
+    rect: tuple
+        cv2 rect with applied rotation. Format: (tuple(center_xy), tuple(width_xy), angle). Angle in [deg].
+    """
+    if angle is None:
+        angle = rect[2]
+
+    # angel=0 vertical; angel=90 horizontal
+    if angle_normalize and rect[1][1] > rect[1][0]:
+        angle -= 90
+
+    rad = np.deg2rad(np.abs(angle))
+    rot_matrix_2d = np.array([[np.cos(rad), np.sin(rad)],
+                              [np.sin(rad), np.cos(rad)]])
+
+    # cal. center of rectangle
+    center = np.sum(np.array(rect[1]).reshape(1, -1) * rot_matrix_2d, axis=-1) * .5
+    center = np.abs(center)
+
+    return tuple(center), rect[1], angle
+
+# #### EXAMPLE ####
+
+# # Generate Image
+# img = np.zeros((1200, 660), dtype=np.uint8)
+
+# # Draw some lines and gen. points
+# x_0 = np.array([150, 600])
+# x_1 = np.int0(x_0 + np.array((100, 100)))
+# x_2 = np.int0(x_0 + np.array((100, -100)) * 2.5)
+# img = cv2.line(img, tuple(x_0), tuple(x_1), 1, 120)
+# img = cv2.line(img, tuple(x_0), tuple(x_2), 1, 120)
+# points = np.array([x_0, x_1, x_2])
+
+# # Get Box
+# rect = cv2.minAreaRect(np.argwhere(img))
+
+# # Apply transformation
+# rect_scale = rect_scale_pad(rect, scale=1., pad=40.)
+# img_return, rect_target, t_matrix = img_rectangle_cut(
+#     img,
+#     rect_scale,
+#     angle=0,
+#     angle_normalize=True  # True <-> angel=0 vertical; angel=90 horizontal
+# )
+
+# # PLOT
+# fig, ax = plt.subplots(ncols=2, figsize=(10, 5))
+# ax = ax.flatten()
+# ax[0].imshow(img)
+
+# box_i = reshape_cv(cv2.boxPoints(rect))
+# ax[0].plot(*strawb.tools.connect_polar(box_i).T, 'o-', color='gray', alpha=.75, label='Original Box')
+# box_i = reshape_cv(cv2.boxPoints(rect_scale))
+# ax[0].plot(*strawb.tools.connect_polar(box_i).T, 'o-', color='green', alpha=.75, label='Scaled Box')
+# ax[0].plot(*points.T, 'o', label='Points')
+
+# ax[1].imshow(img_return)
+# box_i = transform_cv2np(cv2.boxPoints(rect), t_matrix)
+# ax[1].plot(*strawb.tools.connect_polar(box_i).T, 'o-', color='gray', alpha=.75, label='Original Box')
+
+# point_t = transform_np(points, t_matrix)
+# ax[1].plot(*point_t.T, 'o', label='Points')
+
+# ax[0].set_title('Original')
+# ax[1].set_title('Translated')
+
+# for axi in ax:
+#     axi.legend(loc=1)
+#
+# plt.tight_layout()
