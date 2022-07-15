@@ -670,6 +670,30 @@ def connect_polar(x):
         return np.append(x, [x[0]], axis=0)
 
 
+def pd_timestamp_convert(time_0, tz='UTC'):
+    """Converts several inputs to pandas.Timestamp.
+    - np.datetime64, pandas.Timestamp
+    - str:
+        - without tz: '2021-09-04T23:44:09', '2021-09-04 23:44:09',...
+        - with tz: e.g. '2021-09-04T23:44:09Z', '2021-09-04 23:44:09Z', '2021-09-04T23:44:09+01:30'
+    - int, float: timestamp in [ns] since epoch, e.g.: 1.66e18 -> 2022-08-08 23:06:40
+    RETURN
+    ------
+    pandas.Timestamp with tz
+    """
+    if not isinstance(time_0, pandas.Timestamp):
+        time_0 = pandas.Timestamp(time_0, tz=tz)
+
+    else:
+        if hasattr(time_0, 'tzinfo'):
+            if time_0.tzinfo is None:
+                time_0 = time_0.tz_localize(tz=tz)
+            else:
+                time_0 = time_0.tz_convert(tz=tz)
+
+    return time_0
+
+
 def pd_timestamp_mask_between(series_start, series_stop, time_from, time_to, tz="UTC"):
     """Mask time-extended entries which overlap with a time range: [time_from, time_to].
     time-extended entries are specified with series_start, series_stop.
@@ -686,8 +710,8 @@ def pd_timestamp_mask_between(series_start, series_stop, time_from, time_to, tz=
     mask: bool pandas.Series
         masked series of entries which overlap with the time range
     """
-    time_from = pandas.Timestamp(time_from, tz=tz)
-    time_to = pandas.Timestamp(time_to, tz=tz)
+    time_from = pd_timestamp_convert(time_from)
+    time_to = pd_timestamp_convert(time_to)
 
     # files which cover the start time
     mask = (series_start <= time_from) & (series_stop >= time_from)
