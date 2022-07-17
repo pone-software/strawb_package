@@ -221,7 +221,7 @@ class FindCluster:
                                            max_gaps=max_gaps)
         unique_labeled_cluster, n_pixel = np.unique(labeled_cluster, return_counts=True)
 
-        mean_abs_dev, sigma_dev = self.get_sigma_deviation(170,
+        mean_abs_dev, sigma_dev = self.get_sigma_deviation(pic_index=pic_index,
                                                            labels=labeled_cluster,
                                                            index=unique_labeled_cluster)
 

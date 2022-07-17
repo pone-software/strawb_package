@@ -136,14 +136,31 @@ class Images:
         self._rgb_dark_frame = cv2.cvtColor(self.raw_dark_frame.astype(np.uint16),
                                             self.bayer_pattern)
 
-    def cut2effective_pixel_single(self, rgb):
-        return np.array(rgb)[self.file_handler.EffMargins[0]:-self.file_handler.EffMargins[1],
-                             self.file_handler.EffMargins[2]:-self.file_handler.EffMargins[3]]
+    def cut2effective_pixel_single(self, rgb, eff_margin=None):
+        return self.cut2effective_pixel(rgb, axis=0, eff_margin=eff_margin)
 
-    def cut2effective_pixel_arr(self, rgb_arr):
-        return np.array(rgb_arr)[:,
-                                 self.file_handler.EffMargins[0]:-self.file_handler.EffMargins[1],
-                                 self.file_handler.EffMargins[2]:-self.file_handler.EffMargins[3]]
+    def cut2effective_pixel_arr(self, rgb_arr, eff_margin=None):
+        return self.cut2effective_pixel(rgb_arr, axis=1, eff_margin=eff_margin)
+
+    def cut2effective_pixel(self, rgb, axis=-1, eff_margin=None):
+        rgb = np.array(rgb)
+
+        if len(rgb.shape) < 2:
+            raise ValueError('Array needs at leas 2 dimensions.')
+
+        if axis < 0:
+            axis += len(rgb.shape) - 1
+
+        if axis > len(rgb.shape) - 2:
+            raise ValueError(f"Specified axis to high for array. Axis>shape-2; got: {axis} > {len(rgb.shape) - 2}")
+
+        if eff_margin is None:
+            eff_margin = self.file_handler.EffMargins[:]
+
+        slices = (*[slice(None)] * axis,
+                  slice(eff_margin[0], -eff_margin[1]),
+                  slice(eff_margin[2], -eff_margin[3]))
+        return np.array(rgb)[slices]
 
     def frame_raw_to_rgb(self, frame_raw):
         """Values have to be from [0...2**16-1] i.e. np.uint16."""
