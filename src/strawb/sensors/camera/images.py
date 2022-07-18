@@ -93,7 +93,7 @@ class Images:
     def cal_integrated_minus_dark(self, ):
         raw = self.load_raw(exclude_invalid=False)  # exclude_invalid=False as the length hast to match
         raw = raw - self.raw_dark_frame  # subtract the dark frame
-        raw = self.cut2effective_pixel_arr(raw)
+        raw = self.cut2effective_pixel(raw, axis=1)
         raw[raw < 4e4] = 0  # cut the noise
         raw = raw ** 2  # Chi**2
         return np.average(raw.reshape((raw.shape[0], -1)), axis=-1)
@@ -115,7 +115,7 @@ class Images:
 
         elif isinstance(index, (int, float)):
             index = np.array([int(index)])
-        
+
         elif isinstance(index, list):
             index = np.array([index], dtype=int)
 
@@ -137,12 +137,36 @@ class Images:
                                             self.bayer_pattern)
 
     def cut2effective_pixel_single(self, rgb, eff_margin=None):
+        """Shortcut for cut2effective_pixel(rgb_arr, axis=0, eff_margin=eff_margin)"""
         return self.cut2effective_pixel(rgb, axis=0, eff_margin=eff_margin)
 
     def cut2effective_pixel_arr(self, rgb_arr, eff_margin=None):
+        """Shortcut for cut2effective_pixel(rgb_arr, axis=1, eff_margin=eff_margin)"""
         return self.cut2effective_pixel(rgb_arr, axis=1, eff_margin=eff_margin)
 
     def cut2effective_pixel(self, rgb, axis=-1, eff_margin=None):
+        """
+        Cuts the effective margin from the rgb array.
+        PARAMETER
+        ---------
+        rgb: ndarray
+            at a least 2d array. The x- and y-axes have to be in this order, next to each other, and can be
+            positioned anywhere. rgb.shape = (..., x-axis, y-axis,...)
+        axis: int, optional
+            the position of the pixel x-axis, e.g. rgb.shape = (images, x-axis, y-axis,...) -> axis=1
+            If value is negative, it counts from the second last entry so axis=-1 works for
+            rgb.shape = (..., x-axis, y-axis) or axis=-2 <-> rgb.shape = (..., x-axis, y-axis, rgb)
+        eff_margin: bool, list, ndarray, optional
+            shifts the mask according to the effective margin for images where the margin is cut, e.g. with
+            cut2effective_pixel(..., eff_margin=eff_margin) ->  get_raw_rgb_mask(..., eff_margin=eff_margin)
+            If None or True, it takes the eff_margin from the file, i.e. file_handler.EffMargins[:]
+            If its a list or ndarray: it must has the from [pixel_x_start, pixel_x_stop, pixel_y_start, pixel_y_stop]
+            and only integers are allowed.
+        RETURN
+        ------
+        reduced_rgb:
+            the rgb array with cut margins
+        """
         rgb = np.array(rgb)
 
         if len(rgb.shape) < 2:
@@ -154,13 +178,62 @@ class Images:
         if axis > len(rgb.shape) - 2:
             raise ValueError(f"Specified axis to high for array. Axis>shape-2; got: {axis} > {len(rgb.shape) - 2}")
 
-        if eff_margin is None:
+        if eff_margin is None or eff_margin is True:
             eff_margin = self.file_handler.EffMargins[:]
 
         slices = (*[slice(None)] * axis,
-                  slice(eff_margin[0], -eff_margin[1]),
-                  slice(eff_margin[2], -eff_margin[3]))
+                  slice(eff_margin[0], -eff_margin[1] if eff_margin[1] != 0 else None),
+                  slice(eff_margin[2], -eff_margin[3] if eff_margin[3] != 0 else None))
         return np.array(rgb)[slices]
+
+    def get_raw_rgb_mask(self, shape, color='green', eff_margin=False):
+        """
+        PARAMETER
+        ---------
+        shape:
+            shape of the mask or data
+        color: str, optional
+            color channel to create the mask for. Must be one of
+            ['green', 'blue', 'red', 'g', 'b', 'r'] also the names of the matplotlib cmaps are allowed
+            ['Greens', 'Blues', 'Reds']. Default is 'green'.
+        eff_margin: bool, list, ndarray, optional
+            shifts the mask according to the effective margin for images where the margin is cut, e.g. with
+            cut2effective_pixel(..., eff_margin=eff_margin) ->  get_raw_rgb_mask(..., eff_margin=eff_margin)
+            If None or True, it takes the eff_margin from the file, i.e. file_handler.EffMargins[:]
+            If its a list or ndarray: it must has the from [pixel_x_start, pixel_x_stop, pixel_y_start, pixel_y_stop]
+            and only integers are allowed.
+
+        RETURN
+        ------
+        mask: ndarray
+            a bool numpy array which selects the specified color
+        """
+        color = color.lower()
+        color = color[:-1] if color.endswith('s') else color
+        know_color = ['green', 'blue', 'red']
+        know_color.extend([i[0] for i in know_color])
+        if color not in know_color:
+            raise ValueError(f'Unknown color. Supports: {know_color}; Got: {color}')
+
+        if isinstance(eff_margin, bool) and eff_margin is False:
+            eff_margin = [0, 0, 0, 0]
+        if eff_margin is None or isinstance(eff_margin, bool) and eff_margin is True:
+            eff_margin = self.file_handler.EffMargins[:]
+
+        margin_x_shift = eff_margin[0] % 2
+        margin_y_shift = eff_margin[2] % 2
+
+        mask = np.zeros(shape, dtype=bool)
+
+        if color in ['green', 'g']:
+            mask[margin_x_shift + 1::2, margin_y_shift::2] = True
+            mask[margin_x_shift::2, margin_y_shift + 1::2] = True
+        elif color in ['blue', 'b']:
+            mask[margin_x_shift + 1::2, margin_y_shift + 1::2] = True
+        elif color in ['red', 'r']:
+            mask[margin_x_shift::2, margin_y_shift::2] = True
+
+        return mask
 
     def frame_raw_to_rgb(self, frame_raw):
         """Values have to be from [0...2**16-1] i.e. np.uint16."""
@@ -179,7 +252,8 @@ class Images:
         for i, raw_i in enumerate(raw_arr):
             image_list.append(self.frame_raw_to_rgb(raw_i))
 
-        image_arr = self.cut2effective_pixel_arr(image_list)
+        # axes are: [images, pix_x, pix_y, RGB]
+        image_arr = self.cut2effective_pixel(image_list, axis=1)
 
         return image_arr
 
@@ -208,14 +282,14 @@ class Images:
 
         if image_arr.dtype in bit_dict_inv:
             bit_in = bit_dict_inv[image_arr.dtype]
-            max_in = 2**bit_in-1
+            max_in = 2 ** bit_in - 1
         else:
             bit_in = 0
             max_in = 1.
 
         if bit_out in bit_dict:
             type_out = bit_dict[bit_out]
-            max_out = 2**bit_out-1
+            max_out = 2 ** bit_out - 1
         else:
             type_out = np.float64
             max_out = 1.
@@ -223,10 +297,9 @@ class Images:
         if max_out != max_in:
             image_arr = image_arr / max_in * max_out
             image_arr = image_arr.astype(type_out)
-            image_arr[image_arr>max_out] = max_out
+            image_arr[image_arr > max_out] = max_out
 
         return image_arr
-
 
     def image2png(self, f_name_formatter='{datetime}', directory='{proc_data_dir}/{module_lower}',
                   bit=8, index=None, overwrite=False, file_name_iterator=None, ending='.png', **kwargs):

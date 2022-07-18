@@ -72,7 +72,7 @@ class FindCluster:
     def images(self):
         if self._images_ is None:
             self._images_ = self.camera.file_handler.raw[:]
-            self._images_ = self.camera.images.cut2effective_pixel_arr(self._images_)
+            self._images_ = self.camera.images.cut2effective_pixel(self._images_)
         return self._images_
 
     @images.setter
