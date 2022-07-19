@@ -44,8 +44,8 @@ class BaseFileHandler:
             don't open the file at initialisation
         """
         # get all Meta Data arrays
-        self.__members__ = [attr for attr in dir(self) if
-                            not callable(getattr(self, attr)) and not attr.startswith("__")]
+        # self.__members__ = [attr for attr in dir(self) if
+        #                     not callable(getattr(self, attr)) and not attr.startswith("__")]
 
         self.file = None  # instance of the h5py file
         self.file_name = None
@@ -97,6 +97,19 @@ class BaseFileHandler:
                     pass
         else:
             self.module = module
+
+    @property
+    def __members__(self):
+        """All variables loaded from the file"""
+        members = []
+        for attr in dir(self):
+            if attr != '__members__' and \
+                    not isinstance(getattr(self, attr), property) and \
+                    not callable(getattr(self, attr)) and \
+                    not attr.startswith("__"):
+                members.append(attr)
+
+        return members
 
     def close(self):
         """Close the file if it is open."""
