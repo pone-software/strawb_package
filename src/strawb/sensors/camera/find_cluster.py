@@ -256,7 +256,7 @@ class FindCluster:
 
         return df
 
-    def df_all(self, pic_index=None, tqdm_kwargs={}, *args, **kwargs):
+    def df_all(self, pic_index=None, tqdm_kwargs=None, *args, **kwargs):
         """Detect Cluster in multiple pictures.
         PARAMETERS
         ----------
@@ -267,6 +267,8 @@ class FindCluster:
         *args, **kwargs: list, dict, optional
             parsed to df_picture(...,*args, **kwargs)
         """
+        if tqdm_kwargs is None:
+            tqdm_kwargs = {}
         df = pd.DataFrame()
 
         if pic_index is None:
