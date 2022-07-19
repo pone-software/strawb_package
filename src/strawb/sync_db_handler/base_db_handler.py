@@ -9,7 +9,7 @@ class BaseDBHandler:
     _default_file_name_ = None
     _default_raw_data_dir_ = None
 
-    def __init__(self, file_name='Default', update=False, load_db=True):
+    def __init__(self, file_name='Default', update=False, load_db=True, search_file=False):
         """Handle the DB, which holds the metadata from the ONC DB and adds quantities like hdf5 attributes.
         PARAMETER
         ---------
@@ -18,12 +18,14 @@ class BaseDBHandler:
             - 'Default' it takes <self._default_file_name_>
             - the full path to the DB
             - a relative path to the DB
+            If search_file is True:
             - a file name which is anywhere located in the strawb.Config.raw_data_dir
         update: bool, optional
             defines if the entries should be checked against existing files
         load_db: bool, update
             True (default) loads the DB if it exists and if `file_name` is not None. False doesn't load it.
-
+        search_file: bool, optional
+            if the file should be searched in strawb.Config.raw_data_dir
         EXAMPLES
         --------
         Load the DB from disc (also works if there non on disc), update it and store it on disc
@@ -54,7 +56,7 @@ class BaseDBHandler:
         elif os.path.exists(os.path.join(self._default_raw_data_dir_, file_name)):  # maybe with raw_data_dir as path
             path = os.path.join(self._default_raw_data_dir_, file_name)
             self.file_name = os.path.abspath(path)
-        else:  # try to find it in raw_data_dir. Fails if more than 1 file is found or non is found
+        elif search_file:  # try to find it in raw_data_dir. Fails if more than 1 file is found or non is found
             file_name_list = glob.glob(self._default_raw_data_dir_ + "/**/" + file_name, recursive=True)
             if len(file_name_list) == 1:
                 self.file_name = file_name_list[0]
