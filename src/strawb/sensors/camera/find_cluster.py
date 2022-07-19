@@ -256,12 +256,14 @@ class FindCluster:
 
         return df
 
-    def df_all(self, pic_index=None, *args, **kwargs):
+    def df_all(self, pic_index=None, tqdm_kwargs={}, *args, **kwargs):
         """Detect Cluster in multiple pictures.
         PARAMETERS
         ----------
         pic_index: list, ndarray, optional
             the indexes of the pictures to detect teh cluster. If None, take all
+        tqdm_kwargs: dict, optional
+            kwargs for tqdm.notebook
         *args, **kwargs: list, dict, optional
             parsed to df_picture(...,*args, **kwargs)
         """
@@ -271,6 +273,6 @@ class FindCluster:
             pic_index = np.arange(self.images.shape[0])
 
         # loop with progress bar
-        for pic_i in tqdm.notebook.tqdm(pic_index):
+        for pic_i in tqdm.notebook.tqdm(pic_index, **tqdm_kwargs):
             df = df.append(self.df_picture(pic_index=pic_i, *args, **kwargs), ignore_index=True)
         return df
