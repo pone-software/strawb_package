@@ -118,10 +118,10 @@ class BaseFileHandler:
 
     def close(self):
         """Close the file if it is open."""
-        print(f'> close File: {self.file_name}')
+        # print(f'> close File: {self.file_name}')
         if self.file is not None:
             self.file.close()
-            print(f'> closed file? {self.file}')
+            # print(f'> closed file? {self.file}')
             self.file = None
 
     def __enter__(self):
