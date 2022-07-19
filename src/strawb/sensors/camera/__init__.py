@@ -1,5 +1,4 @@
 # Author: Kilian Holzapfel <kilian.holzapfel@tum.de>
-import os.path
 from typing import Union
 
 from .file_handler import FileHandler
@@ -20,3 +19,8 @@ class Camera:
         self.images = Images(file_handler=self.file_handler)
 
         self.find_cluster = FindCluster(camera=self)
+
+    def __del__(self):
+        del self.find_cluster
+        del self.images
+        del self.file_handler
