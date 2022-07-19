@@ -65,6 +65,9 @@ class BaseDBHandler:
                     raise FileExistsError(f'{file_name} matches multiple files in "{self._default_raw_data_dir_}": '
                                           f'{file_name_list}')
 
+        else:
+            self.file_name = os.path.abspath(file_name)
+
         if load_db:
             self.load_db()  # loads the db if file is valid
             # load the DB only if the file exists, i.e. file_name = 'Default'
