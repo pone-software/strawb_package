@@ -118,10 +118,10 @@ class BaseFileHandler:
 
     def close(self):
         """Close the file if it is open."""
-        print(f'close file: {self.file_name}')
+        print(f'> close File: {self.file_name}')
         if self.file is not None:
             self.file.close()
-            print(f'closed file? {self.file}')
+            print(f'> closed file? {self.file}')
             self.file = None
 
     def __enter__(self):
@@ -136,9 +136,9 @@ class BaseFileHandler:
     def __del__(self):
         """When object is not deleted, e.g. when program ends, variable deleted, deleted by the garbage collector."""
         self.close()
-        for i in self:
-            a = self.__getattribute__(i)
-            del a
+        # for i in self:
+        #     a = self.__getattribute__(i)
+        #     del a
 
     def _open_(self, mode='r'):
         """Opens the file if it is not open.
