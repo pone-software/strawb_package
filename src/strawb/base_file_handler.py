@@ -111,6 +111,11 @@ class BaseFileHandler:
 
         return members
 
+    def __iter__(self):
+        """Iterate over all variables loaded from the file"""
+        for i in self.__members__:
+            yield i
+
     def close(self):
         """Close the file if it is open."""
         if self.file is not None:
