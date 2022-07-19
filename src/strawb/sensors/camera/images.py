@@ -43,6 +43,9 @@ class Images:
         self._integrated_minus_dark = None  # for property
         self._max_value_minus_dark = None
 
+    def __del__(self):
+        self.file_handler = None  # unlink
+
     # ---- Properties ----
     @property
     def integrated_raw(self):

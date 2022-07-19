@@ -49,6 +49,14 @@ class TRBTools:
         if self._interp_frequency_ is None:
             self._interp_frequency_ = frequency_interp
 
+    def __del__(self):
+        self.file_handler = None  # unlink
+        del self.__dcounts_arr__
+        del self.__counts_arr__
+        del self._active_read_arr_
+        del self._rate_delta_time
+        del self._rate
+
     # ---- MANDATORY properties ----
     # define interfaces which need to be set in child classes, i.e. to link file handler variables
     # raw_counts_arr are the counter arrays where raw_counts_arr[0] must be the time counter of the TRB aka

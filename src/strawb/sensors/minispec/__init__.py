@@ -12,3 +12,6 @@ class MiniSpectrometer:
             self.file_handler = FileHandler(file_name=file)
         else:
             self.file_handler = file
+
+    def __del__(self):
+        del self.file_handler

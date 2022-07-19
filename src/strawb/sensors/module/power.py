@@ -35,6 +35,9 @@ class Power:
         if self.file_handler is not None:
             self.load_data()
 
+    def __del__(self):
+        self.file_handler = None  # unlink
+
     @property
     def all_devices_list(self):
         return [self.odroid, self.laser, self.motor, self.padiwa, self.switch, self.trb3sc]

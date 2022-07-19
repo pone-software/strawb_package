@@ -46,10 +46,10 @@ class RateScan:
         self._scan_off_ = None
 
     def __del__(self):
-        del self.trb_rates
+        self.trb_rates = None  # unlink
+        self.pmt_meta_data = None  # unlink
         del self._scan_on_
         del self._scan_off_
-        del self.pmt_meta_data
 
     @property
     def scan_on(self):

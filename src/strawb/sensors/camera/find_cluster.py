@@ -39,10 +39,10 @@ class FindCluster:
 
     def __del__(self):
         """Remove links to other classes to prevent deadlock."""
+        self.camera = None  # unlink
         del self._images_
         del self._pixel_mean_
         del self._pixel_std_
-        del self.camera
 
     @property
     def pixel_mean(self):

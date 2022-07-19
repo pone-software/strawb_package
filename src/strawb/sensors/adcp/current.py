@@ -115,6 +115,9 @@ class CurrentFile(BaseCurrent):
         else:
             raise TypeError(f"Expected `strawb.sensors.adcp.FileHandler` got: {type(file_handler)}")
 
+    def __del__(self):
+        self.file_handler = None  # unlink
+
     @property
     def timestamp(self):
         """The absolute timestamp as seconds since epoch."""

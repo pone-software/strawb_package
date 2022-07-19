@@ -26,4 +26,6 @@ class Module:
 
         self.power = Power(self.file_handler)
 
-
+    def __del__(self):
+        del self.power
+        del self.file_handler

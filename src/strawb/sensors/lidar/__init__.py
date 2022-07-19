@@ -17,3 +17,7 @@ class Lidar:
             self.file_handler = file
 
         self.trb_rates = LidarTRBRates(file_handler=self.file_handler)
+
+    def __del__(self):
+        del self.trb_rates
+        del self.file_handler
