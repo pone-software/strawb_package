@@ -2,7 +2,7 @@ import numpy as np
 import scipy.ndimage
 import cv2
 import pandas as pd
-import tqdm
+import tqdm.notebook
 
 
 class FindCluster:
@@ -271,6 +271,6 @@ class FindCluster:
             pic_index = np.arange(self.images.shape[0])
 
         # loop with progress bar
-        for pic_i in tqdm.tqdm(pic_index):
+        for pic_i in tqdm.notebook.tqdm(pic_index):
             df = df.append(self.df_picture(pic_index=pic_i, *args, **kwargs), ignore_index=True)
         return df
