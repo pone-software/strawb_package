@@ -101,12 +101,16 @@ class BaseFileHandler:
     @property
     def __members__(self):
         """All variables loaded from the file"""
+        return self.__get__members__(include_private=False)
+
+    def __get__members__(self, include_private=False):
+        """All variables loaded from the file"""
         members = []
         for attr in dir(self):
             if attr != '__members__' and \
                     not isinstance(getattr(self, attr), property) and \
                     not callable(getattr(self, attr)) and \
-                    not attr.startswith("__"):
+                    (not attr.startswith("__") or include_private):
                 members.append(attr)
 
         return members
@@ -136,9 +140,10 @@ class BaseFileHandler:
     def __del__(self):
         """When object is not deleted, e.g. when program ends, variable deleted, deleted by the garbage collector."""
         self.close()
-        # for i in self:
-        #     a = self.__getattribute__(i)
-        #     del a
+        for i in self.__get__members__(include_private=True):
+            setattr(self, i, None)
+            # a = self.__getattribute__(i)
+            # del a
 
     def _open_(self, mode='r'):
         """Opens the file if it is not open.

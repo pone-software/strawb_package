@@ -46,6 +46,13 @@ class Images:
     def __del__(self):
         self.file_handler = None  # unlink
 
+        del self._integrated_raw
+        del self._raw_dark_frame
+        del self._rgb_dark_frame
+        del self._valid_mask
+        del self._integrated_minus_dark
+        del self._max_value_minus_dark
+
     # ---- Properties ----
     @property
     def integrated_raw(self):
@@ -173,7 +180,7 @@ class Images:
         rgb = np.array(rgb)
 
         if len(rgb.shape) < 2:
-            raise ValueError('Array needs at leas 2 dimensions.')
+            raise ValueError(f'Array needs at leas 2 dimensions. Got shape: {rgb.shape}')
 
         if axis < 0:
             axis += len(rgb.shape) - 1
