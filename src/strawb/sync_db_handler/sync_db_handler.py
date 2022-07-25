@@ -41,6 +41,13 @@ class SyncDBHandler(BaseDBHandler):
 
     def __init__(self, file_name='Default', update=False, load_db=True, **kwargs):
         """Handle the DB, which holds the metadata from the ONC DB and adds quantities like hdf5 attributes.
+        If the DB isn't synced so far you can load the entiere DB with:
+        >>> db = strawb.SyncDBHandler(load_db=False)
+        >>> db.load_onc_db_update(output=True, save_db=True)
+        Once this is done, you can change to
+        >>> >>> db = strawb.SyncDBHandler()  # or with load_db=True
+        and only updates are loaded.
+
         PARAMETER
         ---------
         file_name: Union[str, None], optional
