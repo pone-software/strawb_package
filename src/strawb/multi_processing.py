@@ -4,6 +4,7 @@ import multiprocessing
 import threading
 import logging
 
+import pandas
 import psutil
 import os
 import time
@@ -61,7 +62,10 @@ class MProcessIterator:
         self.pool.terminate()
         self.pool.close()
         self.pool.join()
-        self._thread_.join()
+        try:
+            self._thread_.join(timeout=.001)
+        except TimeoutError:
+            self._active_jobs_dict_ = {}
 
     def get_process_info(self, pid=None, process=None):
         if process is not None:
@@ -348,3 +352,12 @@ class MProcessIterator:
     def number_finished_jobs(self):
         """Number of finished jobs."""
         return len(self._result_dict_)
+
+    def sys_log_dataframe(self):
+        if self.sys_log:
+            df = pandas.DataFrame(self.sys_log)
+            df.time = pandas.to_datetime(df.time, utc=True, unit='s')
+            df.create_time = pandas.to_datetime(df.create_time, utc=True, unit='s')
+
+            return df
+
