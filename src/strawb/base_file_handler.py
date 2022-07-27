@@ -91,8 +91,8 @@ class BaseFileHandler:
                     pass
             if file_name is not None and self.module is None:
                 try:
-                    # '...le_data/TUMMINISPECTROMETER001_202104...' -> 'MINISPECTROMETER001'
-                    self.module = file_name.rsplit('/', 1)[-1].split('_', 1)[0].replace('TUM', '')
+                    # '...le_data/TUMMINISPECTROMETER001_202104...' -> 'TUMMINISPECTROMETER001'
+                    self.module = os.path.basename(file_name).split('_', 1)[0]
                 except (KeyError, ValueError, TypeError):
                     pass
         else:
