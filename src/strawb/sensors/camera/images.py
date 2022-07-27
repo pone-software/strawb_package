@@ -24,11 +24,11 @@ class Images:
     }
     bayer_pattern = cv2.COLOR_BAYER_BG2RGB_EA  # <- that's what we need as cv2 exports BGR -> BG2 instead of RG2
 
-    def __init__(self, file_handler):
+    def __init__(self, file_handler=None):
         self.file_handler = file_handler
 
-        if not isinstance(file_handler, FileHandler):
-            raise ValueError(f'file_handler is no instance of strawb.sensors.camera.FileHandler.'
+        if file_handler is not None and not isinstance(file_handler, FileHandler):
+            raise ValueError(f'file_handler is no instance of strawb.sensors.camera.FileHandler nor None. Got:'
                              f'{type(file_handler)}')
         # elif self.file_handler.is_empty is None:  # protect against empty file
         #     raise ValueError(f'No file defined in file handler.')
@@ -77,7 +77,7 @@ class Images:
         return self._valid_mask
 
     def create_valid_mask(self, limit=None):
-        """Detect which images which are corrupt if the integrated_raw is below the limit.
+        """Detect which images are corrupt if the integrated_raw is above the limit.
         With limit=None it takes:
         For gain=50 end exposure time= ~60s: limit = 2e10
         For gain=30 end exposure time= ~60s: limit = 4e9
@@ -201,7 +201,7 @@ class Images:
         PARAMETER
         ---------
         shape:
-            shape of the mask or data
+            shape of the mask or data, i.e. np.array(...).shape
         color: str, optional
             color channel to create the mask for. Must be one of
             ['green', 'blue', 'red', 'g', 'b', 'r'] also the names of the matplotlib cmaps are allowed
@@ -219,7 +219,8 @@ class Images:
             a bool numpy array which selects the specified color
         """
         color = color.lower()
-        color = color[:-1] if color.endswith('s') else color
+        color = color[:-1] if color.endswith('s') else color  # to support cmaps: ['Greens', 'Blues', 'Reds']
+
         know_color = ['green', 'blue', 'red']
         know_color.extend([i[0] for i in know_color])
         if color not in know_color:
@@ -227,7 +228,7 @@ class Images:
 
         if isinstance(eff_margin, bool) and eff_margin is False:
             eff_margin = [0, 0, 0, 0]
-        if eff_margin is None or isinstance(eff_margin, bool) and eff_margin is True:
+        if eff_margin is None or (isinstance(eff_margin, bool) and eff_margin is True):
             eff_margin = self.file_handler.EffMargins[:]
 
         margin_x_shift = eff_margin[0] % 2

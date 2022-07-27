@@ -4,10 +4,12 @@ import cv2
 import pandas as pd
 import tqdm.notebook
 
+from strawb.tools import asdatetime
+
 
 class FindCluster:
     def __init__(self, camera, min_std=3, min_size_cluster=3, max_gaps=2,
-                 pixel_mean=None, pixel_std=None, images=None):
+                 pixel_mean=None, pixel_std=None, images=None, eff_margin=True):
         """
         Parameters
         ----------
@@ -24,10 +26,13 @@ class FindCluster:
             Or provide the data, can speed things up.
         pixel_mean, pixel_std: numpy.ndarray, optional
             If None, create arrays at initialisation. Or provide the data, can speed things up.
+        eff_margin: bool, optional
+            if pixel should be cut by the effective margin. Default, True.
         """
 
         self.camera = camera
         self._images_ = images
+        self.eff_margin = eff_margin
 
         self.min_std = min_std
         self.min_size_cluster = min_size_cluster
@@ -37,12 +42,38 @@ class FindCluster:
         self._pixel_mean_ = pixel_mean
         self._pixel_std_ = pixel_std
 
+        self._pixel_rgb_mask_ = None
+
     def __del__(self):
         """Remove links to other classes to prevent deadlock."""
         self.camera = None  # unlink
         del self._images_
         del self._pixel_mean_
         del self._pixel_std_
+
+    @property
+    def pixel_rgb_mask(self):
+        if self._pixel_rgb_mask_ is None:
+            self._pixel_rgb_mask_ = [self.camera.images.get_raw_rgb_mask(self.images.shape[1:], 'red',
+                                                                         eff_margin=self.eff_margin),
+                                     self.camera.images.get_raw_rgb_mask(self.images.shape[1:], 'green',
+                                                                         eff_margin=self.eff_margin),
+                                     self.camera.images.get_raw_rgb_mask(self.images.shape[1:], 'blue',
+                                                                         eff_margin=self.eff_margin)
+                                     ]
+        return self._pixel_rgb_mask_
+
+    @property
+    def pixel_red_mask(self):
+        return self.pixel_rgb_mask[0]
+
+    @property
+    def pixel_green_mask(self):
+        return self.pixel_rgb_mask[1]
+
+    @property
+    def pixel_blue_mask(self):
+        return self.pixel_rgb_mask[2]
 
     @property
     def pixel_mean(self):
@@ -72,7 +103,8 @@ class FindCluster:
     def images(self):
         if self._images_ is None:
             self._images_ = self.camera.file_handler.raw[:]
-            self._images_ = self.camera.images.cut2effective_pixel(self._images_)
+            if self.eff_margin:
+                self._images_ = self.camera.images.cut2effective_pixel(self._images_)
         return self._images_
 
     @images.setter
@@ -115,9 +147,11 @@ class FindCluster:
 
         # create structure to fill gaps according to max_distance.
         # scipy.ndimage.measurements.label can only detect direct neighbours
-        structure = np.ones((max_gaps * 2 - 1, max_gaps * 2 - 1), bool)
-        structure[:max_gaps - 1] = 0
-        structure[:, :max_gaps - 1] = 0
+        # if max_gaps == 0:
+        #     max_gaps = 1
+        structure = np.ones((max_gaps * 2 + 1, max_gaps * 2 + 1), bool)
+        structure[:max_gaps] = 0
+        structure[:, :max_gaps] = 0
 
         z = dev >= min_std  # create a map with values True if the deviation is >= min_std, else False
         z_dil = scipy.ndimage.binary_dilation(z, structure=structure).astype(bool)
@@ -127,7 +161,7 @@ class FindCluster:
         # define the structure of the clusters so that diagonal pixels are considered neighbours
         s = scipy.ndimage.generate_binary_structure(2, 2)
 
-        labeled_cluster, num_clusters = scipy.ndimage.measurements.label(z_dil, structure=s)
+        labeled_cluster, num_clusters = scipy.ndimage.label(z_dil, structure=s)
         # labeled_clusters_dil gives array with the number of the cluster the pixel is in
         # num_clusters is the number of clusters found in the picture
         labeled_cluster[z == 0] = 0
@@ -151,7 +185,7 @@ class FindCluster:
                 'box_size': box[1],
                 'box_corners': points}
 
-    def get_sigma_deviation(self, pic_index, labels=None, index=None):
+    def get_sigma_deviation(self, pic_index, labels=None, index=None, color=None):
         """
         1. Compute absolute deviation from mean per pixel averaged over all pixels in the cluster.
         2. Compute deviation from mean in multiples of the standard deviation per pixel averaged
@@ -159,16 +193,19 @@ class FindCluster:
 
         Parameters
         ----------
-        pic_index : int
-            Number of the picture of which the data frame is created.
+        pic_index : ndarray
+            Index of the image in images.
         labels : array_like, optional
             Array of labels of same shape, or broadcastable to the same shape as
-            `input`. All elements sharing the same label form one region over
+            `image`. All elements sharing the same label form one region over
             which the mean of the elements is computed.
         index : int or sequence of ints, optional
             Labels of the objects over which the mean is to be computed.
             Default is None, in which case the mean for all values where label is
             greater than 0 is calculated.
+        color: None or str, optional
+            allowed inputs are None or one strings of ['red', 'green', 'blue']. If a color is specified the statistic is
+             computed for the pixel with the color, only.
 
         Returns
         -------
@@ -177,17 +214,89 @@ class FindCluster:
         sigma_dev: array, float
             Mean deviation from mean in times of the standard deviation.
         """
+        color_mask = None
+        if color == 'red':
+            color_mask = self.pixel_red_mask
+        elif color == 'green':
+            color_mask = self.pixel_green_mask
+        elif color == 'blue':
+            color_mask = self.pixel_blue_mask
+
+        labels = labels[color_mask]
+
         # absolute deviation from mean for each pixel
         # abs_dev = np.abs(self.images[pic_index].astype(np.float64) - self.pixel_mean)
-        abs_dev = self.images[pic_index].astype(np.float64) - self.pixel_mean
+        abs_dev = self.images[pic_index][color_mask].astype(np.float64) - self.pixel_mean[color_mask]
 
         # mean absolute deviation for the cluster
-        mean_abs_dev = scipy.ndimage.measurements.mean(abs_dev, labels=labels, index=index)
+        # can give: RuntimeWarning: invalid value encountered in divide
+        # accept it here
+        mean_abs_dev = scipy.ndimage.mean(abs_dev, labels=labels, index=index)
 
-        abs_dev = abs_dev / np.ma.masked_equal(self.pixel_std, 0)
-        sigma_dev = scipy.ndimage.measurements.mean(abs_dev, labels=labels, index=index)
+        abs_dev = abs_dev / np.ma.masked_equal(self.pixel_std[color_mask], 0)
+        sigma_dev = scipy.ndimage.mean(abs_dev, labels=labels, index=index)
 
         return mean_abs_dev, sigma_dev
+
+    def get_cluster_specs(self, pic_index, labels, index, color=None):
+        """
+        Parameters
+        ----------
+        pic_index : ndarray
+            Index of the image in images.
+        labels : array_like, optional
+            Array of labels of same shape, or broadcastable to the same shape as
+            `image`. All elements sharing the same label form one region over
+            which the mean of the elements is computed.
+        index : int or sequence of ints, optional
+            Labels of the objects over which the mean is to be computed.
+            Default is None, in which case the mean for all values where label is
+            greater than 0 is calculated.
+        color: None or str, optional
+            allowed inputs are None or one strings of ['red', 'green', 'blue']. If a color is specified the statistic is
+             computed for the pixel with the color, only.
+        """
+        color_mask = None
+        if color == 'red':
+            color_mask = self.pixel_red_mask
+        elif color == 'green':
+            color_mask = self.pixel_green_mask
+        elif color == 'blue':
+            color_mask = self.pixel_blue_mask
+
+        labels_c = labels[color_mask]
+        image = self.images[pic_index][color_mask]
+
+        mean_abs_dev, sigma_dev = self.get_sigma_deviation(pic_index=pic_index,
+                                                           labels=labels,
+                                                           index=index,
+                                                           color=color)
+
+        n_pixel = scipy.ndimage.sum(np.ones_like(image),
+                                    labels=labels_c,
+                                    index=index)
+
+        charge_with_noise = scipy.ndimage.sum(image,
+                                              labels=labels_c,
+                                              index=index)
+
+        noise = scipy.ndimage.sum(self.pixel_mean[color_mask],
+                                  labels=labels_c,
+                                  index=index)
+        color_str = ""
+        if color is not None:
+            color_str = f"_{color}"
+
+        # sn: signal to noise
+        specs_dict = {
+            f'n_pixel{color_str}': n_pixel,
+            f'noise{color_str}': noise,
+            f'charge_with_noise{color_str}': charge_with_noise,
+            f'sn_mean_deviation{color_str}': mean_abs_dev,
+            f'sn_mean_deviation_sigma{color_str}': sigma_dev,
+        }
+
+        return specs_dict
 
     def df_picture(self, pic_index, min_std=None, min_size_cluster=None, max_gaps=None):
         """
@@ -215,43 +324,28 @@ class FindCluster:
         if min_size_cluster is None:
             min_size_cluster = self.min_size_cluster
 
-        labeled_cluster = self.get_cluster(pic_index=pic_index,
-                                           min_std=min_std,
-                                           min_size_cluster=min_size_cluster,
-                                           max_gaps=max_gaps)
-        unique_labeled_cluster, n_pixel = np.unique(labeled_cluster, return_counts=True)
+        labels = self.get_cluster(pic_index=pic_index,
+                                  min_std=min_std,
+                                  min_size_cluster=min_size_cluster,
+                                  max_gaps=max_gaps)
+        index = np.unique(labels)
 
-        mean_abs_dev, sigma_dev = self.get_sigma_deviation(pic_index=pic_index,
-                                                           labels=labeled_cluster,
-                                                           index=unique_labeled_cluster)
+        data_dict = self.get_cluster_specs(pic_index, labels, index, color=None)
+        data_dict.update(self.get_cluster_specs(pic_index, labels, index, color='red'))
+        data_dict.update(self.get_cluster_specs(pic_index, labels, index, color='green'))
+        data_dict.update(self.get_cluster_specs(pic_index, labels, index, color='blue'))
 
         df = pd.DataFrame(
-            data={'time': self.camera.file_handler.time.asdatetime()[pic_index],
-                  'label': unique_labeled_cluster,
-                  'n_pixel': n_pixel,
-                  'charge_with_noise': scipy.ndimage.measurements.sum(self.images[pic_index],
-                                                                      labels=labeled_cluster,
-                                                                      index=unique_labeled_cluster),
-                  'noise': scipy.ndimage.measurements.sum(self.pixel_mean,
-                                                          labels=labeled_cluster,
-                                                          index=unique_labeled_cluster),
-                  'mean_absolute_deviation_per_pixel': mean_abs_dev,
-                  'mean_deviation_per_pixel_in_sigma': sigma_dev,
-                  'center_of_mass': scipy.ndimage.measurements.center_of_mass(
-                      self.images[pic_index] - self.pixel_mean,
-                      labels=labeled_cluster,
-                      index=unique_labeled_cluster),
-                  'center_of_pix': scipy.ndimage.measurements.center_of_mass(
-                      np.ones_like(labeled_cluster),
-                      labels=labeled_cluster,
-                      index=unique_labeled_cluster),
+            data={'time': asdatetime(self.camera.file_handler.time[pic_index]),
+                  'label': index,
+                  **data_dict,
                   'angle': None,
                   'box_center': None,
                   'box_size': None,
                   'box_corners': None,
                   })
 
-        df_box = pd.json_normalize([self.get_box(labeled_cluster == i) for i in unique_labeled_cluster])
+        df_box = pd.json_normalize([self.get_box(labels == i) for i in index])
         df.update(df_box)
 
         return df
