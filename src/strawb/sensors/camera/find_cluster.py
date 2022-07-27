@@ -290,7 +290,7 @@ class FindCluster:
 
         # sn: signal to noise
         specs_dict = {
-            f'n_pixel{color_str}': n_pixel,
+            f'n_pixel{color_str}': n_pixel.astype(np.int32),
             f'noise{color_str}': noise,
             f'charge_with_noise{color_str}': charge_with_noise,
             f'sn_mean_deviation{color_str}': mean_abs_dev,
@@ -348,8 +348,8 @@ class FindCluster:
         df = pd.DataFrame(
             data={'time': asdatetime(self.camera.file_handler.time[pic_index]),
                   'label': index,
-                  **{'center_of_mass_{l}': center_of_mass[:, i] for i, l in enumerate(['x', 'y'])},
-                  **{'center_of_pix_{l}': center_of_pix[:, i] for i, l in enumerate(['x', 'y'])},
+                  **{f'center_of_mass_{l}': center_of_mass[:, i] for i, l in enumerate(['x', 'y'])},
+                  **{f'center_of_pix_{l}': center_of_pix[:, i] for i, l in enumerate(['x', 'y'])},
                   **data_dict,
                   })
 
