@@ -178,12 +178,13 @@ class FindCluster:
         box = cv2.minAreaRect(np.argwhere(mask_cluster))
 
         # coordinates of the corners of the minimal bounding rectangle
-        points = cv2.boxPoints(box).astype(np.float64)
+        # points = cv2.boxPoints(box).astype(np.float64)
 
-        return {'angle': box[2],
-                'box_center': box[0],
-                'box_size': box[1],
-                'box_corners': points}
+        return {'angle': float(box[2]),
+                **{f'box_center_{l}': box[0][i] for i, l in enumerate(['x', 'y'])},
+                **{f'box_size_{l}': box[1][i] for i, l in enumerate(['x', 'y'])},
+                # 'box_corners': points
+                }
 
     def get_sigma_deviation(self, pic_index, labels=None, index=None, color=None):
         """
@@ -272,7 +273,7 @@ class FindCluster:
                                                            index=index,
                                                            color=color)
 
-        n_pixel = scipy.ndimage.sum(np.ones_like(image),
+        n_pixel = scipy.ndimage.sum(np.ones_like(image, dtype=np.uint32),
                                     labels=labels_c,
                                     index=index)
 
@@ -335,19 +336,25 @@ class FindCluster:
         data_dict.update(self.get_cluster_specs(pic_index, labels, index, color='green'))
         data_dict.update(self.get_cluster_specs(pic_index, labels, index, color='blue'))
 
+        center_of_mass = np.array(scipy.ndimage.measurements.center_of_mass(
+            self.images[pic_index] - self.pixel_mean,
+            labels=labels,
+            index=index))
+        center_of_pix = np.array(scipy.ndimage.measurements.center_of_mass(
+            np.ones_like(labels),
+            labels=labels,
+            index=index))
+
         df = pd.DataFrame(
             data={'time': asdatetime(self.camera.file_handler.time[pic_index]),
                   'label': index,
+                  **{'center_of_mass_{l}': center_of_mass[:, i] for i, l in enumerate(['x', 'y'])},
+                  **{'center_of_pix_{l}': center_of_pix[:, i] for i, l in enumerate(['x', 'y'])},
                   **data_dict,
-                  'angle': None,
-                  'box_center': None,
-                  'box_size': None,
-                  'box_corners': None,
                   })
 
         df_box = pd.json_normalize([self.get_box(labels == i) for i in index])
-        df.update(df_box)
-
+        df = df.merge(df_box, left_index=True, right_index=True)
         return df
 
     def df_all(self, pic_index=None, tqdm_kwargs=None, *args, **kwargs):
