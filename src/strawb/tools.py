@@ -7,6 +7,8 @@ import pandas
 import scipy.stats
 import scipy.signal
 from matplotlib import pyplot as plt
+import matplotlib.colors as mcolors
+
 #  ---- HDF5 Helper ----
 # add new asdatetime to h5py Dataset similar to asdtype for datetime64 when time is given as float in seconds
 import tqdm
@@ -723,3 +725,49 @@ def pd_timestamp_mask_between(series_start, series_stop, time_from, time_to, tz=
     mask |= (series_start >= time_from) & (series_stop <= time_to)
 
     return mask
+
+
+def cmap_manipulator(cmap, alpha_min=0.3, alpha_max=1., v_min=0., v_max=1., invert_alpha=False, bg_color='white'):
+    """
+    PARAMETER
+    ---------
+    cmap: str, matplotlib colormap
+        a name of the matplotlib colormap understood by plt.cm.get_cmap(cmap) or a cmap.
+    alpha_min, alpha_max: float, optional
+        alpha_min and alpha_max, represent alpha values at the lower and upper bound, respectively.
+        If `invert_alpha` is set, the mapping of alpha_min and alpha_max is inverted.
+    v_min=0., v_max: float, optional
+        cuts the lower and upper bound of the original cmap.
+    invert_alpha: bool, optional
+        inverts the mapping of alpha_min and alpha_max is inverted.
+    bg_color='white'
+        the color of the background as a matplotlib color string (matplotlib.colors.to_rgb(bg_color)).
+        Default is 'white'.
+    """
+    # Choose colormap which will be mixed with the alpha values
+    if isinstance(cmap, str):
+        cmap = plt.cm.get_cmap(cmap)
+
+    # Get the colormap colors
+    my_cmap = cmap(np.arange(cmap.N))
+
+    # Define the alphas in the range from 0 to 1
+    alphas = np.linspace(alpha_min, alpha_max, cmap.N)
+    v = np.linspace(0, 1, cmap.N)
+
+    if invert_alpha:
+        cmap_name = cmap.name + '_ar'
+        alphas = alphas[::-1]
+    else:
+        cmap_name = cmap.name + '_ar'
+
+    # Define the background as white
+    bg = np.asarray(mcolors.to_rgb(bg_color))
+
+    # Mix the colors with the background
+    for i in range(cmap.N):
+        my_cmap[i, :-1] = my_cmap[i, :-1] * alphas[i] + bg * (1. - alphas[i])
+
+    mask = (v >= v_min) & (v <= v_max)
+    # Create new colormap which mimics the alpha values
+    return mcolors.ListedColormap(my_cmap[mask], name=cmap_name)
