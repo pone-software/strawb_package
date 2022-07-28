@@ -51,6 +51,20 @@ class MProcessIterator:
 
         self._active_ = False
 
+    def __del__(self):
+        if self.pool is not None:
+            self.pool.terminate()
+
+        del self.pool
+        del self._multiprocessing_lock_
+        del self._threading_lock_
+
+        del self._active_jobs_dict_
+        del self._ready_dict_
+        del self._result_dict_
+
+        del self.sys_log
+
     @property
     def active(self):
         """True if jobs are running, else False"""
@@ -234,8 +248,7 @@ class MProcessIterator:
                         self._result_dict_.update({key_0: result})
 
                         # clean up RAM
-                        c1, c2, c3 = gc.get_count(), gc.collect(), gc.get_count()
-                        # self.logger.debug(f'Clean up gc: {c1}, {c2}, {c3}')
+                        gc.get_count(), gc.collect(), gc.get_count()
 
         self.pool.close()
         self.pool.join()
