@@ -727,7 +727,7 @@ def pd_timestamp_mask_between(series_start, series_stop, time_from, time_to, tz=
     return mask
 
 
-def cmap_manipulator(cmap, alpha_min=0.3, alpha_max=1., v_min=0., v_max=1., invert_alpha=False, bg_color='white'):
+def cmap_manipulator(cmap, alpha_min=1., alpha_max=1., v_min=0., v_max=1., invert_alpha=False, bg_color='white'):
     """
     PARAMETER
     ---------
