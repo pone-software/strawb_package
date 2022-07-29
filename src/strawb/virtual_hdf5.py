@@ -1,4 +1,10 @@
+import logging
+import multiprocessing
+import os
+import time
+
 import h5py
+import numpy as np
 
 
 class VirtualHDF5:
@@ -237,3 +243,75 @@ class DatasetsInGroupSameSize:
                     # print(dataset_j, obj_j.path, obj_j.shape[0])
 
         return obj_dict
+
+
+class HDF5TempFile:
+    def __init__(self, dataframe, module, file_name=None, temp_dir='temp'):
+        """A class which handles to open a module based on files provided in a dataframe.
+        If its more than one file, it tries to create a temporary virtual HDF5 file.
+        PARAMETER
+        ---------
+        dataframe: pandas.DataFrame
+            must have the column 'fullPath' which holds absolute paths to the files.
+        module: None, or strawb.sensor class
+            a class which can read the file
+        file_name: None or str, optional
+            a filename of the temporary virtual HDF5 file. None creates an random filename.
+        temp_dir: str, optional
+            path where the temporary virtual HDF5 file are located.
+        """
+        self.logger = logging.getLogger(f'{type(self).__name__}')
+        self.logger.debug(f"Create TempFile: {file_name}")
+        self.dataframe = dataframe
+        #         self.camera = None
+
+        # generate a virtual hdf5 to combine the datasets if there are multiple files selected
+        if len(dataframe) > 1:
+
+            self._is_virtual_ = True
+
+            # setup filename and dir
+            seed = multiprocessing.current_process().pid
+            np.random.seed(seed)
+
+            # deviceCode needs to be at first position
+            self.file_name = f'{dataframe.deviceCode.iloc[0]}_temp_' \
+                             f'{np.random.randint(10000)}_{int(time.time_ns() % 1e9)}.hdf5'
+            self.file_name = os.path.abspath(os.path.join(temp_dir, self.file_name))
+            os.makedirs(os.path.dirname(self.file_name), exist_ok=True)
+
+            vhdf5 = VirtualHDF5(self.file_name, dataframe.fullPath.to_list())
+
+            self.file_name = vhdf5.file_name
+            del vhdf5
+        else:
+            self._is_virtual_ = False
+            self.file_name = dataframe.fullPath[0]
+
+        if module is not None:
+            # create an instance of the Camera
+            self.module = module(str(self.file_name))
+        else:
+            self.module = None
+
+    def __del__(self):
+        self.logger.debug(f"Delete TempFile: {self.file_name}")
+
+        # try to close to speed tings up
+        try:
+            self.module.file_handler.close()
+        except Exception as a:
+            print(
+                f'{multiprocessing.current_process()} - {os.path.basename(self.file_name)} - '
+                f'Failed: self.module.file_handler.close(): {a}; /n'
+                f'd_len: {len(self.dataframe)}')
+
+        try:
+            del self.module
+        except (KeyError, Exception):
+            pass
+
+        if self._is_virtual_:
+            os.remove(self.file_name)
+
+        del self.logger
