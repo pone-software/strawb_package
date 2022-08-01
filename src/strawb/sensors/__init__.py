@@ -4,6 +4,7 @@ from .lidar import Lidar
 from .pmtspec import PMTSpec
 from .minispec import MiniSpectrometer
 from .adcp import ADCP
+from .muontracker import MuonTracker
 
 
 # class BaseSensor:

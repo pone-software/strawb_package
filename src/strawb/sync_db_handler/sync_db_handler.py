@@ -10,7 +10,7 @@ from strawb.sync_db_handler.base_db_handler import BaseDBHandler
 from ..base_file_handler import BaseFileHandler
 from ..config_parser import Config
 from ..onc_downloader import ONCDownloader
-from ..sensors import lidar, minispec, module, camera, pmtspec
+from ..sensors import lidar, minispec, module, camera, pmtspec, muontracker
 from ..tools import human_size, ShareJobThreads, pd_timestamp_mask_between
 
 
@@ -19,7 +19,7 @@ class SyncDBHandler(BaseDBHandler):
         # all devices
         'LF': None,
         # Muon-Tracker
-        'MTSD': None,  # TUMMUONTRACKER001_20210503T000000.000Z-SDAQ-MUON.hdf5
+        'MTSD': muontracker,  # TUMMUONTRACKER001_20210503T000000.000Z-SDAQ-MUON.hdf5
         'MTRD': None,  # TUMMUONTRACKER001_20210503T000001.223Z-MUON.hld
         'MTTOT': None,  # TUMMUONTRACKER001_20210802T230012.933Z-TOT-MUON.txt
         # LiDAR
