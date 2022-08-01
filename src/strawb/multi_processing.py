@@ -52,6 +52,7 @@ class MProcessIterator:
         self._active_ = False
 
     def __del__(self):
+        self.logger.info('Delete MPI')
         if self.pool is not None:
             self.pool.terminate()
 
@@ -373,4 +374,3 @@ class MProcessIterator:
             df.create_time = pandas.to_datetime(df.create_time, utc=True, unit='s')
 
             return df
-
