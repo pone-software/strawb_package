@@ -30,6 +30,23 @@ Depending on your Python installation adopt python3/pip3 to python/pip, however 
   pip3 install -U --user -e .  # install the package in developer mode.
   ```
 
+### Update repository when output of notebooks prevent a git pull
+This repository holds several notebooks. Git commit is configured to clear all notebooks outputs before committing to 
+include code only and significantly reduce the size of the notebooks. 
+When you run a notebook, the notebook will change also if you don't modify any cell due to the output. The msg will be:
+```commandline
+git pull
+# ...
+# Please commit your changes or stash them before you merge.
+# Aborting
+```
+To do a `git pull`, you have to `git reset --hard origin/master` or the branch you want to choose instead of `master`.
+**Be aware, this will reset your local repository to the lattes commit and your changes to any file in the repository will be lost.**
+If you want to keep the changes, follow the usual commit-merge-path.
+
+Afterwards a `git pull` will work fine again.
+To prevent this behaviour, you can make local copies of the notebooks and run them there. Once you want to upload changes of a notebook, copy the notebook back and do a `git commit` (+ `git push`).
+
 #### Known issued at installation
 - **Missing hdf5 installation**
 If you see an error like
