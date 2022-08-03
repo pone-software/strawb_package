@@ -10,7 +10,7 @@ class BaseDBHandler:
     _default_raw_data_dir_ = None
 
     def __init__(self, file_name='Default', update=False, load_db=True, search_file=False):
-        """Handle the DB, which holds the metadata from the ONC DB and adds quantities like hdf5 attributes.
+        """Handle a DB stored as a `pandas.DataFrame` in `self.dataframe`.
         PARAMETER
         ---------
         file_name: Union[str, None], optional
@@ -28,13 +28,13 @@ class BaseDBHandler:
             if the file should be searched in strawb.Config.raw_data_dir
         EXAMPLES
         --------
-        Load the DB from disc (also works if there non on disc), update it and store it on disc
-        >>> db = strawb.BaseDBHandler(load_db=False)  # loads the db
-        >>> db.load_onc_db_update(output=True, save_db=True)
+        Load the DB from disc
+        >>> db = strawb.BaseDBHandler()  # loads the db
 
-        Overwrites the existing DB, also works if there is no DB on disc.
+        Or if it doesn't exist, do the first creation of the DB. Also works to overwrite a existing DB.
         >>> db = strawb.BaseDBHandler(load_db=False)  # loads the db
-        >>> db.load_onc_db_update(output=True, save_db=True)
+        >>> db.dataframe = ...
+        >>> db.save_db()
         """
         self.dataframe = None  # stores the db in a pandas data frame
 
@@ -80,7 +80,7 @@ class BaseDBHandler:
         if self.file_name is None:
             raise ValueError(f"File_name is None. Can't load the file.")
         elif not os.path.exists(self.file_name):
-            raise FileNotFoundError(f"{self.file_name} doesn't exist -> load data and execute .save_db() to create it.")
+            raise FileNotFoundError(f"{self.file_name} doesn't exist -> See the doc-string how to initialise it.")
         else:
             self.dataframe = pandas.read_pickle(self.file_name)
 
