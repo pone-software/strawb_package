@@ -9,3 +9,8 @@ The root directory of all generated files is located at: `<strawb.Config.proc_da
 3. The monthly files are ~50 MB in size. To reduce the size and generate one DB file for each module, run [cluster_db_compress.ipynb](cluster_db_compress.ipynb).
    Files are named: `{dev_code}_{t_start}_{t_end}_image_cluster_merge_npixel{min_n_pixel}.gz`
    where `min_n_pixel` is mininimum cluster size to keep. All smaller clusters are removed in the resulting file.
+
+
+# Mask for the camera mounting
+
+To get the coordinates of the camera mounting or a mask for an image where only the pixels that belong to the mounting are valid, run [mounting_coordinates.ipynb].
