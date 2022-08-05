@@ -13,4 +13,4 @@ The root directory of all generated files is located at: `<strawb.Config.proc_da
 
 # Mask for the camera mounting
 
-To get the coordinates of the camera mounting or a mask for an image where only the pixels that belong to the mounting are valid, run [mounting_coordinates.ipynb].
+To get the coordinates of the camera mounting or a mask for an image where only the pixels that belong to the mounting are valid, run [mounting_coordinates.ipynb](mounting_coordinates.ipynb).
