@@ -75,7 +75,7 @@ class SyncDBHandler(BaseDBHandler):
 
         Or both combined into one
         >>> if os.path.exists(strawb.Config.pandas_file_sync_db):
-        >>> db = strawb.SyncDBHandler()  # loads the db from disc
+        >>>     db = strawb.SyncDBHandler()  # loads the db from disc
         >>> else:
         >>>     db = strawb.SyncDBHandler(load_db=False)  # doesn't load from disc
         >>> db.load_onc_db_update(output=True, save_db=True)  # get updates
