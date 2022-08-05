@@ -1,3 +1,5 @@
+import os
+
 from strawb.config_parser.helper_classes import ConfigParser, ConfigItem
 
 
@@ -13,6 +15,8 @@ class Config:
     >>> for config_item in Config.to_list():
     >>>     print(f'{config_item.name:30s} : {config_item.value}')
     """
+
+    repository_home = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../..'))
 
     # PATH
     raw_data_dir = ConfigParser.config.get('Paths', 'raw_data_dir')
