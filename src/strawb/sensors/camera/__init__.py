@@ -5,6 +5,7 @@ from .file_handler import FileHandler
 from .images import Images
 from .find_cluster import FindCluster
 from .tools import *
+from .config import Config
 
 
 class Camera:
@@ -19,6 +20,8 @@ class Camera:
         self.images = Images(file_handler=self.file_handler)
 
         self.find_cluster = FindCluster(camera=self)
+
+        self.config = Config()
 
     def __del__(self):
         del self.find_cluster
