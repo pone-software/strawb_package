@@ -103,6 +103,10 @@ class BaseFileHandler:
         """All variables loaded from the file"""
         return self.__get__members__(include_private=False)
 
+    @property
+    def deviceCode(self):
+        return self.module
+
     def __get__members__(self, include_private=False):
         """All variables loaded from the file"""
         members = []
