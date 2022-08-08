@@ -1,17 +1,55 @@
 import numpy as np
-import pandas as pd
-
 
 class Config:
-    def __init__(self) -> None:
-        with np.load('mounting_mask.npz') as f:
-            self.mask_mounting = f['TUMPMTSPECTROMETER001']
+    def __init__(self, device_code) -> None:
+        self.mask_mounting = None
         
-        self.module_x = np.sum(pd.read_csv('LEDs.csv').center_of_mass_x[:4])/4  # x coordinate of the module above the camera
-        self.module_y = np.sum(pd.read_csv('LEDs.csv').center_of_mass_y[:4])/4  # y coordinate of the module above the camera
+        # [x, y] coordinate of the module above the camera
+        self.position_module = None
+        
+        # [x, y] coordinates of the data cable close to the camera
+        # and it goes to self.position_module
+        self.position_data_cable = None
+        
+        # [x, y] coordinates of the steel cable close to the camera
+        # and it goes to self.position_module
+        self.position_steel_cable = None
+        
+        # load data and set parameters
+        with np.load('mounting_mask.npz') as f:
+            if device_code in f:
+                self.mask_mounting = f[device_code]
+        
+        if device_code == 'TUMPMTSPECTROMETER001':
+            self.position_module = np.array([355.20968475,
+                                             690.49202575])
+            
+            self.position_data_cable = np.array([625, 300])
+            self.position_steel_cable = np.array([678, 320])
+        
+        elif device_code == 'TUMPMTSPECTROMETER002':
+            pass
+        
+        elif device_code == 'TUMMINISPECTROMETER001':
+            pass
 
-        self.data_cable_x = [625, self.module_x]  # x coordinates of the start and end point of the data cable
-        self.data_cable_y = [300, self.module_y]  # y coordinates of the start and end point of the data cable
-
-        self.steel_cable_x = [678, self.module_x]  # x coordinates of the start and end point of the steel cable
-        self.steel_cable_y = [320, self.module_y]  # y coordinates of the start and end point of the steel cable
+    @staticmethod
+    def get_line(p_0, p_1):
+        """Combine two points into a line. p_i = [x, y]; line = [[x_0, x_1], [y_0, y_1]]"""
+        return np.array([p_0, p_1]).T
+    
+    @property
+    def data_cable(self):
+        """Start and stop coordinates of the data cable."""
+        if self.position_module is not None and self.position_data_cable is not None:
+            return np.array([self.position_module, self.position_data_cable]).T
+        else:
+            return None
+    
+    @property
+    def steel_cable(self):
+        """Start and stop coordinates of the steel cable."""
+        if self.position_module is not None and self.position_steel_cable is not None:
+            return np.array([self.position_module, self.position_steel_cable]).T
+        else:
+            return None
