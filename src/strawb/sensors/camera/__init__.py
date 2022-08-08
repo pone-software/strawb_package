@@ -14,8 +14,11 @@ class Camera:
 
         if isinstance(file, str):
             self.file_handler = FileHandler(file_name=file)
-        else:
+        elif file_handler is None or isinstance(file_handler, FileHandler):
             self.file_handler = file
+        else:
+            raise ValueError(f'file_handler is no instance of strawb.sensors.camera.FileHandler, a path, nor None. Got:'
+                             f'{type(file_handler)}')
 
         self.images = Images(file_handler=self.file_handler)
 
