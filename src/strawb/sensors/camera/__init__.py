@@ -24,7 +24,10 @@ class Camera:
 
         self.find_cluster = FindCluster(camera=self)
 
-        self.config = Config(device_code=FileHandler.deviceCode)
+        if self.file_handler is None:
+            self.config = None
+        else:
+            self.config = Config(device_code=self.file_handler.deviceCode)
 
     def __del__(self):
         del self.find_cluster
