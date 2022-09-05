@@ -111,7 +111,10 @@ class BaseFileHandler:
         """All variables loaded from the file"""
         members = []
         for attr in dir(self):
+            # To detect a property use: isinstance(getattr(type(self), attr, None), property)
+            # don't know why there is: isinstance(getattr(self, attr), property) but keep it, don't cost anything
             if attr != '__members__' and \
+                    not isinstance(getattr(type(self), attr, None), property) and \
                     not isinstance(getattr(self, attr), property) and \
                     not callable(getattr(self, attr)) and \
                     (not attr.startswith("__") or include_private):
