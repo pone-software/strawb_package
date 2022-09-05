@@ -145,7 +145,11 @@ class BaseFileHandler:
         """When object is not deleted, e.g. when program ends, variable deleted, deleted by the garbage collector."""
         self.close()
         for i in self.__get__members__(include_private=False):
-            setattr(self, i, None)
+            try:
+                setattr(self, i, None)
+            except AttributeError as a:
+                print(i, a)
+                pass
             # a = self.__getattribute__(i)
             # del a
 
