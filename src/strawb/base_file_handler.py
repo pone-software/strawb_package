@@ -111,7 +111,10 @@ class BaseFileHandler:
         """All variables loaded from the file"""
         members = []
         for attr in dir(self):
+            # To detect a property use: isinstance(getattr(type(self), attr, None), property)
+            # don't know why there is: isinstance(getattr(self, attr), property) but keep it, don't cost anything
             if attr != '__members__' and \
+                    not isinstance(getattr(type(self), attr, None), property) and \
                     not isinstance(getattr(self, attr), property) and \
                     not callable(getattr(self, attr)) and \
                     (not attr.startswith("__") or include_private):
@@ -145,7 +148,11 @@ class BaseFileHandler:
         """When object is not deleted, e.g. when program ends, variable deleted, deleted by the garbage collector."""
         self.close()
         for i in self.__get__members__(include_private=False):
-            setattr(self, i, None)
+            try:
+                setattr(self, i, None)
+            except AttributeError as a:
+                print(i, a)
+                pass
             # a = self.__getattribute__(i)
             # del a
 
