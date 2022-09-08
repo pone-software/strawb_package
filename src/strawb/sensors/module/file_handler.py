@@ -1,4 +1,6 @@
+import h5py
 import numpy as np
+import pandas
 
 from strawb.base_file_handler import BaseFileHandler
 
@@ -106,6 +108,18 @@ class Lucifer:
         self.duration_seconds = file[f'lucifer_{self.id}/duration_seconds']
 
         self.version = 2  # starts with 2 as it is a subclass
+
+    def get_dataframe(self):
+        data_dict = {}
+        for i in ['id', 'current', 'current_mA', 'duration', 'duration_seconds', 'mode', 'time']:
+            if isinstance(self.__getattribute__(i), h5py.Dataset):
+                if i is 'time':
+                    data_dict.update({i: self.__getattribute__(i).asdatetime()[:]})
+                else:
+                    data_dict.update({i: self.__getattribute__(i)[:]})
+            else:
+                data_dict.update({i: self.__getattribute__(i)})
+        return pandas.DataFrame(data_dict)
 
 
 class FileHandler(BaseFileHandler):
