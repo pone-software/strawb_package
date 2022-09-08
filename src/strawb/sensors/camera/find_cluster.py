@@ -140,7 +140,7 @@ class FindCluster:
         if max_gaps is None:
             max_gaps = self.max_gaps
 
-        # create 2darray with the deviation from mean in sigma for the selected picture
+        # create 2d-array with the deviation from mean in sigma for the selected picture
         dev = np.zeros_like(self.images[0], dtype=np.float64)
         mask = self.pixel_std != 0
         dev[mask] = (self.images[pic_index, mask] - self.pixel_mean[mask]) / self.pixel_std[mask]
@@ -175,11 +175,23 @@ class FindCluster:
 
     @staticmethod
     def get_box(mask_cluster):
+        """Calculates the minimum box features of a 2D bool array covering all True values.
+        The parameters returned are: box_center, box_size_x, box_size_y, and angle.
+
+        PARAMETER
+        ---------
+        mask_cluster: ndarray
+            2d bool array. The box represents the minimum box around all True values.
+
+        EXAMPLE
+        -------
+        The corners of the bax can be calculated with openCV, i.e.:
+        >>> box_dict = FindCluster.get_box(mask_cluster)
+        >>> points = cv2.boxPoints((box_dict['box_center_x'], box_dict['box_center_y']),
+        >>>                        (box_dict['box_size_x'], box_dict['box_size_y']),
+        >>>                        box_dict['angle'])
+        """
         box = cv2.minAreaRect(np.argwhere(mask_cluster))
-
-        # coordinates of the corners of the minimal bounding rectangle
-        # points = cv2.boxPoints(box).astype(np.float64)
-
         return {'angle': float(box[2]),
                 **{f'box_center_{l}': box[0][i] for i, l in enumerate(['x', 'y'])},
                 **{f'box_size_{l}': box[1][i] for i, l in enumerate(['x', 'y'])},
