@@ -110,7 +110,7 @@ class Lucifer:
         data_dict = {}
         for i in ['id', 'current', 'current_mA', 'duration', 'duration_seconds', 'mode', 'time']:
             if isinstance(self.__getattribute__(i), h5py.Dataset):
-                if i is 'time':
+                if i == 'time':
                     data_dict.update({i: self.__getattribute__(i).asdatetime()[:]})
                 else:
                     data_dict.update({i: self.__getattribute__(i)[:]})
