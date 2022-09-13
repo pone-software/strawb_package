@@ -14,20 +14,20 @@ class Camera:
 
         if isinstance(file, str):
             self.file_handler = FileHandler(file_name=file)
-        elif file_handler is None or isinstance(file_handler, FileHandler):
+        elif file is None or isinstance(file, FileHandler):
             self.file_handler = file
         else:
             raise ValueError(f'file_handler is no instance of strawb.sensors.camera.FileHandler, a path, nor None. Got:'
-                             f'{type(file_handler)}')
+                             f'{type(file)}')
 
         self.images = Images(file_handler=self.file_handler)
 
         self.find_cluster = FindCluster(camera=self)
 
-        if self.file_handler is None:
-            self.config = None
-        else:
+        if self.file_handler is not None:
             self.config = Config(device_code=self.file_handler.deviceCode)
+        else:
+            self.config = Config(device_code=None)
 
     def __del__(self):
         del self.find_cluster
