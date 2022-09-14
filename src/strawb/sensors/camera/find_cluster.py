@@ -111,7 +111,7 @@ class FindCluster:
     def images(self, value):
         self._images_ = value
 
-    def get_cluster(self, pic_index, min_std=None, min_size_cluster=None, max_gaps=None):
+    def get_cluster(self, pic_index, min_std=None, min_size_cluster=None, max_gaps=None, mask_mounting=True):
         """
         Find clusters of bright pixels.
 
@@ -125,6 +125,10 @@ class FindCluster:
             Minimum number of adjoining pixels to be considered a cluster. If None, take from init.
         max_gaps: int, optional
             the maximum gap size within one cluster. If None, take from init.
+        mask_mounting: bool or ndarray, optional
+            True if the mounting, if known, should be excluded from the cluster search (mounting will be all label=0).
+            An ndarray defines the mask which pixels should be excluded from the cluster search. Must match the pixel
+            shape. `mask_mounting[i] = True` means include and `mask_mounting[i] = False` exclude the pixel i.
         Returns
         -------
         numpy.ndarray
@@ -139,11 +143,25 @@ class FindCluster:
             min_size_cluster = self.min_size_cluster
         if max_gaps is None:
             max_gaps = self.max_gaps
+        if isinstance(mask_mounting, bool):
+            if mask_mounting:
+                mask_mounting = self.camera.config.mask_mounting
+            else:
+                mask_mounting = None
+        elif isinstance(mask_mounting, np.ndarray):
+            pass
 
-        # create 2darray with the deviation from mean in sigma for the selected picture
+        # create 2d-array with the deviation from mean in sigma for the selected picture
         dev = np.zeros_like(self.images[0], dtype=np.float64)
         mask = self.pixel_std != 0
         dev[mask] = (self.images[pic_index, mask] - self.pixel_mean[mask]) / self.pixel_std[mask]
+
+        # create a map with values True if the deviation is >= min_std, else False
+        z = dev >= min_std
+        del dev
+        if mask_mounting is not None:
+            # all mask_mounting==False should be set to False in dev
+            z[~mask_mounting] = 0
 
         # create structure to fill gaps according to max_distance.
         # scipy.ndimage.measurements.label can only detect direct neighbours
@@ -152,8 +170,6 @@ class FindCluster:
         structure = np.ones((max_gaps * 2 + 1, max_gaps * 2 + 1), bool)
         structure[:max_gaps] = 0
         structure[:, :max_gaps] = 0
-
-        z = dev >= min_std  # create a map with values True if the deviation is >= min_std, else False
         z_dil = scipy.ndimage.binary_dilation(z, structure=structure).astype(bool)
 
         # convert the pixel beneath and the pixel to the right of each pixel with 'True' to 'True' as well to also
@@ -161,25 +177,39 @@ class FindCluster:
         # define the structure of the clusters so that diagonal pixels are considered neighbours
         s = scipy.ndimage.generate_binary_structure(2, 2)
 
-        labeled_cluster, num_clusters = scipy.ndimage.label(z_dil, structure=s)
         # labeled_clusters_dil gives array with the number of the cluster the pixel is in
         # num_clusters is the number of clusters found in the picture
-        labeled_cluster[z == 0] = 0
+        # label 0 in labeled_cluster is where z_dil==False, in other words, label=0 is background
+        labeled_cluster, num_clusters = scipy.ndimage.label(z_dil, structure=s)
+        labeled_cluster[z == 0] = 0  # add all False in z to background (label 0)
 
         counts = np.bincount(labeled_cluster.astype(np.int64).flatten())
         counts = counts[labeled_cluster.astype(np.int64)].reshape((labeled_cluster.shape[0],
                                                                    labeled_cluster.shape[1]))
 
+        # add too small cluster to label 0, in other words, remove the cluster and set is as background
         labeled_cluster[counts < min_size_cluster] = 0
         return labeled_cluster
 
     @staticmethod
     def get_box(mask_cluster):
+        """Calculates the minimum box features of a 2D bool array covering all True values.
+        The parameters returned are: box_center, box_size_x, box_size_y, and angle.
+
+        PARAMETER
+        ---------
+        mask_cluster: ndarray
+            2d bool array. The box represents the minimum box around all True values.
+
+        EXAMPLE
+        -------
+        The corners of the bax can be calculated with openCV, i.e.:
+        >>> box_dict = FindCluster.get_box(mask_cluster)
+        >>> points = cv2.boxPoints((box_dict['box_center_x'], box_dict['box_center_y']),
+        >>>                        (box_dict['box_size_x'], box_dict['box_size_y']),
+        >>>                        box_dict['angle'])
+        """
         box = cv2.minAreaRect(np.argwhere(mask_cluster))
-
-        # coordinates of the corners of the minimal bounding rectangle
-        # points = cv2.boxPoints(box).astype(np.float64)
-
         return {'angle': float(box[2]),
                 **{f'box_center_{l}': box[0][i] for i, l in enumerate(['x', 'y'])},
                 **{f'box_size_{l}': box[1][i] for i, l in enumerate(['x', 'y'])},
@@ -224,18 +254,26 @@ class FindCluster:
             color_mask = self.pixel_blue_mask
 
         labels = labels[color_mask]
+        index_present = np.unique(labels)  # unique labels which are present in labels (because of masking)
+        _, ind, _ = np.intersect1d(index,  # all unique labels
+                                   index_present,  # unique labels which are present in labels (because of masking)
+                                   return_indices=True,  # returns the indexes of input arrays (here: ind, _)
+                                   assume_unique=True)
+
+        print(self.images[pic_index][color_mask], labels)
 
         # absolute deviation from mean for each pixel
         # abs_dev = np.abs(self.images[pic_index].astype(np.float64) - self.pixel_mean)
         abs_dev = self.images[pic_index][color_mask].astype(np.float64) - self.pixel_mean[color_mask]
 
         # mean absolute deviation for the cluster
-        # can give: RuntimeWarning: invalid value encountered in divide
-        # accept it here
-        mean_abs_dev = scipy.ndimage.mean(abs_dev, labels=labels, index=index)
+        # np.nan if the label isn't in labels (because of masking)
+        mean_abs_dev = np.zeros_like(index, dtype=float) + np.nan
+        mean_abs_dev[ind] = scipy.ndimage.mean(abs_dev, labels=labels, index=index_present)
 
         abs_dev = abs_dev / np.ma.masked_equal(self.pixel_std[color_mask], 0)
-        sigma_dev = scipy.ndimage.mean(abs_dev, labels=labels, index=index)
+        sigma_dev = np.zeros_like(index, dtype=float) + np.nan
+        sigma_dev[ind] = scipy.ndimage.mean(abs_dev, labels=labels, index=index_present)
 
         return mean_abs_dev, sigma_dev
 
@@ -266,24 +304,46 @@ class FindCluster:
             color_mask = self.pixel_blue_mask
 
         labels_c = labels[color_mask]
+        index_present = np.unique(labels_c)  # unique labels which are present in labels (because of masking)
+        _, ind, _ = np.intersect1d(index,  # all unique labels
+                                   index_present,  # unique labels which are present in labels (because of masking)
+                                   return_indices=True,  # returns the indexes of input arrays (here: ind, _)
+                                   assume_unique=True)
         image = self.images[pic_index][color_mask]
 
-        mean_abs_dev, sigma_dev = self.get_sigma_deviation(pic_index=pic_index,
-                                                           labels=labels,
-                                                           index=index,
-                                                           color=color)
+        # absolute deviation from mean for each pixel
+        # abs_dev = np.abs(self.images[pic_index].astype(np.float64) - self.pixel_mean)
+        abs_dev = image.astype(np.float64) - self.pixel_mean[color_mask]
 
-        n_pixel = scipy.ndimage.sum(np.ones_like(image, dtype=np.uint32),
-                                    labels=labels_c,
-                                    index=index)
+        # mean absolute deviation for the cluster
+        # np.nan if the label isn't in labels (because of masking)
+        mean_abs_dev = np.zeros_like(index, dtype=float) + np.nan
+        mean_abs_dev[ind] = scipy.ndimage.mean(abs_dev, labels=labels_c, index=index_present)
 
-        charge_with_noise = scipy.ndimage.sum(image,
-                                              labels=labels_c,
-                                              index=index)
+        abs_dev = abs_dev / np.ma.masked_equal(self.pixel_std[color_mask], 0)
+        sigma_dev = np.zeros_like(index, dtype=float) + np.nan
+        sigma_dev[ind] = scipy.ndimage.mean(abs_dev, labels=labels_c, index=index_present)
 
-        noise = scipy.ndimage.sum(self.pixel_mean[color_mask],
-                                  labels=labels_c,
-                                  index=index)
+        # mean_abs_dev, sigma_dev = self.get_sigma_deviation(pic_index=pic_index,
+        #                                                    labels=labels,
+        #                                                    index=index,
+        #                                                    color=color)
+
+        n_pixel = np.zeros_like(index, dtype=int)
+        n_pixel[ind] = scipy.ndimage.sum(np.ones_like(image, dtype=np.uint32),
+                                         labels=labels_c,
+                                         index=index_present)
+
+        noise = np.zeros_like(index, dtype=float)
+        noise[ind] = scipy.ndimage.sum(self.pixel_mean[color_mask],
+                                       labels=labels_c,
+                                       index=index_present)
+
+        charge_with_noise = np.zeros_like(index, dtype=float) + np.nan
+        charge_with_noise[ind] = scipy.ndimage.sum(image,
+                                                   labels=labels_c,
+                                                   index=index_present)
+
         color_str = ""
         if color is not None:
             color_str = f"_{color}"
@@ -336,11 +396,13 @@ class FindCluster:
         data_dict.update(self.get_cluster_specs(pic_index, labels, index, color='green'))
         data_dict.update(self.get_cluster_specs(pic_index, labels, index, color='blue'))
 
-        center_of_mass = np.array(scipy.ndimage.measurements.center_of_mass(
+        # center_of_mass = np.array(scipy.ndimage.measurements.center_of_mass(
+        center_of_mass = np.array(scipy.ndimage.center_of_mass(
             self.images[pic_index] - self.pixel_mean,
             labels=labels,
             index=index))
-        center_of_pix = np.array(scipy.ndimage.measurements.center_of_mass(
+        # center_of_pix = np.array(scipy.ndimage.measurements.center_of_mass(
+        center_of_pix = np.array(scipy.ndimage.center_of_mass(
             np.ones_like(labels),
             labels=labels,
             index=index))
@@ -357,12 +419,15 @@ class FindCluster:
         df = df.merge(df_box, left_index=True, right_index=True)
         return df
 
-    def df_all(self, pic_index=None, tqdm_kwargs=None, *args, **kwargs):
+    def df_all(self, pic_index=None, progressbar=None, tqdm_kwargs=None, *args, **kwargs):
         """Detect Cluster in multiple pictures.
         PARAMETERS
         ----------
         pic_index: list, ndarray, optional
             the indexes of the pictures to detect teh cluster. If None, take all
+        progressbar: bool, optional
+            if the loop should print a progressbae.
+            It supports module tqdm: i.e. progressbar=tqdm.notebook.tqdm, or progressbar=tqdm.tqdm
         tqdm_kwargs: dict, optional
             kwargs for tqdm.notebook
         *args, **kwargs: list, dict, optional
@@ -370,12 +435,19 @@ class FindCluster:
         """
         if tqdm_kwargs is None:
             tqdm_kwargs = {}
+
         df = pd.DataFrame()
 
         if pic_index is None:
             pic_index = np.arange(self.images.shape[0])
 
-        # loop with progress bar
-        for pic_i in tqdm.notebook.tqdm(pic_index, **tqdm_kwargs):
+        iterator = pic_index
+        if progressbar is None:
+            iterator = tqdm.tqdm(iterator, **tqdm_kwargs)
+        elif not progressbar:
+            iterator = progressbar(iterator, **tqdm_kwargs)
+
+        # loop with or without progress bar
+        for pic_i in iterator:
             df = df.append(self.df_picture(pic_index=pic_i, *args, **kwargs), ignore_index=True)
         return df

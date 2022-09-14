@@ -38,32 +38,37 @@ class BaseDBHandler:
         """
         self.dataframe = None  # stores the db in a pandas data frame
 
-        if self._default_file_name_ is None:
-            print(f"WARNING: _default_file_name_ isn't set")
-        if self._default_raw_data_dir_ is None:
-            print(f"WARNING: _default_raw_data_dir_ isn't set")
-
         # handle file_name or try to find it.
         self.file_name = None
         if file_name is None:  # non, doesn't load the DB
             pass
         elif file_name == 'Default':  # take the default
+            if self._default_file_name_ is None:
+                print(f"WARNING: _default_file_name_ isn't set")
             self.file_name = self._default_file_name_
         elif os.path.isabs(file_name):
             self.file_name = file_name
         elif os.path.exists(file_name):  # if the file/path exists
             self.file_name = os.path.abspath(file_name)
-        elif os.path.exists(os.path.join(self._default_raw_data_dir_, file_name)):  # maybe with raw_data_dir as path
+
+        # maybe with raw_data_dir as path
+        elif self._default_raw_data_dir_ is not None and \
+                os.path.exists(os.path.join(self._default_raw_data_dir_, file_name)):
             path = os.path.join(self._default_raw_data_dir_, file_name)
             self.file_name = os.path.abspath(path)
-        elif search_file:  # try to find it in raw_data_dir. Fails if more than 1 file is found or non is found
-            file_name_list = glob.glob(self._default_raw_data_dir_ + "/**/" + file_name, recursive=True)
-            if len(file_name_list) == 1:
-                self.file_name = file_name_list[0]
+
+        # try to find it in raw_data_dir. Fails if more than 1 file is found or non is found
+        elif search_file:
+            if self._default_raw_data_dir_ is None:
+                print(f"WARNING: _default_raw_data_dir_ isn't set")
             else:
-                if file_name_list:
-                    raise FileExistsError(f'{file_name} matches multiple files in "{self._default_raw_data_dir_}": '
-                                          f'{file_name_list}')
+                file_name_list = glob.glob(self._default_raw_data_dir_ + "/**/" + file_name, recursive=True)
+                if len(file_name_list) == 1:
+                    self.file_name = file_name_list[0]
+                else:
+                    if file_name_list:
+                        raise FileExistsError(f'{file_name} matches multiple files in "{self._default_raw_data_dir_}": '
+                                              f'{file_name_list}')
 
         else:
             self.file_name = os.path.abspath(file_name)

@@ -288,11 +288,10 @@ class HDF5TempFile:
             self._is_virtual_ = False
             self.file_name = dataframe.fullPath[0]
 
+        self.module = None
         if module is not None:
             # create an instance of the Camera
             self.module = module(str(self.file_name))
-        else:
-            self.module = None
 
     def __del__(self):
         self.logger.debug(f"Delete TempFile: {self.file_name}")

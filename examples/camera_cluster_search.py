@@ -249,4 +249,4 @@ for ident in dates:
     del indices
     del mask
     del tmp
-    pd_info.to_pickle(join(savepath, f"{key}_biolumi_activity_info.pckl").replace("?", "x"))
+    pd_info.to_pickle(join(savepath, f"{key}_biolumi_activity_info.pckl").replace("?", "x"), protocol=4)
