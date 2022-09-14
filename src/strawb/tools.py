@@ -1,7 +1,9 @@
+import os
 import sys
 import threading
 import time
 
+import h5py
 import numpy as np
 import pandas
 import scipy.stats
@@ -771,3 +773,42 @@ def cmap_manipulator(cmap, alpha_min=1., alpha_max=1., v_min=0., v_max=1., inver
     mask = (v >= v_min) & (v <= v_max)
     # Create new colormap which mimics the alpha values
     return mcolors.ListedColormap(my_cmap[mask], name=cmap_name)
+
+
+def h5_iter_group(group, abs_dir='/', data_view=False, include_attrs=False, **kwargs):
+    """Worker function to iter all items of a h5 file and prints info. Similar to h5ls."""
+    if include_attrs:
+        print(f'Attributes ({abs_dir}): {dict(group.attrs)}')
+    for i in group:
+        item_i = group[i]
+        path_i = os.path.join(abs_dir, i)
+        if isinstance(item_i, h5py.Group):
+            print(f'# --- {os.path.basename(path_i)} --- ')
+            h5_iter_group(group=item_i, abs_dir=path_i, data_view=data_view,
+                          include_attrs=include_attrs, **kwargs)
+        else:
+            if include_attrs:
+                print(f'Attributes ({path_i}): {dict(item_i.attrs)}')
+            out = f"{path_i}  # {item_i.shape}"
+            if data_view:
+                with np.printoptions(**kwargs):
+                    out += f" {item_i[:]}"
+            print(out)
+
+
+def explore_hdf5(fn, data_view=False, include_attrs=False, precision=2, suppress=True, threshold=7, **kwargs):
+    """Iter all items of a h5 file and prints info. Similar to h5ls.
+    PARAMETER
+    ---------
+    fn: string
+        path to file
+    data_view: bool, optional
+        if a view of the data should be included in the output
+    include_attrs: bool, optional
+        if Attributes should be printed
+    precision=2, suppress=True, threshold=7, **kwargs: optional
+        parsed to np.printoptions to set up the data view
+    """
+    with h5py.File(fn, 'r') as f:
+        h5_iter_group(f, data_view=data_view, include_attrs=include_attrs, precision=precision,
+                      suppress=suppress, threshold=threshold, **kwargs)
