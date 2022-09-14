@@ -117,6 +117,7 @@ def rect_rotate(rect, angle=None, angle_normalize=True):
 
     return tuple(center), rect[1], angle
 
+
 # #### EXAMPLE ####
 
 # # Generate Image
@@ -167,3 +168,43 @@ def rect_rotate(rect, angle=None, angle_normalize=True):
 #     axi.legend(loc=1)
 #
 # plt.tight_layout()
+
+def equalization(image, dev=8):
+    """
+    image: RGB as float [0..1] or uint8
+    dev: in how many parts n = dev**2, the image should be split and equalizated.
+    """
+
+    if image.dtype == np.float64:
+        image = image.astype(np.float32)
+    elif image.dtype == np.uint8:
+        pass
+    elif image.dtype == np.uint16:
+        image = image // 2
+
+    # convert from RGB color-space to YCrCb
+    ycrcb_img = cv2.cvtColor(image, cv2.COLOR_BGR2YCrCb)
+    ycrcb_img = (ycrcb_img * 2 ** 8).astype(np.uint8)
+
+    # equalize the histogram of the Y channel
+    #     ycrcb_img[:, :, 0] = cv2.equalizeHist(ycrcb_img[:, :, 0])
+
+    # create a CLAHE object (Arguments are optional).
+    clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=tuple([dev] * 2))
+    ycrcb_img[:, :, 0] = clahe.apply(ycrcb_img[:, :, 0])
+
+    # convert back to RGB color-space from YCrCb
+    img = cv2.cvtColor(ycrcb_img, cv2.COLOR_YCrCb2BGR)
+    return img
+
+
+def get_bit(bit):
+    if bit == 8:
+        dtype = np.uint8
+        n_max = 2 ** 8
+    elif bit == 16:
+        dtype = np.uint16
+        n_max = 2 ** 16
+    else:
+        raise ValueError(bit)
+    return n_max, dtype
