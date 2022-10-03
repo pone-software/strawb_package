@@ -324,7 +324,7 @@ class BaseFileHandler:
         """Show the internal structure of the SDAQ hdf5 file.
         PARAMETER
         ---------
-        show_attributes: bol, optional
+        show_attributes: bool, optional
             if hdf5 attributes should be printed
         """
         if show_attributes:
