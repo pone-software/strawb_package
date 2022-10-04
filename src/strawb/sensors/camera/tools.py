@@ -208,3 +208,74 @@ def get_bit(bit):
     else:
         raise ValueError(bit)
     return n_max, dtype
+
+
+def mirror_rgb(rgb, axis=0):
+    """ Alias for np.flip with axis=0 as default.
+    PARAMETER
+    ---------
+    rgb: ndarray
+        rgb array of an image
+    axis: int, optional
+        define the axis to mirror. For an image use: 1 for x axis and 0 (default) for y axis. As plt.imshow and other
+        plot the first axis of the array as the y axis and the second as x axis.
+    RETURN
+    ------
+    mirror_rgb: ndarray
+        mirrored positions
+    """
+    return np.flip(rgb, axis=axis)
+
+
+def mirror_position(position, axis=1, axis_length=1280):
+    """
+    PARAMETER
+    ---------
+    position: ndarray
+        at a least 1d array. First dimension must be is x and y, i.e. shape[0] == 2.
+    axis: int, optional
+        define the axis to mirror. 0 for x axis and 1 (default) for y axis.
+    axis_length: int, optional
+        mirroring happens at `axis_length/2`. Depends on the actual image size, for 'x' it is 960 and
+        for 'y' it is '1280'.
+    RETURN
+    ------
+    position_mirror: ndarray
+        mirrored positions
+    """
+    position = position.copy()
+    position[axis] = axis_length - position[axis]
+    return position
+
+
+def shift_effective_pixel(position, eff_margin=None, inverse=False):
+    """ Shift a position to match the shift induced by effective margin cuts from the rgb array.
+
+    PARAMETER
+    ---------
+    position: ndarray
+        at a least 1d array. First dimension must be is x and y.
+    eff_margin: bool, list, ndarray, optional
+        shifts the position according to the effective margin for images where the margin is cut, e.g. with
+        cut2effective_pixel(..., eff_margin=eff_margin),  get_raw_rgb_mask(..., eff_margin=eff_margin)
+        If None or True, it takes the default eff_margin = np.array([8, 9, 8, 9])
+        If its a list or ndarray: it must has the from [pixel_x_start, pixel_x_stop, pixel_y_start, pixel_y_stop]
+        and only integers are allowed.
+    inverse: True
+        if True, adds the margins: cut margin -> uncut margin
+        if False, subtract the margins: uncut margin -> cut margin
+
+    RETURN
+    ------
+    position_shifted:
+        the rgb array with cut margins
+    """
+    position = np.array(position)
+
+    if eff_margin is None or eff_margin is True:
+        eff_margin = np.array([8, 9, 8, 9])
+
+    if inverse:
+        return (position.T + [eff_margin[0], eff_margin[2]]).T
+    else:
+        return (position.T - [eff_margin[0], eff_margin[2]]).T
