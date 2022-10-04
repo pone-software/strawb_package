@@ -3,46 +3,92 @@ import numpy as np
 
 
 class Config:
+    """ Camera Config
+    Config.position_dict stores positions for the
+    x and y represent the pixel coordinates of an image of the camera. The axes of the RGB image array are:
+    [y-axis, x-axis, 3].
+    """
     position_dict = {'TUMPMTSPECTROMETER001': {'module': np.array([355.20968475,
                                                                    690.49202575]),
                                                'data_cable': np.array([625, 300]),
-                                               'steel_cable': np.array([678, 320])},
-                     'TUMPMTSPECTROMETER002': {'module': None,
-                                               'data_cable': None,
-                                               'steel_cable': None},
+                                               'steel_cable': np.array([678, 320]),
+                                               'lenses_center': np.array([356, 711])},
+                     'TUMPMTSPECTROMETER002': {'module': np.array([327.7, 682.6]),
+                                               'data_cable': np.array([747, 952]),
+                                               'steel_cable': np.array([723, 995]),
+                                               'lenses_center': np.array([329, 688])},
                      'TUMMINISPECTROMETER001': {'module': None,
                                                 'data_cable': None,
-                                                'steel_cable': None}
+                                                'steel_cable': None,
+                                                'lenses_center': None}
                      }
 
-    def __init__(self, device_code=None):
-        # [x, y] coordinate of the module above the camera
-        self.position_module = None
+    def __init__(self, device_code=None, un_mirror=False):
+        """Camera Config class which stores individual information of each camera.
+        Locations represent the pixel coordinates of the un-rotated image of the camera where x is the shorter axis
+        and y the longer.
 
-        # [x, y] coordinates of the data cable close to the camera
-        # and it goes to self.position_module
-        self.position_data_cable = None
+        PARAMETER
+        ---------
+        device_code: None or str, optional
+            the device_code of the module where the camera is located, i.e.
+            'TUMPMTSPECTROMETER001', 'TUMPMTSPECTROMETER002', or 'TUMMINISPECTROMETER001'.
+        un_mirror: bool, optional
+            the images are stored with the first axis
+        """
+        # [x, y] pixel coordinate of the module above the camera
+        self._position_module_ = None
 
-        # [x, y] coordinates of the steel cable close to the camera
-        # and it goes to self.position_module
-        self.position_steel_cable = None
+        # [x, y] pixel coordinates of the data cable close to the camera
+        self._position_data_cable_ = None
+
+        # [x, y] pixel coordinates of the steel cable close to the camera
+        self._position_steel_cable_ = None
 
         # load data and set parameters
-        self.mask_mounting = None
-        camera_home = os.path.abspath(os.path.join(os.path.dirname(__file__)))
+        self._mask_mounting_ = None
 
+        # [x, y] pixel coordinates center of the camera's lenses
+        self._position_lenses_center_ = None
+
+        # load data from config file and dict
+        camera_home = os.path.abspath(os.path.join(os.path.dirname(__file__)))
         if device_code is not None:
             with np.load(os.path.join(camera_home, 'mounting_mask.npz')) as f:
                 if device_code in f:
                     self.mask_mounting = f[device_code]
 
             if device_code in self.position_dict:
-                self.position_module = self.position_dict[device_code]['module']
-                self.position_data_cable = self.position_dict[device_code]['data_cable']
-                self.position_steel_cable = self.position_dict[device_code]['steel_cable']
+                # copy all, otherwise its a pointer on position_dict
+                self._position_module_ = self.position_dict[device_code]['module'].copy()
+                self._position_data_cable_ = self.position_dict[device_code]['data_cable'].copy()
+                self._position_steel_cable_ = self.position_dict[device_code]['steel_cable'].copy()
+                self._position_lenses_center_ = self.position_dict[device_code]['lenses_center'].copy()
 
             else:
                 print(f'device_code must be one of {self.position_dict.keys()}. Got: {device_code}')
+
+    @property
+    def position_module(self):
+        """[x, y] pixel coordinates of the module above the camera."""
+        return self._position_module_
+
+    @property
+    def position_data_cable(self):
+        """[x, y] pixel coordinates of the data cable close to the camera. The cables goes from there to
+        self.position_module. Use self.data_cable to get [position_module, position_data_cable].T"""
+        return self._position_data_cable_
+
+    @property
+    def position_steel_cable(self):
+        """[x, y] pixel coordinates of the steel cable close to the camera. The cables goes from there to
+        self.position_module. Use self.steel_cable to get [position_module, position_steel_cable].T"""
+        return self._position_steel_cable_
+
+    @property
+    def position_lenses_center(self):
+        """[x, y] pixel coordinates center of the camera's lenses."""
+        return self._position_lenses_center_
 
     @staticmethod
     def get_line(p_0, p_1):
