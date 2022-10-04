@@ -196,6 +196,34 @@ class Images:
                   slice(eff_margin[2], -eff_margin[3] if eff_margin[3] != 0 else None))
         return np.array(rgb)[slices]
 
+    def shift_effective_pixel(self, position, eff_margin=None, inverse=False):
+        """
+        shift a position to match the effective margin from the rgb array.
+        PARAMETER
+        ---------
+        position: ndarray
+            at a least 1d array. First must be is x and y, e.g.
+        eff_margin: bool, list, ndarray, optional
+            shifts the mask according to the effective margin for images where the margin is cut, e.g. with
+            cut2effective_pixel(..., eff_margin=eff_margin) ->  get_raw_rgb_mask(..., eff_margin=eff_margin)
+            If None or True, it takes the eff_margin from the file, i.e. file_handler.EffMargins[:]
+            If its a list or ndarray: it must has the from [pixel_x_start, pixel_x_stop, pixel_y_start, pixel_y_stop]
+            and only integers are allowed.
+        RETURN
+        ------
+        reduced_rgb:
+            the rgb array with cut margins
+        """
+        position = np.array(position)
+
+        if eff_margin is None or eff_margin is True:
+            eff_margin = self.file_handler.EffMargins[:]
+
+        if inverse:
+            return (position.T + [eff_margin[0], eff_margin[2]]).T
+        else:
+            return (position.T - [eff_margin[0], eff_margin[2]]).T
+
     def get_raw_rgb_mask(self, shape, color='green', eff_margin=False):
         """
         PARAMETER
