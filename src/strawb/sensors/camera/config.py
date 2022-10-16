@@ -56,7 +56,7 @@ class Config:
         if device_code is not None:
             with np.load(os.path.join(camera_home, 'mounting_mask.npz')) as f:
                 if device_code in f:
-                    self.mask_mounting = f[device_code]
+                    self._mask_mounting_ = f[device_code]
 
             if device_code in self.position_dict:
                 # copy all, otherwise its a pointer on position_dict
@@ -67,6 +67,11 @@ class Config:
 
             else:
                 print(f'device_code must be one of {self.position_dict.keys()}. Got: {device_code}')
+
+    @property
+    def mask_mounting(self):
+        """A pixel mask which masks the mounting."""
+        return self._mask_mounting_
 
     @property
     def position_module(self):
