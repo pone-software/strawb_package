@@ -250,7 +250,7 @@ def get_polygon(mask):
 
 def simplify_contours(contours, simplify_tolerance = 1):
     """simplify the contours of a polygon with shapely"""
-    
+
     contours_s = []
     for i in contours:
         poly = shapely.geometry.Polygon(i)
@@ -287,7 +287,7 @@ def inside_polygon(polygon, points_x, points_y):
                                                            points_y.astype('int32'))]
     
     # list with True if point is inside the given area, else False
-    inside_polygon = [shapely.ops.unary_union([i for i in polygon]).contains(i) for i in points_p]
+    inside_polygon = [polygon.contains(i) for i in points_p]
 
     # list of coordinates of the points inside area
     points_inside = [i for i,j in zip(points_co, inside_polygon) if j == True]
