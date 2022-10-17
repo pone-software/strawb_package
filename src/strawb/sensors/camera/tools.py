@@ -1,5 +1,8 @@
 import cv2
 import numpy as np
+import rasterio.features 
+import shapely.geometry
+import shapely.ops
 
 
 def img_rectangle_cut(img, rect=None, angle=None, angle_normalize=True):
@@ -208,3 +211,48 @@ def get_bit(bit):
     else:
         raise ValueError(bit)
     return n_max, dtype
+
+
+def inside_area(points_x, points_y, area):
+    """
+    Check which of the given points are inside the given area.
+
+    PARAMETER
+    ---------
+    points_x: pandas series
+        Pandas series with x-coordinates of the points to be checked.
+    points_y: pandas series
+        Pandas series with y-coordinate of the points to be checked.
+    area: 2darray, bool
+        Array the same size as the pixel arrangement of the camera, each element representing a pixel. 
+        True if pixel is inside an adjacent area, else False.
+
+    RETURNS
+    -------
+    points_inside: list
+        List of points inside the considered area.
+    """
+
+    # array with 1 if pixel is inside the area, else 0 as int32
+    im = np.where(area == True, 1, 0).astype('int32')  
+
+    # get shapes and values of connected regions in array
+    shapes = rasterio.features.shapes(im) 
+
+    # get the polygon around each shape
+    polygons = [shapely.geometry.Polygon(shape[0]['coordinates'][0]) for shape in shapes if shape[1] == 1]
+
+    # list of coordinates of points as tuples
+    points_co = [(x,y) for x,y in zip(points_x, points_y)]
+    # make coordinates "Point" objects
+    points_p = [shapely.geometry.Point(i,j) for i,j in zip(points_x.astype('int32'), 
+                                                           points_y.astype('int32'))]
+    
+    # list with True if point is inside the given area, else False
+    inside_area = [shapely.ops.unary_union([i for i in polygons]).contains(i) for i in points_p]
+
+    # list of coordinates of the points inside area
+    points_inside = [i for i,j in zip(points_co, inside_area) if j == True]
+   
+
+    return points_inside
