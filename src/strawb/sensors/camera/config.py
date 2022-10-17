@@ -60,10 +60,11 @@ class Config:
 
             if device_code in self.position_dict:
                 # copy all, otherwise its a pointer on position_dict
-                self._position_module_ = self.position_dict[device_code]['module'].copy()
-                self._position_data_cable_ = self.position_dict[device_code]['data_cable'].copy()
-                self._position_steel_cable_ = self.position_dict[device_code]['steel_cable'].copy()
-                self._position_lenses_center_ = self.position_dict[device_code]['lenses_center'].copy()
+                dictionary = self.position_dict[device_code]
+                self._position_module_ = self.__get_copy__(dictionary, 'module')
+                self._position_data_cable_ = self.__get_copy__(dictionary, 'data_cable')
+                self._position_steel_cable_ = self.__get_copy__(dictionary, 'steel_cable')
+                self._position_lenses_center_ = self.__get_copy__(dictionary, 'lenses_center')
 
             else:
                 print(f'device_code must be one of {self.position_dict.keys()}. Got: {device_code}')
@@ -115,3 +116,13 @@ class Config:
             return np.array([self.position_module, self.position_steel_cable]).T
         else:
             return None
+
+    @staticmethod
+    def __get_copy__(dictionary, key):
+        item = None
+        if key in dictionary:
+            item = dictionary[key]
+            if item is not None:
+                item = item.copy()
+
+        return item
