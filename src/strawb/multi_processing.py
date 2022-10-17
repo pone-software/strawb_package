@@ -153,7 +153,7 @@ class MProcessIterator:
             result = job.get()
 
         except Exception as exc:
-            self.logger.warning(f'Get error at {index} with: {exc.__repr__()}')
+            self.logger.exception(f'Error at job {index} with: {exc.__repr__()}')
             result = exc
 
         return result
@@ -254,7 +254,7 @@ class MProcessIterator:
             self.progress_bar.close()
 
         c1, c2, c3 = gc.get_count(), gc.collect(), gc.get_count()
-        self.logger.debug(f'---- START WORKER THREAD ---- and clean up gc: {c1}, {c2}, {c3}')
+        self.logger.debug(f'---- END OF WORKER THREAD ---- and clean up gc: {c1}, {c2}, {c3}')
 
     # Public
     def run_async(self, func, iterable, args=(), pbar_kwargs=None, callback=None, error_callback=None, **kwargs):
