@@ -78,6 +78,8 @@ class TestMultiProcessing(TestCase):
         self.assertIsInstance(self.mpi.__get_sys_log__(10), list)
 
     def test__update__(self):
+        self.mpi = MProcessIterator(with_sys_log=True)
+
         jobs = 5
         index = np.random.randint(0, jobs)
         self.mpi._active_jobs_dict_ = {i: ApplyResultTest(f'job_{i}') for i in range(5)}
