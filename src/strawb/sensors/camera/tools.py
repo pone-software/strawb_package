@@ -2,7 +2,6 @@ import cv2
 import numpy as np
 import shapely.geometry
 import shapely.ops
-import rasterio.features
 
 
 def img_rectangle_cut(img, rect=None, angle=None, angle_normalize=True):
@@ -469,73 +468,3 @@ def get_nearest_points_line(x, y, line):
         coordinates [[x,y], ...] of the closest points on the line to the given points.
     """
     return np.array([get_nearest_point_line(x_i, y_i, line) for x_i, y_i in zip(x, y)])
-
-
-def get_polygon(mask):
-    """
-    Get the polygon around a certain area and its coordinates.
-
-    PARAMETER
-    ---------
-    mask: 2darray, bool
-        Array the same size as the pixel arrangement of the camera, each element representing a pixel. 
-        True if pixel is inside an contiguous area, else False.
-
-    RETURNS
-    -------
-    polygons: MultiPolygon
-        Polygon around considered area.
-    contours: list
-        List of coordinates of the points forming the polygons. Each element of the list belongs to one polygon 
-        and contains two other lists, the first one are the x-coordinates, the second one the y-coordinates.
-    """
-
-    # array with 1 if pixel is inside the mask, else 0 as int32
-    im = np.where(mask == True, 1, 0).astype('int32')  
-
-    # get shapes and values of connected regions in array
-    shapes = rasterio.features.shapes(im) 
-
-    # get the polygon around each shape
-    polygons = [shapely.geometry.Polygon(shape[0]['coordinates'][0]) for shape in shapes if shape[1] == 1]
-
-    # get coordinates of the polygon points
-    contours = [(i.boundary.coords) for i in polygons]
-    contours = [np.array(i) for i in contours]
-
-    return polygons, contours
-
-
-def inside_polygon(polygon, points_x, points_y):
-    """
-    Check if points are inside a polygon.
-
-    PARAMETER
-    ---------
-    polygon: polygon
-    points_x: pandas series
-        Pandas series with x-coordinates of the points to be checked.
-    points_y: pandas series
-        Pandas series with y-coordinate of the points to be checked.
-
-    RETURNS
-    -------
-    inside_polygon: list
-        List with True if point is inside the polygon, else False.
-    points_inside: list
-        List of points inside the considered area.
-    """
-
-    # list of coordinates of points as tuples
-    points_co = [(x,y) for x,y in zip(points_x, points_y)]
-    # make coordinates "Point" objects
-    points_p = [shapely.geometry.Point(i,j) for i,j in zip(points_x.astype('int32'), 
-                                                           points_y.astype('int32'))]
-    
-    # list with True if point is inside the given area, else False
-    inside_polygon = [polygon.contains(i) for i in points_p]
-
-    # list of coordinates of the points inside area
-    points_inside = [i for i,j in zip(points_co, inside_polygon) if j == True]
-
-    return inside_polygon, points_inside
