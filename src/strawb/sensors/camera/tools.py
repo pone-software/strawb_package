@@ -1,8 +1,8 @@
 import cv2
 import numpy as np
-import rasterio.features 
 import shapely.geometry
 import shapely.ops
+import rasterio.features
 
 
 def img_rectangle_cut(img, rect=None, angle=None, angle_normalize=True):
@@ -10,7 +10,6 @@ def img_rectangle_cut(img, rect=None, angle=None, angle_normalize=True):
     and the cropped image can be rotated.
     The rect must be of the from (tuple(center_xy), tuple(width_xy), angle).
     The angle are in degrees.
-
     PARAMETER
     ---------
     img: ndarray
@@ -23,8 +22,6 @@ def img_rectangle_cut(img, rect=None, angle=None, angle_normalize=True):
     angle_normalize: bool, optional
         normalize angle that angel=0 is vertical, and angel=90 is horizontal.
         Otherwise, this isn't fixed and depends on the rect.
-
-
     RETURNS
     -------
     img_return: ndarray
@@ -86,7 +83,6 @@ def rect_rotate(rect, angle=None, angle_normalize=True):
     """Rotate a rectangle by an angle in respect to it's center.
     The rect must be of the from (tuple(center_xy), tuple(width_xy), angle).
     The angle is in degrees.
-
     PARAMETER
     ---------
     rect: tuple
@@ -97,7 +93,6 @@ def rect_rotate(rect, angle=None, angle_normalize=True):
     angle_normalize: bool, optional
         normalize angle that angel=0 is vertical, and angel=90 is horizontal.
         Otherwise, this isn't fixed and depends on the rect.
-
     RETURN
     ------
     rect: tuple
@@ -175,7 +170,7 @@ def rect_rotate(rect, angle=None, angle_normalize=True):
 def equalization(image, dev=8):
     """
     image: RGB as float [0..1] or uint8
-    dev: in how many parts n = dev**2, the image should be split and equalizated.
+    dev: in how many parts n = dev**2, the image should be split and equalized.
     """
 
     if image.dtype == np.float64:
@@ -213,6 +208,269 @@ def get_bit(bit):
     return n_max, dtype
 
 
+def mirror_rgb(rgb, axis=0):
+    """ Alias for np.flip with axis=0 as default.
+    PARAMETER
+    ---------
+    rgb: ndarray
+        rgb array of an image
+    axis: int, optional
+        define the axis to mirror. For an image use: 1 for x axis and 0 (default) for y axis. As plt.imshow and other
+        plot the first axis of the array as the y axis and the second as x axis.
+    RETURN
+    ------
+    mirror_rgb: ndarray
+        mirrored positions
+    """
+    return np.flip(rgb, axis=axis)
+
+
+def mirror_position(position, axis=1, axis_length=1280):
+    """
+    PARAMETER
+    ---------
+    position: ndarray
+        at a least 1d array. First dimension must be is x and y, i.e. shape[0] == 2.
+    axis: int, optional
+        define the axis to mirror. 0 for x axis and 1 (default) for y axis.
+    axis_length: int, optional
+        mirroring happens at `axis_length/2`. Depends on the actual image size, for 'x' it is 960 and
+        for 'y' it is '1280'.
+    RETURN
+    ------
+    position_mirror: ndarray
+        mirrored positions
+    """
+    position = position.copy()
+    position[axis] = axis_length - position[axis]
+    return position
+
+
+def shift_effective_pixel(position, eff_margin=None, inverse=False):
+    """ Shift a position to match the shift induced by effective margin cuts from the rgb array.
+    PARAMETER
+    ---------
+    position: ndarray
+        at a least 1d array. First dimension must be is x and y.
+    eff_margin: bool, list, ndarray, optional
+        shifts the position according to the effective margin for images where the margin is cut, e.g. with
+        cut2effective_pixel(..., eff_margin=eff_margin),  get_raw_rgb_mask(..., eff_margin=eff_margin)
+        If None or True, it takes the default eff_margin = np.array([8, 9, 8, 9])
+        If its a list or ndarray: it must has the from [pixel_x_start, pixel_x_stop, pixel_y_start, pixel_y_stop]
+        and only integers are allowed.
+    inverse: True
+        if True, adds the margins: cut margin -> uncut margin
+        if False, subtract the margins: uncut margin -> cut margin
+    RETURN
+    ------
+    position_shifted:
+        the rgb array with cut margins
+    """
+    position = np.array(position)
+
+    if eff_margin is None or eff_margin is True:
+        eff_margin = np.array([8, 9, 8, 9])
+
+    if inverse:
+        return (position.T + [eff_margin[0], eff_margin[2]]).T
+    else:
+        return (position.T - [eff_margin[0], eff_margin[2]]).T
+
+
+def get_contours(mask):
+    """Generate polygons, aka. contour, which surround the True areas in the 2D mask based on cv2.findContours
+    PARAMETER
+    ---------
+    mask: ndarray
+        2d bool array
+    RETURNS
+    -------
+    contours: list
+        a list of 2d ndarray in the form [np.array([[x_0, y_0], [x_1, y_1], ...]), np.array(...), ...]
+        each list entry is a contour around all 'True' areas in the 2D mask
+    hierarchy: ndarray
+        forwarded from cv2.findContours
+    """
+    # get contours, cv2 need uint, here uint8
+    contours, hierarchy = cv2.findContours(mask.astype(np.uint8), cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
+    contours = [i.reshape((-1, 2)) for i in contours]
+    return contours, hierarchy
+
+
+def simplify_contours(contours, simplify_tolerance=1., preserve_topology=True):
+    """Simplify a contour, i.e. points all in a single line will reduce to start and endpoint, removing the points
+    in between. It use shapely.geometry.simplify which base on the Douglas-Peucker algorithm.
+    PARAMETER
+    ---------
+    contours: ndarray
+        a list of 2d ndarrays in the form [np.array([[x_0, y_0], [x_1, y_1], ...]), np.array(...), ...]
+        each list entry is a separate contour
+    simplify_tolerance: float, optional
+        Coordinates of the simplified geometry will be no more than the tolerance distance from the original.
+    preserve_topology: bool, optional
+        Unless the topology preserving option is used, the algorithm may produce self-intersecting or
+        otherwise invalid geometries. So default is True.
+    RETURNS
+    -------
+    simplify_contours: list
+        a list of the simplified contours from the input contours
+    """
+    # simplify contours with shapely
+    contours_s = []
+    for i in contours:
+        poly = shapely.geometry.Polygon(i)
+        poly_s = poly.simplify(tolerance=simplify_tolerance, preserve_topology=preserve_topology)
+        contours_s.append(np.array(poly_s.boundary.coords[:]))
+    return contours_s
+
+
+def get_contours_simplify(mask, simplify_tolerance=1., preserve_topology=True):
+    """ Combines get_contours and simplify_contours and returns the simplified contours.
+    PARAMETER
+    ---------
+    mask: ndarray
+        2d bool array
+    simplify_tolerance: float, optional
+        Coordinates of the simplified geometry will be no more than the tolerance distance from the original.
+    preserve_topology: bool, optional
+        Unless the topology preserving option is used, the algorithm may produce self-intersecting or
+        otherwise invalid geometries. So default is True.
+    RETURNS
+    -------
+    contours: list
+        a list of 2d ndarrays in the form [np.array([[x_0, y_0], [x_1, y_1], ...]), np.array(...), ...]
+        each list entry is a contour around all 'True' areas in the 2D mask and the contour is simplified.
+    hierarchy: ndarray
+        forwarded from cv2.findContours
+    """
+    # get contours, cv2 need uint, here uint8
+    contours, hierarchy = get_contours(mask)
+    contours = simplify_contours(contours, simplify_tolerance=simplify_tolerance, preserve_topology=preserve_topology)
+    return contours, hierarchy
+
+
+# get distance to polygon (its not too fast)
+def get_distance_poly(x, y, poly):
+    """Shortest distance between a point and a polygon. Positive values for point is inside the polygon,
+    negative when outside.
+    PARAMETER
+    ---------
+    x, y: float
+        x and y coordinate
+    poly: shapely.geometry.Polygon, ndarray
+        a shapely.geometry.Polygon or a 2d ndarray in the form np.array([[x_0, y_0], [x_1, y_1], ...])
+        defining the contour
+    RETURNS
+    -------
+    distance: float
+        the shortest distance between the polygon boundary and the coordinate. Negative if outside the polygon,
+        positive when inside.
+    """
+    if not isinstance(poly, shapely.geometry.Polygon):
+        poly = shapely.geometry.Polygon(poly)
+    pt = shapely.geometry.Point(x, y)
+    return (1 - poly.contains(pt) * 2) * poly.boundary.distance(pt)
+
+
+def get_distances_poly(x, y, poly):
+    """Calculates the get_distance for array of x,y values to a polygon. X and y must have the same length and 1d.
+    PARAMETER
+    ---------
+    x, y: ndarray
+        x and y coordinates as 1d ndarray both with the same length
+    poly: shapely.geometry.Polygon, ndarray
+        a shapely.geometry.Polygon or a 2d ndarray in the form np.array([[x_0, y_0], [x_1, y_1], ...])
+        defining the contour
+    RETURNS
+    -------
+    distances: ndarray
+        the shortest distances between the polygon boundary and the coordinates. Negative if outside the polygon,
+        positive when inside.
+    """
+    if not isinstance(poly, shapely.geometry.Polygon):
+        poly = shapely.geometry.Polygon(poly)
+    return np.array([get_distance_poly(x_i, y_i, poly) for x_i, y_i in zip(x, y)])
+
+
+# get distance to polygon (its not too fast)
+def get_distance_line(x, y, line):
+    """Shortest distance between a point and a line. Respect a polygon, a line is not closed.
+    PARAMETER
+    ---------
+    x, y: float
+        x and y coordinate
+    line: shapely.geometry.LineString or ndarray
+        a shapely.geometry.LineString or a 2d ndarray in the form np.array([[x_0, y_0], [x_1, y_1], ...])
+        defining the line. Can be multiple points.
+    RETURNS
+    -------
+    distance: float
+        the shortest distance between the line and the coordinate. distances>=0
+    """
+    if not isinstance(line, shapely.geometry.LineString):
+        line = shapely.geometry.LineString(line)
+    pt = shapely.geometry.Point(x, y)
+    return line.distance(pt)
+
+
+def get_distances_line(x, y, line):
+    """Calculates the get_distance for array of x,y values to a line. X and y must have the same length and 1d.
+    Respect a polygon, a line is not closed.
+    PARAMETER
+    ---------
+    x, y: ndarray
+        x and y coordinates as 1d ndarray both with the same length
+    line: shapely.geometry.LineString or ndarray
+        a shapely.geometry.LineString or a 2d ndarray in the form np.array([[x_0, y_0], [x_1, y_1], ...])
+        defining the line. Can be multiple points.
+    RETURNS
+    -------
+    distances: ndarray
+        the shortest distances between the line and the coordinates. distances>=0
+    """
+    return np.array([get_distance_line(x_i, y_i, line) for x_i, y_i in zip(x, y)])
+
+
+def get_nearest_point_line(x, y, line):
+    """Closest point on the line to the coordinate.
+    PARAMETER
+    ---------
+    x, y: float
+        x and y coordinate
+    line: shapely.geometry.LineString or ndarray
+        a shapely.geometry.LineString or a 2d ndarray in the form np.array([[x_0, y_0], [x_1, y_1], ...])
+        defining the line. Can be multiple points. For a polygon you can use
+        get_nearest_point_line(x,y, polygon.boundary).
+    RETURNS
+    -------
+    coordinate: ndarray
+        coordinate [x,y] of the closest point on the line to the given point.
+    """
+    if not isinstance(line, shapely.geometry.LineString):
+        line = shapely.geometry.LineString(line)
+    pt = shapely.geometry.Point(x, y)
+
+    # want [0] - [1] is the point again, would be different if it not a point
+    return np.array(shapely.ops.nearest_points(line, pt)[0].coords).flatten()
+
+
+def get_nearest_points_line(x, y, line):
+    """Closest point on the line to multiple coordinates.
+    PARAMETER
+    ---------
+    x, y: ndarray
+        x and y coordinates as 1d ndarray both with the same length
+    line: shapely.geometry.LineString or ndarray
+        a shapely.geometry.LineString or a 2d ndarray in the form np.array([[x_0, y_0], [x_1, y_1], ...])
+        defining the line. Can be multiple points.
+    RETURNS
+    -------
+    coordinates: ndarray
+        coordinates [[x,y], ...] of the closest points on the line to the given points.
+    """
+    return np.array([get_nearest_point_line(x_i, y_i, line) for x_i, y_i in zip(x, y)])
+
+
 def get_polygon(mask):
     """
     Get the polygon around a certain area and its coordinates.
@@ -246,18 +504,6 @@ def get_polygon(mask):
     contours = [np.array(i) for i in contours]
 
     return polygons, contours
-
-
-def simplify_contours(contours, simplify_tolerance = 1):
-    """simplify the contours of a polygon with shapely"""
-
-    contours_s = []
-    for i in contours:
-        poly = shapely.geometry.Polygon(i)
-        poly_s = poly.simplify(tolerance=simplify_tolerance)
-        contours_s.append(np.array(poly_s.boundary.coords[:]))
-
-    return contours_s
 
 
 def inside_polygon(polygon, points_x, points_y):
