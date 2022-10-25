@@ -7,6 +7,20 @@ For the installation you have two options.
 ### Installation directly from the repository
 `Pip` can directly install the package from the repository. As `pip` only compares the version number and not the code, uninstall an existing installation before you install it from the repository. For updating the package just rerun the same commands. You can also specify the branch by changing `master` accordingly. The commands are:
 ```bash
+pip3 install -U git+https://github.com/pone-software/strawb_package.git@master  # Install it from the repository
+```
+Afterwards, copy the [config file](config) to your home directory at `~/strawb`, e.g. with:
+```commandline
+makdir ~/strawb
+vim ~/strawb/config
+```
+c/p, adopt the paths to your setup if needed and save (:wq).
+
+#### Updating with pip
+Pip will compare the version of the package and only update if the version number has changed (defined in `setup.py`).
+Only a few commits will increase the version. To get the update with the lates commits, uninstall and install strawb 
+again with:
+```bash
 pip3 uninstall -y strawb  # Uninstall an existing installation
 pip3 install -U git+https://github.com/pone-software/strawb_package.git@master  # Install it from the repository
 ```
