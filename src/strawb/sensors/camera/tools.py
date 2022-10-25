@@ -247,6 +247,7 @@ def mirror_position(position, axis=1, axis_length=1280):
 
 def shift_effective_pixel(position, eff_margin=None, inverse=False):
     """ Shift a position to match the shift induced by effective margin cuts from the rgb array.
+
     PARAMETER
     ---------
     position: ndarray
@@ -260,6 +261,7 @@ def shift_effective_pixel(position, eff_margin=None, inverse=False):
     inverse: True
         if True, adds the margins: cut margin -> uncut margin
         if False, subtract the margins: uncut margin -> cut margin
+
     RETURN
     ------
     position_shifted:
