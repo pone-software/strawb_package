@@ -9,7 +9,6 @@ def img_rectangle_cut(img, rect=None, angle=None, angle_normalize=True):
     and the cropped image can be rotated.
     The rect must be of the from (tuple(center_xy), tuple(width_xy), angle).
     The angle are in degrees.
-
     PARAMETER
     ---------
     img: ndarray
@@ -22,8 +21,6 @@ def img_rectangle_cut(img, rect=None, angle=None, angle_normalize=True):
     angle_normalize: bool, optional
         normalize angle that angel=0 is vertical, and angel=90 is horizontal.
         Otherwise, this isn't fixed and depends on the rect.
-
-
     RETURNS
     -------
     img_return: ndarray
@@ -85,7 +82,6 @@ def rect_rotate(rect, angle=None, angle_normalize=True):
     """Rotate a rectangle by an angle in respect to it's center.
     The rect must be of the from (tuple(center_xy), tuple(width_xy), angle).
     The angle is in degrees.
-
     PARAMETER
     ---------
     rect: tuple
@@ -96,7 +92,6 @@ def rect_rotate(rect, angle=None, angle_normalize=True):
     angle_normalize: bool, optional
         normalize angle that angel=0 is vertical, and angel=90 is horizontal.
         Otherwise, this isn't fixed and depends on the rect.
-
     RETURN
     ------
     rect: tuple
