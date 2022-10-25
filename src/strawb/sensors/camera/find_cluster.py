@@ -359,7 +359,7 @@ class FindCluster:
 
         return specs_dict
 
-    def df_picture(self, pic_index, min_std=None, min_size_cluster=None, max_gaps=None):
+    def df_picture(self, pic_index, min_std=None, min_size_cluster=None, max_gaps=None, mask_mounting=True):
         """
         Get DataFrame with properties of all clusters in a picture.
 
@@ -373,6 +373,10 @@ class FindCluster:
             Minimum number of adjoining pixels to be considered a cluster. If None, take from init.
         max_gaps: int, optional
             the maximum gap size within one cluster. If None, take from init.
+        mask_mounting: bool or ndarray, optional
+            True if the mounting, if known, should be excluded from the cluster search (mounting will be all label=0).
+            An ndarray defines the mask which pixels should be excluded from the cluster search. Must match the pixel
+            shape. `mask_mounting[i] = True` means include and `mask_mounting[i] = False` exclude the pixel i.
 
         Returns
         -------
@@ -388,7 +392,8 @@ class FindCluster:
         labels = self.get_cluster(pic_index=pic_index,
                                   min_std=min_std,
                                   min_size_cluster=min_size_cluster,
-                                  max_gaps=max_gaps)
+                                  max_gaps=max_gaps,
+                                  mask_mounting=mask_mounting)
         index = np.unique(labels)
 
         data_dict = self.get_cluster_specs(pic_index, labels, index, color=None)

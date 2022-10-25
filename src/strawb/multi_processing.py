@@ -149,11 +149,11 @@ class MProcessIterator:
     def __get_result__(self, index, job):
         """Return True if job finished."""
         try:
-            result = job.get()
             self.logger.debug(f"Get: {index}")
+            result = job.get()
 
         except Exception as exc:
-            self.logger.warning(f'Get error at {index} with: {exc.__repr__()}')
+            self.logger.exception(f'Error at job {index} with: {exc.__repr__()}')
             result = exc
 
         return result
@@ -187,7 +187,7 @@ class MProcessIterator:
             Both function must return immediately!
         """
 
-        self.logger.debug(f"---- START ----")
+        self.logger.debug(f"---- START WORKER THREAD ----")
         self._active_ = True
 
         self._total_jobs_ = len(iterable)
@@ -201,7 +201,7 @@ class MProcessIterator:
             if not self.active:
                 break
 
-            self.logger.debug(f"Init: {i}")
+            self.logger.debug(f"Init job: {i} with active jobs:{len(self._active_jobs_dict_)}, and total len(iterable):{len(iterable)}")
             if self.with_sys_log:
                 self.sys_log.extend(self.__get_sys_log__(i, 'start'))
 
@@ -216,8 +216,6 @@ class MProcessIterator:
                 )
 
             # wait for task to finish and keep 2-times the number of tasks in the pool as processes
-
-            self.logger.debug(f"Active:{len(self._active_jobs_dict_)}, len(iterable):{len(iterable)}, i: {i}")
             if len(self._active_jobs_dict_) > self.pool._processes * 2 or len(iterable) - 1 == i:
                 self.logger.debug(f"Check or wait for finished jobs: {self._ready_dict_}")
 
@@ -226,9 +224,6 @@ class MProcessIterator:
                 while not len(self._ready_dict_):
                     time.sleep(.01)
                     j += 1
-
-                # self.logger.debug(
-                #     f"After {j} waits, {len(self._ready_dict_)} jobs ready: {list(self._ready_dict_.keys())}")
 
                 # get the results, check_once: loop only once if not at the end of the iterable
                 # else loop until all jobs done.
@@ -259,7 +254,7 @@ class MProcessIterator:
             self.progress_bar.close()
 
         c1, c2, c3 = gc.get_count(), gc.collect(), gc.get_count()
-        self.logger.debug(f'Stop Iteration and clean up gc: {c1}, {c2}, {c3}')
+        self.logger.debug(f'---- END OF WORKER THREAD ---- and clean up gc: {c1}, {c2}, {c3}')
 
     # Public
     def run_async(self, func, iterable, args=(), pbar_kwargs=None, callback=None, error_callback=None, **kwargs):
