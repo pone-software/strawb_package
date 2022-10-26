@@ -1,6 +1,6 @@
 import pandas
 
-from strawb.sensors.pmtspec.calibration import Absorption
+from strawb.calibration.absorption import Absorption
 
 bricaud95_para_txt = """
 A. Bricaud and M. Babin and A. Morel and H. Claustre, 
