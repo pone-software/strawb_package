@@ -5,7 +5,12 @@ import pandas
 
 class LED:
     """
-    Dataset with relative radiation power for different LEDs
+    Dataset with relative radiation power for different LEDs from:
+    CREE LED: https://assets.cree-led.com/a/ds/x/XLamp-XPG3.pdf
+    CREE LED: https://assets.cree-led.com/a/ds/x/XLamp-XPE2.pdf
+    LUMINUS : https://download.luminus.com/datasheets/Luminus_SST-10-UV_Datasheet.pdf
+    (Data got extracted directly from the vector data (.pdf) to ensure accuracy)
+
     config_parameters is a DataFrame with the columns:
     label,type,wavelength,relative_radiation
 
