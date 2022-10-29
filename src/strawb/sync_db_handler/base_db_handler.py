@@ -104,5 +104,34 @@ class BaseDBHandler:
                                      protocol=4,  # protocol=4 compatible with python>=3.4
                                      )
 
+    def optimize_dataframe(self, exclude_columns=None, include_columns=None):
+        """Optimize the dataframe to reduce the size, manly RAM but also on disc.
+        It converts the columns as defined in this function. Which is manly by introducing pandas dtype "category"
+        to all object dtypes.
+        PARAMETER
+        ---------
+        exclude_columns: list
+            columns to exclude, default None. To use if the dtype of this column is 'object' but it should be NOT
+            converted to a "category"
+        include_columns: list
+            columns to include, default None. To use if the dtype of this column is not 'object' and it should be
+            converted to a "category"
+        """
+        if include_columns is None:
+            include_columns = []
+        if exclude_columns is None:
+            exclude_columns = []
+
+        for i, j in zip(self.dataframe, self.dataframe.dtypes):
+            if j == object or i in include_columns:
+                if i in exclude_columns:
+                    # skipp
+                    continue
+                else:
+                    try:
+                        self.dataframe[i] = self.dataframe[i].astype("category")
+                    except (KeyError, Exception) as a:
+                        print(f'failed to convert pandas.Category at column {i} with {a}')
+
     def update(self):
         pass

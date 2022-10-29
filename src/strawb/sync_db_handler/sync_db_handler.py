@@ -39,9 +39,10 @@ class SyncDBHandler(BaseDBHandler):
     _default_raw_data_dir_ = Config.raw_data_dir
     _default_file_name_ = Config.pandas_file_sync_db
 
-    def __init__(self, file_name='Default', update=False, load_db=True, **kwargs):
+    def __init__(self, file_name='Default', update=False, load_db=True, optimize_dataframe=True, **kwargs):
         """Handle the DB, which holds the metadata from the ONC DB and adds quantities like hdf5 attributes.
         If the DB isn't synced so far you can load the entiere DB with:
+        >>> import strawb
         >>> db = strawb.SyncDBHandler(load_db=False)
         >>> db.load_onc_db_update(output=True, save_db=True)
         Once this is done, you can change to
@@ -62,15 +63,18 @@ class SyncDBHandler(BaseDBHandler):
             True (default) loads the DB if it exists and if `file_name` is not None. False doesn't load it.
         kwargs: dict, optional
             parsed to ONCDownloader(**kwargs), e.g.: token, outPath, download_threads
+        optimize_dataframe: bool, optional
+            if the dataframe should be optimized for RAM and disc size based on `self.optimize_dataframe()`.
+            It manly introduce pandas dtype 'category'
 
         EXAMPLES
         --------
         Load the DB from disc (also works if there non on disc), update it and store it on disc
-        >>> db = strawb.BaseDBHandler(load_db=False)  # loads the db
+        >>> db = strawb.SyncDBHandler(load_db=False)  # loads the db
         >>> db.load_onc_db_update(output=True, save_db=True)
 
         Overwrites the existing DB, also works if there is no DB on disc.
-        >>> db = strawb.BaseDBHandler(load_db=False)  # loads the db
+        >>> db = strawb.SyncDBHandler(load_db=False)  # loads the db
         >>> db.load_onc_db_update(output=True, save_db=True)
 
         Or both combined into one
@@ -83,6 +87,9 @@ class SyncDBHandler(BaseDBHandler):
         self.onc_downloader = ONCDownloader(**kwargs)
 
         BaseDBHandler.__init__(self, file_name=file_name, update=update, load_db=load_db)
+
+        if optimize_dataframe:
+            self.optimize_dataframe()
 
     def update(self):
         self.update_sync_state()
@@ -566,7 +573,7 @@ class SyncDBHandler(BaseDBHandler):
         PARAMETER
         ---------
         dataframe: pandas.DataFrame, optional
-            the above steps are executeted for the files defined in the dataframe. E.g. if `download=True` all files
+            the above steps are executed for the files defined in the dataframe. E.g. if `download=True` all files
             are downloaded. None (default) takes the internal dataframe.
         download: bool, optional
             if the missing files should be downloaded.
@@ -862,9 +869,34 @@ class SyncDBHandler(BaseDBHandler):
         RETURNS
         -------
         mask: bool pandas.Series
-            masked series of entires which overlap with the time range
+            masked series of entries which overlap with the time range
         """
         if dataframe is None:
             dataframe = self.dataframe
 
         return pd_timestamp_mask_between(dataframe.dateFrom, dataframe.dateTo, time_from, time_to, tz=tz)
+
+    def optimize_dataframe(self, exclude_columns=None, include_columns=None):
+        """function which optimize the dataframe to reduce the size, manly RAM but also on disc.
+        It use converts the columns as defined in this function. Which is manly by introducing pandas dtype "category"
+        PARAMETER
+        ---------
+        exclude_columns: list
+            columns to exclude, default None
+        """
+        if exclude_columns is None:
+            exclude_columns = []
+
+        # 'filename', 'fullPath' are different for every row and h5_attrs can't be converted to category
+        exclude_columns = ['filename', 'fullPath', 'h5_attrs', *exclude_columns]
+
+        # prepare 'following_file_id', 'previous_file_id' columns for a 'category'
+        for i in ['following_file_id', 'previous_file_id']:
+            if i in self.dataframe:
+                if self.dataframe.dtype == object:
+                    self.dataframe.loc[self.dataframe[i].isna(), i] = 0
+                    self.dataframe.loc[self.dataframe[i] < 0, i] = 0
+                    self.dataframe[i] = self.dataframe[i].astype(np.uint64)
+
+        # use the super implementation
+        BaseDBHandler.optimize_dataframe(self, exclude_columns=exclude_columns, include_columns=include_columns)
