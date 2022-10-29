@@ -205,9 +205,9 @@ class FindCluster:
         -------
         The corners of the bax can be calculated with openCV, i.e.:
         >>> box_dict = FindCluster.get_box(mask_cluster)
-        >>> points = cv2.boxPoints((box_dict['box_center_x'], box_dict['box_center_y']),
-        >>>                        (box_dict['box_size_x'], box_dict['box_size_y']),
-        >>>                        box_dict['angle'])
+        >>> points = cv2.boxPoints(((box_dict['box_center_x'], box_dict['box_center_y']),
+        >>>                         (box_dict['box_size_x'], box_dict['box_size_y']),
+        >>>                         box_dict['angle']))
         """
         box = cv2.minAreaRect(np.argwhere(mask_cluster))
         return {'angle': float(box[2]),
