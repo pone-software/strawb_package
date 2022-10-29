@@ -893,7 +893,7 @@ class SyncDBHandler(BaseDBHandler):
         # prepare 'following_file_id', 'previous_file_id' columns for a 'category'
         for i in ['following_file_id', 'previous_file_id']:
             if i in self.dataframe:
-                if self.dataframe.dtype == object:
+                if self.dataframe[i].dtype == object:
                     self.dataframe.loc[self.dataframe[i].isna(), i] = 0
                     self.dataframe.loc[self.dataframe[i] < 0, i] = 0
                     self.dataframe[i] = self.dataframe[i].astype(np.uint64)
