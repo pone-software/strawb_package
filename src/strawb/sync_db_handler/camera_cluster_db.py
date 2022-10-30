@@ -34,7 +34,8 @@ class ImageClusterDB(BaseDBHandler):
         self.device_code = device_code
 
         # directly add the charge, doesn't need long
-        self.add_charge()
+        if self.dataframe is not None:
+            self.add_charge()
 
     def save_db(self):
         # remove the extra columns again to save space
