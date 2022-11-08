@@ -64,10 +64,11 @@ class EventBuilder:
         dataframe.reset_index(drop=True, inplace=True)
         return dataframe
 
-    def get_dataframe(self, trb_overflow=2750.):
+    def get_dataframe(self, trb_overflow=2**38*1e-8):
         """ Load data and do first cleaning.
         removes: tot_time_ns!=1e-9 <-> there are some events with 1ns
-        removes the TRB overflow in the timestamp but don't do it at tot_time_ns as it can cause precision loss"""
+        removes the TRB overflow in the timestamp: trb_overflow
+        but don't do it at tot_time_ns as it can cause precision loss"""
         tot = self.file_handler.tot_tot[:]
 
         tot_time_ns = self.file_handler.tot_time_ns[:]
@@ -84,7 +85,9 @@ class EventBuilder:
 
         # time in seconds, time_masked since epoch (1.1.1970); remove the overflow,
         # but don't do it at tot_time_ns as it can cause precision loss
-        time_masked = np.unwrap(self.file_handler.tot_time[mask_valid], period=trb_overflow)
+        # old: time_masked = np.unwrap(self.file_handler.tot_time[mask_valid], period=trb_overflow)
+        time_masked = np.unwrap(tot_time_ns[mask_valid], period=trb_overflow)
+        time_masked += self.file_handler.tot_time[0] - time_masked[0]
 
         df_base = pandas.DataFrame({
             # time_masked since epoch (1.1.1970)
