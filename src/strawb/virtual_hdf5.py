@@ -293,6 +293,9 @@ class HDF5TempFile:
             # create an instance of the Camera
             self.module = module(str(self.file_name))
 
+    def close(self):
+        self.__del__()
+
     def __del__(self):
         self.logger.debug(f"Delete TempFile: {self.file_name}")
 
