@@ -46,7 +46,7 @@ class Config:
         self._position_steel_cable_ = None
 
         # load data and set parameters
-        self._mask_mounting_ = None
+        self._mask_mounting_ = np.ones((1280, 960), dtype=bool)  # default
 
         # [x, y] pixel coordinates center of the camera's lenses
         self._position_lenses_center_ = None
