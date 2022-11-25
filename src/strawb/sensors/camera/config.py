@@ -17,10 +17,11 @@ class Config:
                                                'data_cable': np.array([747, 952]),
                                                'steel_cable': np.array([723, 995]),
                                                'lenses_center': np.array([329, 688])},
-                     'TUMMINISPECTROMETER001': {'module': None,
-                                                'data_cable': None,
-                                                'steel_cable': None,
-                                                'lenses_center': None}
+                     'TUMMINISPECTROMETER001': {'module': [354., 708.],
+                                                'data_cable': [0., 708.],    # more a guess - no proper image
+                                                'steel_cable': [0., 728.],   # more a guess - no proper image
+                                                'lenses_center': [379, 568],  # more a guess - no proper image
+                                                }
                      }
 
     def __init__(self, device_code=None, un_mirror=False):
