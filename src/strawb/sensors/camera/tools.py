@@ -173,7 +173,7 @@ def rect_rotate(rect, angle=None, angle_normalize=True):
 
 def equalization(image, dev=8):
     """
-    image: RGB as float [0..1] or uint8
+    image: RGB as float [0..1] or uint8 or uint16
     dev: in how many parts n = dev**2, the image should be split and equalized.
     """
 
