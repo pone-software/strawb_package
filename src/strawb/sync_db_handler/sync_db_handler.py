@@ -231,6 +231,11 @@ class SyncDBHandler(BaseDBHandler):
             self._check_index_(dataframe2add)  # check the new dataframe
             self._check_index_(dataframe)  # check the new dataframe
 
+            # convert dtypes == 'category'
+            columns_categories = dataframe.columns[dataframe.dtypes == 'category']
+            for i in columns_categories:
+                dataframe[i] = dataframe[i].astype(object)
+
             # handle rows with the same indexes
             intersection = dataframe2add.index.intersection(dataframe.index)
             if intersection.shape[0] != 0:
@@ -261,6 +266,10 @@ class SyncDBHandler(BaseDBHandler):
             if difference.shape[0] != 0:
                 dataframe2add_diff = dataframe2add.loc[difference]
                 dataframe = dataframe.append(dataframe2add_diff)  # for newer pandas versions: concat = append
+
+            # convert it back to 'category'
+            for i in columns_categories:
+                dataframe[i] = dataframe[i].astype('category')
 
         if in_place:
             self.dataframe = dataframe
