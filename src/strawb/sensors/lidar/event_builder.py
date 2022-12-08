@@ -38,7 +38,7 @@ class EventBuilder:
             based on the labels, and it's the nth hit for a laser pulse
         """
         if self._dataframe_ is None:
-            self._dataframe_ = self.event_builder()
+            self.event_builder(inplace=True)
         return self._dataframe_
 
     @dataframe.setter
@@ -49,8 +49,8 @@ class EventBuilder:
         """Combines all the different steps to generate the events from the raw data.
         That includes:
         - remove invalid entries & correct TRB overflow
-        - label events with same laser trigger time
-        - hit order for each label. The first hit per label is 0, the second 1, ...
+        - add label events with same laser trigger time
+        - add hit order for each label. The first hit per label is 0, the second 1, ...
         PARAMETER
         ---------
         inplace: bool, optional
@@ -63,6 +63,7 @@ class EventBuilder:
 
         # add the hit order for each label. The first hit per label is 0, the second 1, ...
         dataframe = self.add_hit_order(dataframe)
+
         if inplace:
             self._dataframe_ = dataframe
         return dataframe
