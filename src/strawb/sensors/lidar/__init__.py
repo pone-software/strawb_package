@@ -1,5 +1,6 @@
 from typing import Union
 
+from strawb.sensors.lidar.event_builder import EventBuilder
 from strawb.sensors.lidar.laser_adjustment_scan import LaserAdjustmentScan
 from strawb.sensors.lidar.lidar_trb_rates import LidarTRBRates
 from strawb.sensors.lidar.file_handler import FileHandler
@@ -17,6 +18,8 @@ class Lidar:
             self.file_handler = file
 
         self.trb_rates = LidarTRBRates(file_handler=self.file_handler)
+
+        self.event_builder = EventBuilder(file_handler=self.file_handler)
 
     def __del__(self):
         del self.trb_rates
