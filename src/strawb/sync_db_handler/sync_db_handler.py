@@ -199,6 +199,46 @@ class SyncDBHandler(BaseDBHandler):
 
         return dataframe
 
+    def __add_new_columns__(self, dataframe2add, dataframe=None, use='left'):
+        """Alternative version with pandas.merge not test"""
+        if use not in ['right', 'left']:
+            raise ValueError(f'Use must be one of [right, left], got: {use}')
+        in_place = False
+        if dataframe is None:
+            in_place = True
+            dataframe = self.dataframe
+
+        if dataframe is None:
+            return dataframe2add  # no second dataframe defined -> nothing to add
+
+        else:
+            # convert dtypes == 'category'
+            columns_categories = dataframe.columns[dataframe.dtypes == 'category']
+            for i in columns_categories:
+                dataframe[i] = dataframe[i].astype(object)
+
+            df_a = dataframe.merge(dataframe2add, on='x', how='outer', suffixes=[None, '_right_merge'])
+            mask_columns = df_a.columns.str.find('_right_merge') > 0
+
+            if use is 'left':
+                for i in df_a.columns[mask_columns]:
+                    mask_na = ~df_a[i].isna()
+                    df_a.loc[mask_na, i.replace('_right_merge', '')] = df_a.pop(i)[mask_na]
+
+            elif use is 'right':
+                for i in df_a.columns[mask_columns]:
+                    mask_na = df_a[i.replace('_right_merge', '')].isna()
+                    df_a.loc[mask_na, i.replace('_right_merge', '')] = df_a.pop(i)[mask_na]
+
+            # convert it back to 'category'
+            for i in columns_categories:
+                df_a[i] = df_a[i].astype('category')
+
+        if in_place:
+            self.dataframe = dataframe
+
+        return dataframe
+
     def add_new_columns(self, dataframe2add, dataframe=None, overwrite=False):
         """Adds new columns from a pandas.DataFrame to the internal pandas.DataFrame. If there is no internal
         pandas.DataFrame it set the provided dataframe as the internal. Otherwise it adds the columns from the provided
