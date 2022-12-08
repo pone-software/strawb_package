@@ -9,15 +9,41 @@ class EventBuilder:
         self.verbose = verbose
         self.file_handler = file_handler
 
-        self.dataframe = None
+        self._dataframe_ = None
 
         if generate_dataframe:
             # can take some seconds
-            self.dataframe = self.event_builder()
+            self._dataframe_ = self.event_builder()
 
     def __del__(self):
         self.file_handler = None
-        del self.dataframe
+        del self._dataframe_
+
+    @property
+    def dataframe(self):
+        """The dataframe for the events.
+        COLUMNS
+        -------
+        time    : datetime
+            time in UTC
+        time_ns : float
+            time in seconds starting at 0 (the ns is misleading here). It's there in addition to the `time` to have
+            sub-nanosecond precision, the absolut can handle with the 64bit.
+        dt_pmt  : float
+            delta time in nanoseconds between laser emission and PMT light detection (signal went over the threshold)
+        label   : int
+            labels with the same number came from the same from the same laser pulse. If there is just one event for
+            a laser pulse, the label will be 0
+        hit_order: int
+            based on the labels, and it's the nth hit for a laser pulse
+        """
+        if self._dataframe_ is None:
+            self._dataframe_ = self.event_builder()
+        return self._dataframe_
+
+    @dataframe.setter
+    def dataframe(self, dataframe):
+        self._dataframe_ = dataframe
 
     def event_builder(self, inplace=True):
         """Combines all the different steps to generate the events from the raw data.
@@ -38,7 +64,7 @@ class EventBuilder:
         # add the hit order for each label. The first hit per label is 0, the second 1, ...
         dataframe = self.add_hit_order(dataframe)
         if inplace:
-            self.dataframe = dataframe
+            self._dataframe_ = dataframe
         return dataframe
 
     def get_dataframe(self, trb_overflow=2**38*1e-8):
