@@ -79,7 +79,9 @@ class ImageClusterDB(BaseDBHandler):
     def add_charge(self):
         """Adds new columns for charge based on charge_with_noise-noise also for the colors"""
         for i in ['', '_red', '_blue', '_green']:
-            if f'charge{i}' not in self.dataframe:
+            if f'charge{i}' not in self.dataframe and\
+                    f'charge_with_noise{i}' in self.dataframe and\
+                    f'noise{i}' in self.dataframe:
                 self.dataframe[f'charge{i}'] = self.dataframe[f'charge_with_noise{i}'] - self.dataframe[f'noise{i}']
 
     def get_distance_fov(self, coordinates='center_of_pix'):
@@ -102,7 +104,7 @@ class ImageClusterDB(BaseDBHandler):
         # create pandas.Series filled with nans
         distance = pandas.Series(data=np.nan, index=self.dataframe.index)
 
-        # only do the calculation for labels > 0; label=0 is not the cluster, its the rest of the image without clusters
+        # only do the calculation for labels > 0; label=0 is not the cluster, it's the image's rest without clusters
         mask_label = self.dataframe.label > 0
 
         # the coordinates in x and y are flipped, see doc at `contours` calculation above
@@ -133,7 +135,7 @@ class ImageClusterDB(BaseDBHandler):
         # create pandas.Series filled with nans
         distance = pandas.Series(data=np.nan, index=self.dataframe.index)
 
-        # only do the calculation for labels > 0; label=0 is not the cluster, its the rest of the image without clusters
+        # only do the calculation for labels > 0; label=0 is not the cluster, it's the image's rest without clusters
         mask_label = self.dataframe.label > 0
 
         # the coordinates in x and y are flipped, see doc at `contours` calculation above
@@ -165,7 +167,7 @@ class ImageClusterDB(BaseDBHandler):
         pos_x = pandas.Series(data=np.nan, index=self.dataframe.index)
         pos_y = pandas.Series(data=np.nan, index=self.dataframe.index)
 
-        # only do the calculation for labels > 0; label=0 is not the cluster, its the rest of the image without clusters
+        # only do the calculation for labels > 0; label=0 is not the cluster, it's the image's rest without clusters
         mask_label = self.dataframe.label > 0
 
         # the coordinates in x and y are flipped, see doc at `contours` calculation above
