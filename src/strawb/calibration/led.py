@@ -2,8 +2,10 @@ import os
 
 import pandas
 
+from strawb.calibration.base_dataset_handler import DatasetHandler
 
-class LED:
+
+class LED(DatasetHandler):
     """
     Dataset with relative radiation power for different LEDs from:
     CREE LED: https://assets.cree-led.com/a/ds/x/XLamp-XPG3.pdf
@@ -28,15 +30,13 @@ class LED:
     """
     local_path = os.path.abspath(os.path.join(os.path.dirname(__file__)))
     config_parameters = pandas.read_csv(os.path.join(local_path, 'strawb_leds.csv'))
-
-    led_labels = list(config_parameters.label.unique())
+    available_labels = list(config_parameters.label.unique())
 
     def __init__(self, label=None):
         self._wavelength_ = None
         self._relative_radiation_ = None
 
-        # set the label and check if it a valid label
-        self.label = label
+        DatasetHandler.__init__(self, label=label)
 
     @property
     def wavelength(self):
@@ -48,21 +48,10 @@ class LED:
         """relative radiation: [0,1]"""
         return self._relative_radiation_
 
-    @property
-    def label(self):
-        """label of the LED in the config_parameters dataset"""
-        return self._label_
+    def _load_data_(self, mask):
+        self._wavelength_ = self.config_parameters.wavelength[mask]
+        self._relative_radiation_ = self.config_parameters.relative_radiation[mask]
 
-    @label.setter
-    def label(self, label):
-        """Set the label of the LED and loads the data from the config_parameters dataset
-        Label must be a value in config_parameters.label or None."""
-        if label is not None:
-            self._wavelength_ = None
-            self._relative_radiation_ = None
-        if label is not None:
-            if label not in self.led_labels:
-                raise ValueError(f'label must be one of: {self.led_labels}. Got: {label}')
-            mask = self.config_parameters.label == label
-            self._wavelength_ = self.config_parameters.wavelength[mask]
-            self._relative_radiation_ = self.config_parameters.relative_radiation[mask]
+    def _free_data_(self):
+        self._wavelength_ = None
+        self._relative_radiation_ = None
