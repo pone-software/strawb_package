@@ -40,7 +40,8 @@ class ImageClusterDB(BaseDBHandler):
     def save_db(self):
         # remove the extra columns again to save space
         for i in ['charge', 'charge_red', 'charge_blue', 'charge_green']:
-            self.dataframe.pop(i)
+            if i in self.dataframe:
+                self.dataframe.pop(i)
         BaseDBHandler.save_db(self)
         self.add_charge()  # and add it back
 
