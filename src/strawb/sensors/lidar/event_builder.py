@@ -1,7 +1,9 @@
 import numpy as np
 
 import pandas
-import scipy.ndimage
+
+
+# import scipy.ndimage
 
 
 class EventBuilder:
@@ -32,10 +34,11 @@ class EventBuilder:
         dt_pmt  : float
             delta time in nanoseconds between laser emission and PMT light detection (signal went over the threshold)
         label   : int
-            labels with the same number came from the same from the same laser pulse. If there is just one event for
-            a laser pulse, the label will be 0
-        hit_order: int
+            labels with the same number came from the same laser pulse.
+        hit_index: int
             based on the labels, and it's the nth hit for a laser pulse
+        dt_index: float
+            the delta time in nanoseconds between hits of the same laser flash
         """
         if self._dataframe_ is None:
             self.event_builder(inplace=True)
@@ -58,17 +61,20 @@ class EventBuilder:
         """
         dataframe = self.get_dataframe()
 
-        # detect if there are two or more entries within a dt of some ns
-        dataframe = self.add_labels(dataframe)
+        # # detect if there are two or more entries within a dt of some ns
+        # dataframe = self.add_labels(dataframe)
 
         # add the hit order for each label. The first hit per label is 0, the second 1, ...
-        dataframe = self.add_hit_order(dataframe)
+        dataframe = self.add_label_and_hit_index(dataframe)
+
+        # Adds the delta time between hits of the same laser flash
+        dataframe = self.add_dt_index(dataframe)
 
         if inplace:
             self._dataframe_ = dataframe
         return dataframe
 
-    def get_dataframe(self, trb_overflow=2**38*1e-8):
+    def get_dataframe(self, trb_overflow=2 ** 38 * 1e-8):
         """ Load data and do first cleaning.
         removes: tot_time_ns!=1e-9 <-> there are some events with 1ns
         removes the TRB overflow in the timestamp - trb_overflow
@@ -100,7 +106,7 @@ class EventBuilder:
             'time_ns': tot_time_ns,
             # tot in nanoseconds
             'dt_pmt': tot[mask_valid]})
-        df_base['time'] = pandas.to_datetime(df_base['time']*1e9, utc=True)
+        df_base['time'] = pandas.to_datetime(df_base['time'] * 1e9, utc=True)
 
         # the time isn't sorted correctly, do it here
         df_base.sort_values(['time', 'time_ns', 'dt_pmt'], inplace=True)
@@ -109,54 +115,67 @@ class EventBuilder:
         del tot_time_ns, mask_valid, tot
         return df_base
 
-    # define the label function
     @staticmethod
-    def label_intermediate(input):
-        """ Label features in an array based on a second intermediate array, which length is shorter by one.
-        input                     =  [1,0,1,1,0,0,0,1]
-        scipy.ndimage.label(input)=  [1,0,2,2,0,0,0,3]
-        label_intermediate(input) = [1,1,2,2,2,0,0,3,3]
-        Parameters
-        ----------
-        input : array_like
-            The intermediate array-like object to be labeled. Any non-zero values in `input` are
-            counted as features and zero values are considered the background.
-
-        Returns
-        -------
-        label : ndarray or int
-            An integer ndarray where each unique feature in `input` has a unique
-            label in the returned array. And each label is extended by one item.
-        num_features : int
-
-        Example
-        -------
-        >>> d_a = np.diff(a)
-        >>> labels = EventBuilder.label_intermediate(d_a<1.)
-        >>> assert len(labels) == len(a)
-
-        Test
-        ----
-        >>> a = np.array([1,0,2,2,0,0,0,3])
-        >>> l, _ = EventBuilder.label_intermediate(a)
-        >>> print(f'input         :  {a}')
-        >>> print(f'l_intermediate: {l}')
-        """
-        label, num_features = scipy.ndimage.label(input, structure=None)
-        label = np.append(label, [0])  # add one item
-        label[1:][label[:-1] != 0] = label[:-1][label[:-1] != 0]  # add the shifted labels `if label!=0`
-        return label, num_features
-
-    def add_labels(self, dataframe):
-        # event selection
-        dt = np.diff(dataframe['time_ns'])
-        dataframe['label'], _ = self.label_intermediate(dt == 0)
-
+    def add_label_and_hit_index(dataframe):
+        """add the label and the hit order for each unique time_ns. dataframe needs the `time_ns` column."""
+        gb = dataframe.groupby('time_ns')
+        dataframe['hit_index'] = gb.cumcount()
+        # dataframe.loc[dataframe.label == 0, 'hit_index'] = 0
+        dataframe['label'] = gb.ngroup()
         return dataframe
 
     @staticmethod
-    def add_hit_order(dataframe):
-        """add the hit order for each label. dataframe needs the label column."""
-        dataframe['hit_order'] = dataframe.groupby('label').cumcount()
-        dataframe.loc[dataframe.label == 0, 'hit_order'] = 0
+    def add_dt_index(dataframe):
+        """Adds the delta time between hits of the same laser flash, i.e. dt between hit index i and i+1.
+        Needs a dataframe with 'dt_pmt' and 'hit_index'."""
+        m = dataframe.hit_index > 0
+        m_previous = m.shift(periods=-1, fill_value=False)
+        dataframe.loc[m_previous, 'dt_index'] = 0
+        dataframe.loc[m, 'dt_index'] = dataframe.loc[m, 'dt_pmt'].to_numpy()
+        dataframe.loc[m, 'dt_index'] -= dataframe.loc[m_previous, 'dt_pmt'].to_numpy()
         return dataframe
+
+    # # define the label function
+    # @staticmethod
+    # def label_intermediate(input):
+    #     """ Label features in an array based on a second intermediate array, which length is shorter by one.
+    #     input                     =  [1,0,1,1,0,0,0,1]
+    #     scipy.ndimage.label(input)=  [1,0,2,2,0,0,0,3]
+    #     label_intermediate(input) = [1,1,2,2,2,0,0,3,3]
+    #     Parameters
+    #     ----------
+    #     input : array_like
+    #         The intermediate array-like object to be labeled. Any non-zero values in `input` are
+    #         counted as features and zero values are considered the background.
+    #
+    #     Returns
+    #     -------
+    #     label : ndarray or int
+    #         An integer ndarray where each unique feature in `input` has a unique
+    #         label in the returned array. And each label is extended by one item.
+    #     num_features : int
+    #
+    #     Example
+    #     -------
+    #     >>> d_a = np.diff(a)
+    #     >>> labels = EventBuilder.label_intermediate(d_a<1.)
+    #     >>> assert len(labels) == len(a)
+    #
+    #     Test
+    #     ----
+    #     >>> a = np.array([1,0,2,2,0,0,0,3])
+    #     >>> l, _ = EventBuilder.label_intermediate(a)
+    #     >>> print(f'input         :  {a}')
+    #     >>> print(f'l_intermediate: {l}')
+    #     """
+    #     label, num_features = scipy.ndimage.label(input, structure=None)
+    #     label = np.append(label, [0])  # add one item
+    #     label[1:][label[:-1] != 0] = label[:-1][label[:-1] != 0]  # add the shifted labels `if label!=0`
+    #     return label, num_features
+    #
+    # def add_labels(self, dataframe):
+    #     # event selection
+    #     dt = np.diff(dataframe['time_ns'])
+    #     dataframe['label'], _ = self.label_intermediate(dt == 0)
+    #
+    #     return dataframe
