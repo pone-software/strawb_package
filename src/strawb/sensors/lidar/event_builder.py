@@ -79,6 +79,7 @@ class EventBuilder:
         tot = self.file_handler.tot_tot[:]  # [ns]
         tot_time_ns = self.file_handler.tot_time_ns[:]  # [s]
 
+        tot_hld_start_time = None
         if self.file_handler.tot_hld_start_time is not None:
             tot_hld_start_time = self.file_handler.tot_hld_start_time[:]
 
