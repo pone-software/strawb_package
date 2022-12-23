@@ -44,6 +44,8 @@ class FileHandler(BaseFileHandler):
         self.tot_time = None  # absolute timestamps in seconds for the event
         self.tot_time_ns = None  # timestamps from trb in seconds for the event, not absolut and with overflow
         self.tot_tot = None  # time over threshold (tot) in ns for the event
+        self.tot_hld_start_time = None  # the start time of a hld file
+        # A file is covers usually several hld files as there is a new hld file if it exceeds 100MB.
 
         # Counter, similar to PMTSpectrometer. Added to hdf5 ~05.10.2021.
         # -> File version 2
@@ -148,6 +150,22 @@ class FileHandler(BaseFileHandler):
         self.__load_meta_data_measurement__()
         self.file_version = 5
 
+    def __load_meta_data_v6__(self, ):
+        """Loads the SDAQ-hdf5 version 6 introduced from 23rd of November 2022.
+
+        CHANGES in respect to version 5
+        -------------------------------
+        added: @TOT - 'tot/hld_start_time'
+        """
+        # load the single hdf5 groups
+        self.__load_meta_data_daq_v3__()  # TRB_DAQ
+        self.__load_meta_data_gimbal__()  # Gimbal
+        self.__load_meta_data_laser_v2__()  # Laser
+        self.__load_meta_data_counts__()  # counts
+        self.__load_meta_data_tot_v2__()  # TOT
+        self.__load_meta_data_measurement__()
+        self.file_version = 6
+
     # ---- Helper functions for load ----
     def __load_meta_data_gimbal__(self):
         # Gimbal
@@ -174,13 +192,20 @@ class FileHandler(BaseFileHandler):
         self.__load_meta_data_laser_v1__()
 
     def __load_meta_data_tot__(self):
-        # TOT - sometime there are is no TOT available
+        # TOT - sometime there is no TOT available
         try:
             self.tot_time = self.file['tot/time']
             self.tot_time_ns = self.file['tot/time_ns']
             self.tot_tot = self.file['tot/tot']
         except KeyError:
             pass
+
+    def __load_meta_data_tot_v2__(self):
+        # TOT - sometime there are is no TOT available
+        self.tot_time = self.file['tot/time']
+        self.tot_time_ns = self.file['tot/time_ns']
+        self.tot_tot = self.file['tot/tot']
+        self.tot_hld_start_time = self.file['tot/hld_start_time']
 
     def __load_meta_data_counts__(self):
         # Counter
