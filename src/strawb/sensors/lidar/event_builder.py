@@ -1,9 +1,5 @@
 import numpy as np
-
 import pandas
-
-
-# import scipy.ndimage
 
 
 class EventBuilder:
@@ -86,7 +82,7 @@ class EventBuilder:
         # some values are 1ns, exclude them
         mask_valid = tot_time_ns != 1e-9
 
-        # some tot values are very high ~1e12, exclude them here or not
+        # some tot values are very high ~1e12, exclude them here
         max_tot = 1 * 1e6  # cut at 1ms - [ns]
         mask_valid &= (tot < max_tot) & (tot > 0)
 
@@ -109,7 +105,7 @@ class EventBuilder:
         df_base['time'] = pandas.to_datetime(df_base['time'] * 1e9, utc=True)
 
         # the time isn't sorted correctly, do it here
-        df_base.sort_values(['time', 'time_ns', 'dt_pmt'], inplace=True)
+        # df_base.sort_values(['time', 'time_ns', 'dt_pmt'], inplace=True)
 
         # free RAM - parameter not needed
         del tot_time_ns, mask_valid, tot
@@ -134,48 +130,3 @@ class EventBuilder:
         dataframe.loc[m, 'dt_index'] = dataframe.loc[m, 'dt_pmt'].to_numpy()
         dataframe.loc[m, 'dt_index'] -= dataframe.loc[m_previous, 'dt_pmt'].to_numpy()
         return dataframe
-
-    # # define the label function
-    # @staticmethod
-    # def label_intermediate(input):
-    #     """ Label features in an array based on a second intermediate array, which length is shorter by one.
-    #     input                     =  [1,0,1,1,0,0,0,1]
-    #     scipy.ndimage.label(input)=  [1,0,2,2,0,0,0,3]
-    #     label_intermediate(input) = [1,1,2,2,2,0,0,3,3]
-    #     Parameters
-    #     ----------
-    #     input : array_like
-    #         The intermediate array-like object to be labeled. Any non-zero values in `input` are
-    #         counted as features and zero values are considered the background.
-    #
-    #     Returns
-    #     -------
-    #     label : ndarray or int
-    #         An integer ndarray where each unique feature in `input` has a unique
-    #         label in the returned array. And each label is extended by one item.
-    #     num_features : int
-    #
-    #     Example
-    #     -------
-    #     >>> d_a = np.diff(a)
-    #     >>> labels = EventBuilder.label_intermediate(d_a<1.)
-    #     >>> assert len(labels) == len(a)
-    #
-    #     Test
-    #     ----
-    #     >>> a = np.array([1,0,2,2,0,0,0,3])
-    #     >>> l, _ = EventBuilder.label_intermediate(a)
-    #     >>> print(f'input         :  {a}')
-    #     >>> print(f'l_intermediate: {l}')
-    #     """
-    #     label, num_features = scipy.ndimage.label(input, structure=None)
-    #     label = np.append(label, [0])  # add one item
-    #     label[1:][label[:-1] != 0] = label[:-1][label[:-1] != 0]  # add the shifted labels `if label!=0`
-    #     return label, num_features
-    #
-    # def add_labels(self, dataframe):
-    #     # event selection
-    #     dt = np.diff(dataframe['time_ns'])
-    #     dataframe['label'], _ = self.label_intermediate(dt == 0)
-    #
-    #     return dataframe
