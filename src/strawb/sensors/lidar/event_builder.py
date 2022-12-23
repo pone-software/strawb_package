@@ -71,13 +71,16 @@ class EventBuilder:
         return dataframe
 
     def get_dataframe(self, trb_overflow=2 ** 38 * 1e-8):
-        """ Load data and do first cleaning.
+        """Load data and do first cleaning.
         removes: tot_time_ns!=1e-9 <-> there are some events with 1ns
         removes the TRB overflow in the timestamp - trb_overflow
         trb_overflow seems to be 2**38*1e-8s, the FPGA runs with 100Mhz -> 1e-8s and numbers are stored as ints usually
         for performance reasons. More information must be provided by the TRB group!"""
         tot = self.file_handler.tot_tot[:]  # [ns]
         tot_time_ns = self.file_handler.tot_time_ns[:]  # [s]
+
+        if self.file_handler.tot_hld_start_time is not None:
+            tot_hld_start_time = self.file_handler.tot_hld_start_time[:]
 
         # some values are 1ns, exclude them
         mask_valid = tot_time_ns != 1e-9
@@ -101,8 +104,10 @@ class EventBuilder:
             # time_ns TRB internal in nanoseconds
             'time_ns': tot_time_ns,
             # tot in nanoseconds
-            'dt_pmt': tot[mask_valid]})
+            'dt_pmt': tot[mask_valid],
+            'hld_start_time': tot_hld_start_time[mask_valid]})
         df_base['time'] = pandas.to_datetime(df_base['time'] * 1e9, utc=True)
+        df_base['hld_start_time'] = pandas.to_datetime(df_base['hld_start_time'] * 1e9, utc=True)
 
         # the time isn't sorted correctly, do it here
         # df_base.sort_values(['time', 'time_ns', 'dt_pmt'], inplace=True)
