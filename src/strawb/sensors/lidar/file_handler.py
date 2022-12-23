@@ -30,7 +30,7 @@ class FileHandler(BaseFileHandler):
 
         # Laser
         self.laser_time = None
-        self.laser_diode = None  # diode readings to calibrate the intensity. Gimbal is be in calibration position.
+        self.laser_diode = None  # diode readings to calibrate the intensity. Gimbal is in calibration position.
         self.laser_frequency = None  # if the power is en-/disabled
         self.laser_power = None  # if the laser power is en-/disabled
         self.laser_pulsewidth = None  # sets the intensity
@@ -49,7 +49,7 @@ class FileHandler(BaseFileHandler):
 
         # Counter, similar to PMTSpectrometer. Added to hdf5 ~05.10.2021.
         # -> File version 2
-        self.counts_time = None  # absolute timestamps in seconds for each counts reading
+        self.counts_time = None  # absolute timestamps in seconds for each count reading
         self.counts_ch0 = None  # channel which counts up at a constant frequency -> PMT Spectrometer
         self.counts_ch17 = None  # the readout/PMT channel.
         self.counts_ch18 = None  # the Laser trigger channel.
