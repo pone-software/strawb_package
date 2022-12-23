@@ -66,7 +66,7 @@ class FileHandler(BaseFileHandler):
         BaseFileHandler.__init__(self, *args, **kwargs)
 
     def __load_meta_data__(self, ):
-        # order is important, tries to load newest first and oldest latest.
+        # order is important, tries to load the newest first and oldest latest.
         err_list = []
         for i in [self.__load_meta_data_v6__, self.__load_meta_data_v5__, self.__load_meta_data_v4__,
                   self.__load_meta_data_v3__, self.__load_meta_data_v2__, self.__load_meta_data_v1__]:
