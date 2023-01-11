@@ -79,10 +79,6 @@ class EventBuilder:
         tot = self.file_handler.tot_tot[:]  # [ns]
         tot_time_ns = self.file_handler.tot_time_ns[:]  # [s]
 
-        tot_hld_start_time = None
-        if self.file_handler.tot_hld_start_time is not None:
-            tot_hld_start_time = self.file_handler.tot_hld_start_time[:]
-
         # some values are 1ns, exclude them
         mask_valid = tot_time_ns != 1e-9
 
@@ -99,6 +95,11 @@ class EventBuilder:
         tot_time_ns = np.unwrap(tot_time_ns[mask_valid], period=trb_overflow)
         tot_time_ns -= tot_time_ns[0]
 
+        if self.file_handler.tot_hld_start_time is not None:
+            tot_hld_start_time = self.file_handler.tot_hld_start_time[:][mask_valid]
+        else:
+            tot_hld_start_time = None
+
         df_base = pandas.DataFrame({
             # time_masked since epoch (1.1.1970)
             'time': self.file_handler.tot_time[0] + tot_time_ns,
@@ -106,7 +107,7 @@ class EventBuilder:
             'time_ns': tot_time_ns,
             # tot in nanoseconds
             'dt_pmt': tot[mask_valid],
-            'hld_start_time': tot_hld_start_time[mask_valid]})
+            'hld_start_time': tot_hld_start_time})
         df_base['time'] = pandas.to_datetime(df_base['time'] * 1e9, utc=True)
         df_base['hld_start_time'] = pandas.to_datetime(df_base['hld_start_time'] * 1e9, utc=True)
 
@@ -114,7 +115,7 @@ class EventBuilder:
         # df_base.sort_values(['time', 'time_ns', 'dt_pmt'], inplace=True)
 
         # free RAM - parameter not needed
-        del tot_time_ns, mask_valid, tot
+        del tot_time_ns, mask_valid, tot, tot_hld_start_time
         return df_base
 
     @staticmethod
