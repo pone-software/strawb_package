@@ -10,20 +10,20 @@ from strawb import tools
 class TRBTools:
     def __init__(self, file_handler=None, frequency_interp=33.):
         """Base Class for the TRB. It takes care about the counter readings and calculates the rates based on the
-        counts. In addition it can also calculate a interpolated rate based on the counts. To open and close a file can
-        cause corrupt links. Therefore, the following properties must be set in the child class which inherits from
-        TRBTools and they should set the link to the data source:
+        counts. In addition, it can also calculate an interpolated rate based on the counts. To open and close a file
+        can cause corrupt links. Therefore, the following properties must be set in the child class which inherits from
+        TRBTools, and they should set the link to the data source:
         - raw_counts_arr; __daq_frequency_readout__; __time__
 
         PARAMETER
         ---------
         frequency_interp: float or int
-            sets the default frequency for the rates interpolation. Is only set, if there is no frequency_interp in
+            sets the default frequency for the rates' interpolation. Is only set, if there is no frequency_interp in
             the file set. To overwrite, set frequency_interp (i.e. `frequency_interp=24`) after the initialisation.
         """
         self.__dcounts_arr__ = None  # stores result of self.diff_counts()
         self.__counts_arr__ = None  # stores 'absolute' counts as a 2D array,
-        self._active_read_arr_ = None  # stores if the counter read happens at a event (1) or not (0)
+        self._active_read_arr_ = None  # stores if the counter read happens at an event (1) or not (0)
         self._rate_delta_time = None
         self._rate = None  # stores result of self.calculate_rates() (needs `self._dcounts_arr_`)
 
@@ -31,7 +31,7 @@ class TRBTools:
         # where n is the length of the SDAQ buffer
         self._index_start_valid_data_ = None
 
-        # interpolated rates. Based on the `counts` and interpolated to fit a artificially readout frequency.
+        # interpolated rates. Based on the `counts` and interpolated to fit an artificial readout frequency.
         self._interp_frequency_ = None  # artificially readout frequency
         self._interp_time_ = None  # absolute timestamps. Shape: [time_j]
         self._interp_rate_ = None  # rate as a 2d array. Shape: [channel_i, time_j]
@@ -228,7 +228,7 @@ class TRBTools:
 
     @property
     def active_read(self):
-        """A bool array which signalise, that the TRB read a counter when there was a event ongoing at this channel.
+        """A bool array which signalise, that the TRB read a counter when there was an event ongoing at this channel.
         """
         if self._active_read_arr_ is None:
             self.diff_counts()
@@ -271,7 +271,7 @@ class TRBTools:
     @staticmethod
     def _diff_counts_(*args, **kwargs):
         """
-        Calculates the delta counts of the raw counts readings, similar to np.diff with overflow correction and it
+        Calculates the delta counts of the raw counts readings, similar to np.diff with overflow correction, and it
         takes care of the special TRB integer type. To calculate the absolute counts readings, do
         >>> counts, active_read = TRBTools._diff_counts_(*args, **kwargs)
         >>> np.cumsum(counts.astype(np.int64))
@@ -422,7 +422,7 @@ class TRBTools:
         ------
         time_inter: np.array
             the interpolated absolute timestamp in seconds since the epoch. It corresponds to the middle of time_probe.
-            Therefore len(time_probe) -1 == len(time_inter)
+            Therefore, len(time_probe) -1 == len(time_inter)
         rate_inter: np.array
             the interpolated rate as a 2d array with shape [channel_i, rate_j] and len(rate_j) == len(time_inter).
         """
@@ -435,7 +435,15 @@ class TRBTools:
 
         timestamps = self.rate_time  # seconds since file started
         if time_probe is None:
-            time_probe = np.arange(timestamps[0], timestamps[-1], 1. / frequency)
+            if timestamps[0] - timestamps[-1] > 0:
+                time_probe = np.arange(timestamps[0], timestamps[-1], 1. / frequency)
+            else:
+                # use the CPU time when the counters are read with the pearl script
+                time_probe = self._time_[:] - self._time_[0]
+
+        # check if there are entries in time_probe
+        if len(time_probe) == 0:
+            raise ValueError('File has corrupt time data in `file_handler.counts_ch0` and `file_handler.counts_time`.')
 
         active, b, n = scipy.stats.binned_statistic(timestamps,
                                                     self.active_read,
@@ -640,7 +648,7 @@ class InterpolatedRatesFile:
 
     @staticmethod
     def _get_active_(t, bins=None, step_size=None, max_delta_t=1.5):
-        """Calculate the active (up time) time of the measurement within the periods (bins). If the time between two
+        """Calculate the active (up-time) time of the measurement within the periods (bins). If the time between two
         measurements is greater as the `max_delta_t`, the period is counted as inactive.
         PARAMETER
         t: ndarray
