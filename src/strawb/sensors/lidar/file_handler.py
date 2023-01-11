@@ -59,6 +59,12 @@ class FileHandler(BaseFileHandler):
         self.measurement_time = None
         self.measurement_step = None
 
+        # hld-file start and end times.
+        # -> File version 7
+        self.hld_time = None  # absolute timestamps in seconds (usually it's the time after unpacking the hld-file)
+        self.hld_file_start = None  # start time of the hld-file (when the cmd is sent to the TRB)
+        self.hld_file_start = None  # stop time of the hld-file (when the cmd is sent to the TRB)
+
         # holds the file version
         self.file_version = None
 
@@ -151,7 +157,7 @@ class FileHandler(BaseFileHandler):
         self.file_version = 5
 
     def __load_meta_data_v6__(self, ):
-        """Loads the SDAQ-hdf5 version 6 introduced from 23rd of November 2022.
+        """Loads the SDAQ-hdf5 version 6 introduced from 23rd of December 2022.
 
         CHANGES in respect to version 5
         -------------------------------
@@ -165,6 +171,23 @@ class FileHandler(BaseFileHandler):
         self.__load_meta_data_tot_v2__()  # TOT
         self.__load_meta_data_measurement__()
         self.file_version = 6
+
+    def __load_meta_data_v7__(self, ):
+        """Loads the SDAQ-hdf5 version 7 introduced from 26th of December 2022 at 13:02.
+
+        CHANGES in respect to version 6
+        -------------------------------
+        added: @hld - 'hld/file_start', 'hld/file_end'
+        """
+        # load the single hdf5 groups
+        self.__load_meta_data_daq_v3__()  # TRB_DAQ
+        self.__load_meta_data_gimbal__()  # Gimbal
+        self.__load_meta_data_laser_v2__()  # Laser
+        self.__load_meta_data_counts__()  # counts
+        self.__load_meta_data_tot_v2__()  # TOT
+        self.__load_meta_data_hld__()  # TOT
+        self.__load_meta_data_measurement__()
+        self.file_version = 7
 
     # ---- Helper functions for load ----
     def __load_meta_data_gimbal__(self):
@@ -192,7 +215,7 @@ class FileHandler(BaseFileHandler):
         self.__load_meta_data_laser_v1__()
 
     def __load_meta_data_tot__(self):
-        # TOT - sometime there is no TOT available
+        """TOT - sometime there is no TOT available"""
         try:
             self.tot_time = self.file['tot/time']
             self.tot_time_ns = self.file['tot/time_ns']
@@ -201,11 +224,18 @@ class FileHandler(BaseFileHandler):
             pass
 
     def __load_meta_data_tot_v2__(self):
-        # TOT - sometime there are is no TOT available
+        """TOT - sometime there are is no TOT available"""
         self.tot_time = self.file['tot/time']
         self.tot_time_ns = self.file['tot/time_ns']
         self.tot_tot = self.file['tot/tot']
         self.tot_hld_start_time = self.file['tot/hld_start_time']
+
+    def __load_meta_data_hld__(self):
+        """hld-file start and end times. The time represents the storage of the parameters in the sdaq job.
+        Usually, it's after the unpacking of the hld file."""
+        self.hld_time = self.file['hld/time']
+        self.hld_file_start = self.file['hld/file_start']
+        self.hld_file_start = self.file['hld/file_end']
 
     def __load_meta_data_counts__(self):
         # Counter
