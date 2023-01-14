@@ -37,6 +37,9 @@ class Config:
         un_mirror: bool, optional
             the images are stored with the first axis
         """
+        # store device_code
+        self.device_code = device_code
+
         # [x, y] pixel coordinate of the module above the camera
         self._position_module_ = None
 
@@ -60,7 +63,7 @@ class Config:
                     self._mask_mounting_ = f[device_code]
 
             if device_code in self.position_dict:
-                # copy all, otherwise its a pointer on position_dict
+                # copy all, otherwise it's a pointer on position_dict
                 dictionary = self.position_dict[device_code]
                 self._position_module_ = self.__get_copy__(dictionary, 'module')
                 self._position_data_cable_ = self.__get_copy__(dictionary, 'data_cable')
@@ -82,13 +85,13 @@ class Config:
 
     @property
     def position_data_cable(self):
-        """[x, y] pixel coordinates of the data cable close to the camera. The cables goes from there to
+        """[x, y] pixel coordinates of the data cable close to the camera. The cables go from there to
         self.position_module. Use self.data_cable to get [position_module, position_data_cable].T"""
         return self._position_data_cable_
 
     @property
     def position_steel_cable(self):
-        """[x, y] pixel coordinates of the steel cable close to the camera. The cables goes from there to
+        """[x, y] pixel coordinates of the steel cable close to the camera. The cables go from there to
         self.position_module. Use self.steel_cable to get [position_module, position_steel_cable].T"""
         return self._position_steel_cable_
 
