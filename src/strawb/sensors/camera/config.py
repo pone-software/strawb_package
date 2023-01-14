@@ -49,8 +49,11 @@ class Config:
         # [x, y] pixel coordinates of the steel cable close to the camera
         self._position_steel_cable_ = None
 
-        # load data and set parameters
+        # load data and set parameters later
         self._mask_mounting_ = np.ones((1280, 960), dtype=bool)  # default
+
+        # distance to the line for each pixel. Default is set to 2000 [pixel] ~ 1500[pixel]*np.sqrt(2)
+        self._pixel_distances_line_ = 2000  # default
 
         # [x, y] pixel coordinates center of the camera's lenses
         self._position_lenses_center_ = None
@@ -61,6 +64,10 @@ class Config:
             with np.load(os.path.join(camera_home, 'mounting_mask.npz')) as f:
                 if device_code in f:
                     self._mask_mounting_ = f[device_code]
+
+            with np.load(os.path.join(camera_home, 'pixel_distances_line.npz')) as f:
+                if device_code in f:
+                    self._pixel_distances_line_ = f[device_code]
 
             if device_code in self.position_dict:
                 # copy all, otherwise it's a pointer on position_dict
@@ -77,6 +84,41 @@ class Config:
     def mask_mounting(self):
         """A pixel mask which masks the mounting."""
         return self._mask_mounting_
+
+    @property
+    def pixel_distances_line(self):
+        """Distance to the line for each pixel as 2d array. Distances are only calculated in the module's FoV,
+        i.e. where mask_mounting is True. Outside, the values is set to 2000 [pixel] ~ 1500[pixel]*np.sqrt(2)
+
+        Generator code
+        --------------
+        >>> import strawb.camera
+        >>> import numpy
+        >>>
+        >>> pixel_distances_line_dict = {}
+        >>> for i in range(1,2):
+        >>>     cam_conf = strawb.camera.Config(f'TUMPMTSPECTROMETER00{i}')  # camera config class
+        >>>
+        >>>     # get the pixel coordinates to calculate the distance to the line
+        >>>     pixel_coordinates = numpy.argwhere(cam_conf.mask_mounting)[:,::-1].T
+        >>>
+        >>>     line = numpy.array([cam_conf.position_data_cable,
+        >>>                      cam_conf.position_module,
+        >>>                      cam_conf.position_steel_cable])
+        >>>
+        >>>     # calculate the distances - not very fast, needs some time
+        >>>     distances_line = strawb.camera.tools.get_distances_line(*pixel_coordinates, line)
+        >>>
+        >>>     pixel_distances_line = cam_conf.mask_mounting.copy().astype(float)
+        >>>     # all mounting pixels are set to 2000 [pixel] ~ 1500[pixel]*np.sqrt(2)
+        >>>     pixel_distances_line[pixel_distances_line==0] = 2000
+        >>>     pixel_distances_line[pixel_distances_line==1] = distances_line
+        >>>
+        >>>     pixel_distances_line_dict.update({cam_conf.device_code: pixel_distances_line})
+        >>>
+        >>> numpy.savez_compressed('pixel_distances_line.npz', **pixel_distances_line_dict)
+        """
+        return self._pixel_distances_line_
 
     @property
     def position_module(self):
