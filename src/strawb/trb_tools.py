@@ -355,7 +355,7 @@ class TRBTools:
                     ][0]
 
         daq_frequency_readout = float(daq_frequency_readout)  # must be a float
-        dcounts_arr = np.array(dcounts_arr, dtype=np.float)  # must be of int64
+        dcounts_arr = np.array(dcounts_arr, dtype=float)  # must be of int64
 
         # Calculate Rates
         delta_time = dcounts_time.astype(float) / daq_frequency_readout  # seconds
@@ -477,13 +477,18 @@ class TRBTools:
         return time_inter, rate_inter, active
 
     def __load_interp_rate__(self):
-        group = self.file_handler.file['counts_interpolated']
+        """Moved to InterpolatedRatesFile"""
+        group = self.file_handler.file['rates_interpolated']
         self._interp_frequency_ = group.attrs['interpolated_frequency']
+
         self._interp_time_ = group['time']
-        self._interp_rate_ = group['rate']
+        if 'mask' in group:
+            self._interp_mask_ = group['mask']
+        self._interp_rate_ = np.array(group['rate'])
 
     def write_interp_rate(self, force_write=False, compression_dict=None):
-        """Write the interpolated rates and time to the file.
+        """Moved to InterpolatedRatesFile
+        Write the interpolated rates and time to the file.
         PARAMETER
         ---------
         force_write: bool, optional
@@ -523,6 +528,7 @@ class TRBTools:
             self.file_handler.open()  # open in read only mode
 
     def remove_interp_rate(self, ):
+        """Moved to InterpolatedRatesFile"""
         if self.file_handler is None:
             return
 
@@ -540,26 +546,84 @@ class TRBTools:
 
 
 class InterpolatedRatesFile:
-    def __init__(self, file_name, version=2, read_data=True):
-        """Loads or write the interpolated rate data to a hdf5 file."""
+    def __init__(self, file_name, read_data=True):
+        """Loads or write the interpolated rate data to a hdf5 file. Interpolated rates are processed rates in order
+        to transform the raw rates with unequal readout frequency to a fixed artificial readout frequency by
+        interpolation. To handle periods where no raw rates are available, the interpolated rates come with a mask
+        that flags the artificial readout intervals where no raw rates are recorded. Consequently, interpolated
+        rates intervals are not masked when at least one raw rate is recorded.
+
+        EXAMPLE
+        -------
+        Legend: artificial intervals: '|', interpolated rater: 'i', raw rates data: 'x'
+        Time         : ->
+        RAW          : | x    | x    |  x  x|  x   |   x  |      |x x  x|  x   | x  x |  x x | x    |   x  |
+        Interpolated : |  i   |  i   |  i   |  i   |  i   |  i   |  i   |  i   |  i   |  i   |  i   |  i   |
+        mask         : |  0   |  0   |  0   |  0   |  0   |  1   |  0   |  0   |  0   |  0   |  0   |  0   |
+        """
 
         self.file_name = os.path.abspath(file_name)
 
-        self.time = None
-        self.rate = None
+        self.__time__ = None
+        self.__rate__ = None
+        self.__mask__ = None
 
         self.file_start = None
         self.file_end = None
 
         self._t_probe_, self._active_ = None, None
 
-        self.version = version
         if read_data and os.path.exists(self.file_name):
             self.read()
         elif read_data and not os.path.exists(self.file_name):
             print(f"WARNING: file doesn't exist {self.file_name}")
 
-    def write_to_file(self, pmt, file_attrs=None, group_attrs=None):
+    @property
+    def time(self):
+        """Interpolated (artificial) readout time of the rates.
+        RETURN
+        ------
+        time: np.ma.ndarray
+            time in seconds with fixed frequency. Periods where no RAW rates are available, are masked.
+            However, the time is still available for these periods with `time.data`.
+        """
+        if self.__time__ is None:
+            self.read()
+        if self.__mask__ is None:
+            self.read()
+            return np.ma.array(self.__time__)
+        else:
+            return np.ma.array(self.__time__, mask=self.mask)
+
+    @property
+    def rate(self):
+        """Interpolated (artificial) readout rates.
+        RETURN
+        ------
+        mask: np.ndarray
+            interpolated rate in Hz as a 2D array with the shape : [channel_i, time_i]. Periods where no RAW rates are
+            available, are masked. However, the interpolated is still available for these periods with `rate.data`.
+        """
+        if self.__rate__ is None:
+            self.read()
+        if self.mask is None:
+            return np.ma.array(self.__rate__)
+        else:
+            return np.ma.array(self.__rate__, mask=np.ones_like(self.__rate__, dtype=bool) * self.mask)
+
+    @property
+    def mask(self):
+        """Interpolated (artificial) readout mask. A flag for period where no RAW data is recorded.
+        RETURN
+        ------
+        maks: np.ndarray
+            interpolated rate in Hz. Periods where no RAW rates are available, are True (np.ma.array logic)
+        """
+        if self.__time__ is None:  # check if file is loaded
+            self.read()  # read sets __time__
+        return self.__rate__
+
+    def write_to_file(self, trb_tools, file_attrs=None, group_attrs=None):
         """Write interpolated data of PMT to the file. It generates a hdf5 file and adds the data as follows:
         group: /rates_interpolated
         data_Set: /rates_interpolated/rate - with shape [channels, time]
@@ -569,9 +633,9 @@ class InterpolatedRatesFile:
 
         PARAMETER
         ---------
-        pmt: strawb.sensors.PMTSpec
-            class which holds the PMT Data and process code.
-            To change the interpolation frequency, do it before you execute this function.
+        trb_tools: strawb.trb_tools.TRBTools
+            class which holds the TRB Data and process code. To change the interpolation frequency,
+            do it before you execute this function.
         file_attrs: dict, optional
             hdf5 file attributes
         group_attrs: dict, optional
@@ -597,7 +661,7 @@ class InterpolatedRatesFile:
                 group.attrs.update({i: group_attrs[i]})
 
             tools.append_hdf5(f, '/rates_interpolated/rate',
-                              data=pmt.trb_rates.interp_rate.data,
+                              data=trb_tools.interp_rate.data,
                               axis=1,
                               **h5py_dataset_options)
 
@@ -606,22 +670,21 @@ class InterpolatedRatesFile:
                 h5py_opt_1d['chunks'] = (h5py_opt_1d['chunks'][1],)
 
             tools.append_hdf5(f, '/rates_interpolated/time',
-                              data=tools.datetime2float(pmt.trb_rates.interp_time.data),
+                              data=tools.datetime2float(trb_tools.interp_time.data),
                               **h5py_opt_1d)
 
             tools.append_hdf5(f, '/rates_interpolated/mask',
-                              data=pmt.trb_rates.interp_time.mask,
+                              data=trb_tools.interp_time.mask,
                               **h5py_opt_1d)
 
     def read(self, ):
         """ Reads the file. """
         with h5py.File(self.file_name, 'r') as f:
-            if self.version == 2:
-                self.time = np.ma.array(f['/rates_interpolated/time'][:],
-                                        mask=f['/rates_interpolated/mask'][:])
-            else:
-                self.time = f['/rates_interpolated/time'][:]
-            self.rate = np.array(f['/rates_interpolated/rate'][:])
+            if '/rates_interpolated/mask' in f:
+                self.__mask__ = f['/rates_interpolated/mask'][:]
+
+            self.__time__ = f['/rates_interpolated/time'][:]
+            self.__rate__ = np.array(f['/rates_interpolated/rate'][:])
 
             self.file_start = f.attrs['file_start']
             self.file_end = f.attrs['file_end']
