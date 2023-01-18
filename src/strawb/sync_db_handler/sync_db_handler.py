@@ -65,11 +65,11 @@ class SyncDBHandler(BaseDBHandler):
             parsed to ONCDownloader(**kwargs), e.g.: token, outPath, download_threads
         optimize_dataframe: bool, optional
             if the dataframe should be optimized for RAM and disc size based on `self.optimize_dataframe()`.
-            It manly introduce pandas dtype 'category'
+            It manly introduces pandas dtype 'category'
 
         EXAMPLES
         --------
-        Load the DB from disc (also works if there non on disc), update it and store it on disc
+        Load the DB from disc (also works if there is no one on disc), update it and store it on disc
         >>> db = strawb.SyncDBHandler(load_db=False)  # loads the db
         >>> db.load_onc_db_update(output=True, save_db=True)
 
@@ -153,7 +153,7 @@ class SyncDBHandler(BaseDBHandler):
             try:
                 dataframe.sort_values(by=['dateFrom', 'dateTo', 'deviceCode', 'dataProductCode'],
                                       inplace=True,
-                                      ascending=True)  # old first, latest last
+                                      ascending=True)  # old first, the latest last
             except KeyError:
                 pass
             # dataframe.sort_index(inplace=True, ignore_index=False)  # and sort it inplace
@@ -161,7 +161,7 @@ class SyncDBHandler(BaseDBHandler):
 
     def add_new_db(self, dataframe2add, dataframe=None, ):
         """Updates a pandas.DataFrame to the internal pandas.DataFrame. If there is no internal pandas.DataFrame it set
-        the provided dataframe as the internal. Otherwise it appends the dataframe to the internal.
+        the provided dataframe as the internal. Otherwise, it appends the dataframe to the internal.
 
         PARAMETER
         ---------
@@ -220,12 +220,12 @@ class SyncDBHandler(BaseDBHandler):
             df_a = dataframe.merge(dataframe2add, on='x', how='outer', suffixes=[None, '_right_merge'])
             mask_columns = df_a.columns.str.find('_right_merge') > 0
 
-            if use is 'left':
+            if use == 'left':
                 for i in df_a.columns[mask_columns]:
                     mask_na = ~df_a[i].isna()
                     df_a.loc[mask_na, i.replace('_right_merge', '')] = df_a.pop(i)[mask_na]
 
-            elif use is 'right':
+            elif use == 'right':
                 for i in df_a.columns[mask_columns]:
                     mask_na = df_a[i.replace('_right_merge', '')].isna()
                     df_a.loc[mask_na, i.replace('_right_merge', '')] = df_a.pop(i)[mask_na]
@@ -241,7 +241,7 @@ class SyncDBHandler(BaseDBHandler):
 
     def add_new_columns(self, dataframe2add, dataframe=None, overwrite=False):
         """Adds new columns from a pandas.DataFrame to the internal pandas.DataFrame. If there is no internal
-        pandas.DataFrame it set the provided dataframe as the internal. Otherwise it adds the columns from the provided
+        pandas.DataFrame it set the provided dataframe as the internal. Otherwise, it adds the columns from the provided
          dataframe to the internal dataframe (here in-place).
 
         PARAMETER
@@ -327,7 +327,7 @@ class SyncDBHandler(BaseDBHandler):
         b: dataset
         priority_column: str
             the column to detect from which dataset (`a` or `b`) to delete the index.
-            `a` has an higher priority then `b`. If None, delete all intersections from `b`.
+            `a` has a higher priority then `b`. If None, delete all intersections from `b`.
         """
         if priority_column not in a:
             a[priority_column] = None
@@ -375,7 +375,7 @@ class SyncDBHandler(BaseDBHandler):
         PARAMETER
         ---------
         dictionary: dict
-            dictionary to replace the values
+            dictionary for the replacemet
         converter: dict
             The converter must be in the shape of {<key>: {<value>: <replacement>}
 
@@ -395,7 +395,7 @@ class SyncDBHandler(BaseDBHandler):
             for key_ii in converter[key_i]:
                 if isinstance(key_ii, float) and np.isnan(key_ii):
                     converter_nan[key_i] = converter[key_i][key_ii]
-                    break  # there can only be one np.nan per key_i as its a dict
+                    break  # there can only be one np.nan per key_i as it's a dict
 
         for key_i in converter:
             if key_i in dictionary:
@@ -414,7 +414,7 @@ class SyncDBHandler(BaseDBHandler):
         PARAMETER
         ---------
         dictionary: dict
-            dictionary to replace the values
+            dictionary for the replacemet
         converter: dict
             The converter must be in the shape of {<key>: {<value>: <replacement>}
 
@@ -446,7 +446,7 @@ class SyncDBHandler(BaseDBHandler):
         PARAMETER
         ---------
         dataframe: Union[None, pandas.DataFrame], optional
-            If None (default) it checks the internal dataframe. Otherwise it checks the provided dataframe.
+            If None (default) it checks the internal dataframe. Otherwise, it checks the provided dataframe.
         """
         if dataframe is None:
             dataframe = self.dataframe
@@ -537,7 +537,7 @@ class SyncDBHandler(BaseDBHandler):
         items_to_check &= dataframe.fullPath.str.endswith('hdf5') | dataframe.fullPath.str.endswith('h5')
         items_to_check &= dataframe['synced']  # exclude non existing files
 
-        # convert file_id's with nan to int. Otherwise pandas interprets the Series as float and the resolution
+        # convert file_id's with nan to int. Otherwise, pandas interprets the Series as float and the resolution
         # of the np.float64 isn't sufficient for a np.uint64.
         if entries_converter is None:
             entries_converter = {'previous_file_id': {np.nan: 0}, 'following_file_id': {np.nan: 0}}
@@ -575,7 +575,7 @@ class SyncDBHandler(BaseDBHandler):
         RETURN
         ------
         h5_dataframe: pandas.DataFrame
-            a pandas.DataFrame from the hdf5 file attributes. This is a new DataFrame and independent from the provided
+            a pandas.DataFrame from the hdf5 file attributes. This is a new DataFrame and independent of the provided
             dataframe. Therefore, both DataFrames have to be combined in case this is needed.
         """
         if dataframe is None:
@@ -611,7 +611,7 @@ class SyncDBHandler(BaseDBHandler):
 
     def update_db_and_load_files(self, dataframe=None, output=False, download=False, add_hdf5_attributes=True,
                                  add_dataframe=True, add_file_version=True, save_db=False):
-        """Depending which options are set, this function does any combination of the following 4 tasks:
+        """Depending on which options are set, this function does any combination of the following 4 tasks:
         1. `download=True` -> loads all missing files from the dataframe
         2. `add_hdf5_attributes=True` -> updates the hdf5 attributes from the files which are present on the disc
         3. 'add_file_version' -> scan the files and extract the file_version
@@ -696,7 +696,7 @@ class SyncDBHandler(BaseDBHandler):
         return self.load_onc_db(**kwargs)
 
     def load_onc_db_update(self, **kwargs):
-        """Load the newest entries of the ONC DB. If the local DB doesn't exists, it loads the entire db
+        """Load the newest entries of the ONC DB. If the local DB doesn't exist, it loads the entire db
         `date_from='strawb_all'`. If the local DB exists, it takes the time of the latest entry. If this time is
         older than a day, it updated the entries from that date incl. the day before. If it is less than a day, it
         doesn't load something.
@@ -794,8 +794,8 @@ class SyncDBHandler(BaseDBHandler):
         PARAMETER
         ---------
         i: int or str
-            could a integer or string to select a item from the dataframe. Or directly a pandas.Series.
-            The integer is used as an numeric index and the string as the index (fullPath) of the pandas dataframe.
+            could an integer or string to select an item from the dataframe. Or directly a pandas.Series.
+            The integer is used as a numeric index and the string as the index (fullPath) of the pandas dataframe.
         dataframe: pandas.DataFrame ro None, optional
             the dataframe to which i_or_full_path revers. If None, default, it takes the internal dataframe.
         *args, **kwargs: optional
@@ -828,8 +828,8 @@ class SyncDBHandler(BaseDBHandler):
         PARAMETER
         ---------
         i: int or str
-            could a integer or string to select a item from the dataframe. Or directly a pandas.Series.
-            The integer is used as an numeric index and the string as the index (fullPath) of the pandas dataframe.
+            could an integer or string to select an item from the dataframe. Or directly a pandas.Series.
+            The integer is used as a numeric index and the string as the index (fullPath) of the pandas dataframe.
         dataframe: pandas.DataFrame ro None, optional
             the dataframe to which i_or_full_path revers. If None, default, it takes the internal dataframe.
         """
@@ -863,7 +863,7 @@ class SyncDBHandler(BaseDBHandler):
         PARAMETER
         ---------
         dataframe: Union[None, pandas.DataFrame], optional
-            If None (default) it checks the internal dataframe. Otherwise it checks the provided dataframe.
+            If None (default) it checks the internal dataframe. Otherwise, it checks the provided dataframe.
         """
         if dataframe is None:
             dataframe = self.dataframe
@@ -912,7 +912,7 @@ class SyncDBHandler(BaseDBHandler):
         time_from, time_to: datetime-like, str, int, float
             Value to be converted to Timestamp.
         dataframe: Union[None, pandas.DataFrame], optional
-            If None (default) it checks the internal dataframe. Otherwise it checks the provided dataframe.
+            If None (default) it checks the internal dataframe. Otherwise, it checks the provided dataframe.
         tz : str, pytz.timezone, dateutil.tz.tzfile or None, optional
             Time zone for time_from, time_to. Default: "UTC"
         RETURNS
@@ -927,7 +927,7 @@ class SyncDBHandler(BaseDBHandler):
 
     def optimize_dataframe(self, exclude_columns=None, include_columns=None):
         """function which optimize the dataframe to reduce the size, manly RAM but also on disc.
-        It use converts the columns as defined in this function. Which is manly by introducing pandas dtype "category"
+        It uses converts the columns as defined in this function. Which is manly by introducing pandas dtype "category"
         PARAMETER
         ---------
         exclude_columns: list
