@@ -200,7 +200,7 @@ class SyncDBHandler(BaseDBHandler):
         return dataframe
 
     def __add_new_columns__(self, dataframe2add, dataframe=None, use='left'):
-        """Alternative version with pandas.merge not test"""
+        """Alternative version with `pandas.merge` not test"""
         if use not in ['right', 'left']:
             raise ValueError(f'Use must be one of [right, left], got: {use}')
         in_place = False
@@ -369,7 +369,7 @@ class SyncDBHandler(BaseDBHandler):
     @staticmethod
     def _convert_dict_entries_(dictionary, converter):
         """Converts entries in a dictionary following the converter dict. The converter must be in the shape
-        {<key>: {<value>: <replacement>} where the original dictionary is {<key>: <value>}. It also suports np.nan as
+        {<key>: {<value>: <replacement>} where the original dictionary is {<key>: <value>}. It also suports `np.nan` as
         <values>, because np.nan == np.nan if False, by default.
 
         PARAMETER
@@ -933,6 +933,8 @@ class SyncDBHandler(BaseDBHandler):
         exclude_columns: list
             columns to exclude, default None
         """
+        if self.dataframe is None:
+            return
         if exclude_columns is None:
             exclude_columns = []
 
