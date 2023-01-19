@@ -226,7 +226,7 @@ class ShareJobThreads:
 
         with tqdm.tqdm(self.iterable,
                        file=sys.stdout,
-                       unit=self.unit) as bar:
+                       unit=self.unit, smoothing=0) as bar:
             while any([thread_i.is_alive() for thread_i in self.threads]) or last_i != self.i_bar:
                 with self.lock:
                     # print(self.i, self.active)
