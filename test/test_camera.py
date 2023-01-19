@@ -71,9 +71,9 @@ class TestCameraImages(TestCase):
         mode_list, mask_list = self.picture_handler.get_lucifer_mask()
         mask_lucifer = np.any(mask_list, axis=0)
 
-        mask = (self.picture_handler.integrated_minus_dark > 5e3) & self.picture_handler.invalid_mask & ~mask_lucifer
+        mask = (self.picture_handler.integrated_minus_dark > 5e3) & self.picture_handler.valid_mask & ~mask_lucifer
         index = np.argsort(self.picture_handler.integrated_minus_dark)
-        index = index[mask[index]]  # remove invalid items  & cam_module.invalid_mask
+        index = index[mask[index]]  # remove invalid items  & ~cam_module.valid_mask
         index = index[::-1]  # revers the order
         self.picture_handler.image2png(index=index, f_name_formatter='{i}_{datetime}.png')
 
@@ -95,4 +95,3 @@ class TestCameraImages(TestCase):
         self.assertEqual(self.picture_handler.normalize_rgb(arr, bit_out=8)[-1], 255)
         self.assertEqual(self.picture_handler.normalize_rgb(arr, bit_out=16)[-1], int(2**16-1))
         self.assertEqual(self.picture_handler.normalize_rgb(arr, bit_out=0)[-1], 1)
-

@@ -1,8 +1,8 @@
 from unittest import TestCase
 import numpy as np
 
-from src.strawb.sensors.camera.projection import CameraProjection, EquisolidProjection, ProjectionTools, \
-    SphereDistortion
+from src.strawb.sensors.camera.projection import CameraProjection, EquisolidProjection, ProjectionTools
+from src.strawb.sensors.camera.distortion import SphereDistortion
 
 
 class TestCameraProjection(TestCase):
@@ -91,8 +91,8 @@ class TestCameraProjection(TestCase):
     def test_vec2pixel(self):
         # create points on a circle around the center with radius 1 pixel
         radius = 1.5
-        phi, theta = np.meshgrid(np.linspace(0, np.pi*2., 9),
-                                 np.linspace(0, np.pi/2., 7))
+        phi, theta = np.meshgrid(np.linspace(0, np.pi * 2., 9),
+                                 np.linspace(0, np.pi / 2., 7))
         vec = radius * np.array([np.cos(phi) * np.sin(theta),
                                  np.sin(phi) * np.sin(theta),
                                  np.cos(theta)]).reshape(3, -1)
@@ -104,9 +104,9 @@ class TestCameraProjection(TestCase):
 
             r, phi, theta = ProjectionTools.cart2spherical(*(vec_inv - vec))
             msg = '\n'.join(['invert_dir_i= {invert_dir_i}',
-                             # f'vec    ={vec}',
-                             # f'vec_inv={vec_inv}',
-                             # f'r      ={r}'
+                             f'vec    ={vec}',
+                             f'vec_inv={vec_inv}',
+                             f'r      ={r}'
                              ])
             self.assertAlmostEqual(r.max(), 0, places=12, msg=msg)
 
@@ -174,9 +174,9 @@ class TestEquisolidProjection(TestCase):
 
             r, phi, theta = ProjectionTools.cart2spherical(*(vec_inv - vec))
             msg = '\n'.join(['invert_dir_i= {invert_dir_i}',
-                             # f'vec    ={vec}',
-                             # f'vec_inv={vec_inv}',
-                             # f'r      ={r}'
+                             f'vec    ={vec}',
+                             f'vec_inv={vec_inv}',
+                             f'r      ={r}'
                              ])
             self.assertAlmostEqual(r.max(), 0, places=12, msg=msg)
 
@@ -188,7 +188,8 @@ class TestSphereDistortion(TestCase):
         self.center_index = np.array([10, 15])
         self.pixel_size = 1e-5  # meter
         # Values for STRAWb
-        self.distortion = SphereDistortion(h=.063, r=.1531, d=.012, n_a=1., n_g=1.52, n_w=1.35)
+        self.distortion = SphereDistortion(r_position=.063, r_sphere=.1531, thickness_sphere=.012,
+                                           n_a=1., n_g=1.52, n_w=1.35)
         self.projection = EquisolidProjection(self.focal_length,
                                               pixel_size=self.pixel_size,
                                               pixel_center_index=self.center_index,
@@ -244,8 +245,8 @@ class TestSphereDistortion(TestCase):
 
             r, phi, theta = ProjectionTools.cart2spherical(*(vec_inv - vec))
             msg = '\n'.join(['invert_dir_i= {invert_dir_i}',
-                             # f'vec    ={vec}',
-                             # f'vec_inv={vec_inv}',
-                             # f'r      ={r}'
+                             f'vec    ={vec}',
+                             f'vec_inv={vec_inv}',
+                             f'r      ={r}'
                              ])
             self.assertAlmostEqual(r.max(), 0, places=12, msg=msg)

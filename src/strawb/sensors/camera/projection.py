@@ -1,5 +1,7 @@
 import numpy as np
-import scipy.interpolate
+
+# unittest  takes another import. Therefore, Distortion2.
+from .distortion import Distortion
 
 
 def reshape_data(y, target):
@@ -137,11 +139,11 @@ class CameraProjection:
         ---------
         focal_length: float
             focal length of the lens in meter
-        pixel_size_xy: tuple, list, ndarray, int, float
+        pixel_size: tuple, list, ndarray, int, float
             size of a pixel on the image sensor in meter.
             If tuple, list, ndarray: different sizes in x and y. First values corresponds to x and second to y.
             If int, float: same size for x and y.
-        pixel_center: tuple, list, ndarray of floats
+        pixel_center_index: tuple, list, ndarray of floats
             pixel indexes of the lens center on the image plane. First values corresponds to x and second to y.
         invert_dir: bool, optional
             if the image should be rotated by 180deg
@@ -152,11 +154,11 @@ class CameraProjection:
         # set and check distribution
         if distortion is None:
             distortion = []
-        elif isinstance(distortion, Distortion):
+        elif isinstance(distortion, (Distortion, )):
             distortion = [distortion]
 
         for distortion_i in distortion:
-            if not isinstance(distortion_i, Distortion):
+            if not isinstance(distortion_i, (Distortion, )):
                 raise TypeError(f'All distributions must be subclasses of Distortion. Got: {type(distortion_i)}')
         self.distortion = distortion
 
@@ -418,134 +420,3 @@ class EquisolidProjection(CameraProjection):
         # r_pixel = 2*f*np.sin(theta/2)
         # -> 2 * arcsin(r_pixel/2/f) = theta
         return 2. * self.focal_length * np.sin(theta / 2.)
-
-
-class Distortion:
-    def theta_distortion(self, theta, *args, **kwargs):
-        """Prototype for a distortion in theta. Theta is undistorted and theta_dis is distorted.
-        E.g. for a distribution of a lens, theta refers to the angle in the read world and theta_dis to the angle
-        after the lens.
-        PARAMETER
-        ---------
-        theta: ndarray, float
-            undistorted theta
-        args: iterable, optional
-        kwargs: dict, optional
-        RETURN
-        ---------
-        theta_dis: ndarray, float
-            distorted theta
-        """
-        return theta
-
-    def theta_distortion_inv(self, theta_dis, *args, **kwargs):
-        """Prototype for the inverse distortion of theta. Theta is undistorted and theta_dis is distorted.
-        E.g. for a distribution of a lens, theta refers to the angle in the read world and theta_dis to the angle
-        after the lens.
-        PARAMETER
-        ---------
-        theta_dis: ndarray, float
-            distorted theta
-        args: iterable, optional
-        kwargs: dict, optional
-        RETURN
-        ---------
-        theta: ndarray, float
-            undistorted theta
-        """
-        return theta_dis
-
-    def phi_distortion(self, phi, *args, **kwargs):
-        """Prototype for a distortion in phi. Phi is undistorted and phi_dis is distorted.
-        E.g. for a distribution of a lens, phi refers to the angle in the read world and phi_dis to the angle
-        after the lens.
-        PARAMETER
-        ---------
-        phi: ndarray, float
-            undistorted phi
-        args: iterable, optional
-        kwargs: dict, optional
-        RETURN
-        ---------
-        phi_dis: ndarray, float
-            distorted phi
-        """
-        return phi
-
-    def phi_distortion_inv(self, phi_dis, *args, **kwargs):
-        """Prototype for the inverse distortion of phi. Phi is undistorted and phi_dis is distorted.
-        E.g. for a distribution of a lens, phi refers to the angle in the read world and phi_dis to the angle
-        PARAMETER
-        ---------
-        phi_dis: ndarray, float
-            distorted phi
-        args: iterable, optional
-        kwargs: dict, optional
-        RETURN
-        ---------
-        phi: ndarray, float
-            undistorted phi
-        """
-        return phi_dis
-
-
-class SphereDistortion(Distortion):
-    """Calculates the Distortion of a sphere."""
-
-    def __init__(self, h, r, d, n_a=1., n_g=1.52, n_w=1.35):
-        """Calculates the Distortion of a sphere.
-        Values for STRAWb: h=.063, r=.1531, d=.012, n_a=1., n_g=1.52, n_w=1.35
-        PARAMETER
-        ---------
-        h: float; radius at which theta is measured, e.g. the location of camera in meter
-        r: float; inner radius of the sphere in meter
-        d: float; thickness of the sphere in meter
-        n_a: float, optional; refractive index inside the sphere (air)
-        n_g: float, optional; refractive index of the sphere (glass)
-        n_w: float, optional; refractive index outside the sphere (water)
-        """
-        self.h = h  # radius at which theta is measured, e.g. the location of camera in meter
-        self.r = r  # inner radius of the sphere in meter
-        self.d = d  # thickness of the sphere in meter
-        self.n_a = n_a  # refractive index inside the sphere (air)
-        self.n_g = n_g  # refractive index of the sphere (glass)
-        self.n_w = n_w  # refractive index outside the sphere (water)
-
-        # to calculate the inverse numerically
-        self.__theta_distortion__ = None
-
-    def theta_distortion(self, theta, n=int(1e6), **kwargs):
-        """Applies the theta distortion: theta -> theta_distortion
-        PARAMETER
-        ---------
-        theta: ndarray
-            undistorted theta values
-        n: int
-            the inverse is calculated numerically at the positions: np.linspace(0, np.pi, n).
-            Therefore higher n provides more accuracy.
-        args: iterable, optional
-            to match signature of the base method `SphereDistortion.theta_distortion_inv()'
-        """
-        # only calculate or update it when needed
-        if self.__theta_distortion__ is None or int(n) != len(self.__theta_distortion__.x):
-            theta_numeric = np.linspace(0, np.pi, int(n))
-            beta = self.theta_distortion_inv(theta_numeric)
-            self.__theta_distortion__ = scipy.interpolate.interp1d(x=beta, y=theta_numeric,
-                                                                   kind='cubic', assume_sorted=True)
-        return self.__theta_distortion__(theta)
-
-    def theta_distortion_inv(self, theta_dis, n=10000,  **kwargs):
-        """Applies the theta inverse distortion: theta_distortion -> theta.
-        PARAMETER
-        ---------
-        theta_dis: ndarray
-            distorted theta values
-        args: iterable, optional
-            to match signature of the base method `SphereDistortion.theta_distortion_inv()'
-        """
-        # only calculate or update it when needed
-        a_0 = np.arcsin(self.h / self.r * np.sin(theta_dis))
-        a_1 = np.arcsin(self.n_a / self.n_g * self.h / self.r * np.sin(theta_dis))
-        b_0 = np.arcsin(self.h / (self.r + self.d) * np.sin(theta_dis))
-        b_1 = np.arcsin(self.n_a / self.n_w * self.h / (self.r + self.d) * np.sin(theta_dis))
-        return theta_dis - a_0 + a_1 - b_0 + b_1
