@@ -111,7 +111,7 @@ class FindCluster:
     def images(self, value):
         self._images_ = value
 
-    def get_cluster(self, pic_index, min_std=None, min_size_cluster=None, max_gaps=None, mask_mounting=True):
+    def get_cluster(self, pic_index, min_std=None, min_size_cluster=None, max_gaps=None, mask_mounting=False):
         """
         Find clusters of bright pixels.
 
@@ -127,7 +127,7 @@ class FindCluster:
             the maximum gap size within one cluster. If None, take from init.
         mask_mounting: bool or ndarray, optional
             True if the mounting, if known, should be excluded from the cluster search (mounting will be all label=0).
-            An ndarray defines the mask which pixels should be excluded from the cluster search. Must match the pixel
+            A ndarray defines the mask which pixels should be excluded from the cluster search. Must match the pixel
             shape. `mask_mounting[i] = True` means include and `mask_mounting[i] = False` exclude the pixel i.
         Returns
         -------
@@ -136,7 +136,7 @@ class FindCluster:
         int
             Number of clusters found in the picture.
         """
-        # in case its not specified, take the default from init
+        # in case it's not specified, take the default from init
         if min_std is None:
             min_std = self.min_std
         if min_size_cluster is None:
@@ -145,7 +145,13 @@ class FindCluster:
             max_gaps = self.max_gaps
         if isinstance(mask_mounting, bool):
             if mask_mounting:
-                mask_mounting = self.camera.config.mask_mounting
+                if len(self.camera.config.mask_mounting.shape) == len(self.images[0].shape) and \
+                        np.all(np.array(self.camera.config.mask_mounting.shape) == np.array(self.images[0].shape)):
+                    mask_mounting = self.camera.config.mask_mounting
+                else:
+                    print(f'Provided mask_mounting (shape: {self.camera.config.mask_mounting.shape}) has incompatible ',
+                          f'shape to image (shape: {self.images[0].shape})')
+                    mask_mounting = None
             else:
                 mask_mounting = None
         elif isinstance(mask_mounting, np.ndarray):
@@ -159,6 +165,7 @@ class FindCluster:
         # create a map with values True if the deviation is >= min_std, else False
         z = dev >= min_std
         del dev
+
         if mask_mounting is not None:
             # all mask_mounting==False should be set to False in dev
             z[~mask_mounting] = 0
@@ -359,7 +366,7 @@ class FindCluster:
 
         return specs_dict
 
-    def df_picture(self, pic_index, min_std=None, min_size_cluster=None, max_gaps=None, mask_mounting=True):
+    def df_picture(self, pic_index, min_std=None, min_size_cluster=None, max_gaps=None, mask_mounting=False):
         """
         Get DataFrame with properties of all clusters in a picture.
 

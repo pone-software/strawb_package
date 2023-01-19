@@ -44,15 +44,15 @@ class TestCameraClusterBase(TestCase):
                                    pixel_mean=pixel_mean, pixel_std=pixel_std,
                                    images=image * 4., eff_margin=False)
 
-        labels = find_cluster.get_cluster(0, max_gaps=0, min_size_cluster=1)
+        labels = find_cluster.get_cluster(0, max_gaps=0, min_size_cluster=1, mask_mounting=False)
         self.assertFalse(np.any(image[0] - labels))
 
-        labels = find_cluster.get_cluster(0, max_gaps=1, min_size_cluster=1)
+        labels = find_cluster.get_cluster(0, max_gaps=1, min_size_cluster=1, mask_mounting=False)
         image_i = image[0].copy()
         image_i[image_i > 2] -= 1  # 3 merge with 2 -> 3 gets to 2 and 4 gets to 3
         self.assertFalse(np.any(image_i - labels))
 
-        labels = find_cluster.get_cluster(0, max_gaps=0, min_size_cluster=3)
+        labels = find_cluster.get_cluster(0, max_gaps=0, min_size_cluster=3, mask_mounting=False)
         image_i = image[0].copy()
         image_i[image_i > 2] = 0  # no 3 & 4
         self.assertFalse(np.any(image_i - labels))
@@ -82,7 +82,7 @@ class TestCameraClusterBase(TestCase):
                                    pixel_mean=pixel_mean, pixel_std=pixel_std,
                                    images=image, eff_margin=False)
 
-        labels = find_cluster.get_cluster(0, max_gaps=0, min_size_cluster=1)
+        labels = find_cluster.get_cluster(0, max_gaps=0, min_size_cluster=1, mask_mounting=False)
         specs = find_cluster.get_cluster_specs(0, labels, np.unique(labels))
 
         # probe all colors here
@@ -129,7 +129,7 @@ class TestCameraClusterBase(TestCase):
                                    pixel_mean=pixel_mean, pixel_std=pixel_std,
                                    images=image, eff_margin=False)
 
-        df = find_cluster.df_picture(0)
+        df = find_cluster.df_picture(0, mask_mounting=False)
         n_rgb = np.sum([df.n_pixel_blue, df.n_pixel_red, df.n_pixel_green], axis=0)
         self.assertFalse(np.sum(df.n_pixel - n_rgb))
 
@@ -157,6 +157,6 @@ class TestCameraClusterBase(TestCase):
                                    pixel_mean=pixel_mean, pixel_std=pixel_std,
                                    images=image, eff_margin=False)
 
-        df = find_cluster.df_all()
+        df = find_cluster.df_all(mask_mounting=False)
         n_rgb = np.sum([df.n_pixel_blue, df.n_pixel_red, df.n_pixel_green], axis=0)
         self.assertFalse(np.sum(df.n_pixel - n_rgb))
