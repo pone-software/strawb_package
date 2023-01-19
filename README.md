@@ -21,6 +21,10 @@ Pip will compare the version of the package and only update if the version numbe
 Only a few commits will increase the version. To get the update with the lates commits, uninstall and install strawb 
 again with:
 ```bash
+pip3 install --no-deps --ignore-installed git+https://github.com/pone-software/strawb_package.git@master
+```
+or
+```bash
 pip3 uninstall -y strawb  # Uninstall an existing installation
 pip3 install -U git+https://github.com/pone-software/strawb_package.git@master  # Install it from the repository
 ```
