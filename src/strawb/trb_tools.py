@@ -426,7 +426,6 @@ class TRBTools:
         rate_inter: np.array
             the interpolated rate as a 2d array with shape [channel_i, rate_j] and len(rate_j) == len(time_inter).
         """
-
         def interp_np(x, xp, fp):
             y = np.zeros((fp.shape[0], x.shape[0]), dtype=float)
             for i in range(y.shape[0]):
@@ -435,12 +434,14 @@ class TRBTools:
 
         timestamps = self.rate_time  # seconds since file started
         if time_probe is None:
-            if timestamps[0] - timestamps[-1] > 0:
-                time_probe = np.arange(timestamps[0], timestamps[-1], 1. / frequency)
+            if timestamps[-1] - timestamps[0] > 0:
+                # if counters are not growing over the time
+                time_probe = np.arange(timestamps[0], timestamps[-1], 1./frequency)
             else:
                 # use the CPU time when the counters are read with the pearl script
-                time_probe = self._time_[:] - self._time_[0]
-
+                time_probe = np.arange(self._time_[0] - self._time_[0],
+                                       self._time_[-1] - self._time_[0],
+                                       1./frequency)
         # check if there are entries in time_probe
         if len(time_probe) == 0:
             raise ValueError('File has corrupt time data in `file_handler.counts_ch0` and `file_handler.counts_time`.')

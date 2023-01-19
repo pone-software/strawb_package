@@ -59,10 +59,6 @@ class TestIntegratedRates(TestCase):
         with h5py.File('test.h5', 'a') as f:
             f.require_group('test')
 
-        # # create empty file
-        # with h5py.File('test_v2.h5', 'a') as f:
-        #     f.require_group('test')
-
         class ChildClass(TRBTools):
             """Mock class which use the __time__, counts and __daq_frequency_readout__ from before"""
             @property
@@ -71,7 +67,7 @@ class TestIntegratedRates(TestCase):
 
             @property
             def raw_counts_arr(self):
-                # the raw counts are the cum. sum
+                # the raw counts are the cum sum
                 return np.cumsum(counts, axis=-1)
 
             @property
@@ -87,7 +83,8 @@ class TestIntegratedRates(TestCase):
     def test_integrate_rates(self):
         # set interp_frequency, setter executes the calculation
         self.trb_tools.interp_frequency = self.trb_tools.daq_frequency_readout / 2.
-        self.assertTrue(np.all(self.trb_tools.daq_frequency_readout / 2. == self.trb_tools.interp_rate.round(0)))
+        self.assertAlmostEqual((self.trb_tools.daq_frequency_readout / 2. - self.trb_tools.interp_rate).max(),
+                               0, places=12)
 
     def test_write_hdf5(self):
         self.trb_tools.write_interp_rate()
