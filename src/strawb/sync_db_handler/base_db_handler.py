@@ -122,7 +122,7 @@ class BaseDBHandler:
         if exclude_columns is None:
             exclude_columns = []
 
-        for i, j in zip(self.dataframe, self.dataframe.dtypes):
+        for i, j in zip(self.dataframe.columns, self.dataframe.dtypes):
             if j == object or i in include_columns:
                 if i in exclude_columns:
                     # skipp
