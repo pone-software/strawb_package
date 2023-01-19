@@ -1,0 +1,551 @@
+import numpy as np
+import scipy.interpolate
+
+
+def reshape_data(y, target):
+    """Helper to do numpy calculations with different shapes."""
+    y = np.array(y)
+    return y.reshape(*y.shape, *[1] * (len(target.shape) - len(y.shape)))
+
+
+class ProjectionTools:
+    @staticmethod
+    def spherical2cart(radius, phi, theta=None):
+        """Converts spherical or polar coordinates to cartesian.
+        sph2cart(1, 0) -> x,y = (1 , 0)
+        sph2cart(1, 0, 0) -> x,y,z = (0, 0, 1)
+        PARAMETER
+        ---------
+        radius: int, float, list or ndarray
+        phi: int, float, list or ndarray
+            should be in the range from [0, 2*np.pi]
+        theta: int, float, list or ndarray, optional
+            set theta (is not None) to use spherical coordinates
+            should be in the range from [0, np.pi]
+        RETURN
+        ------
+        x: float or ndarray
+        y: float or ndarray
+        z: float or ndarray, optional
+            if theta is not None
+        """
+        rr, pp, tt = np.broadcast_arrays(radius, phi, theta)
+        if theta is None:
+            x = np.cos(pp) * rr
+            y = np.sin(pp) * rr
+            return x, y
+        else:
+            x = np.sin(tt) * np.cos(pp) * rr
+            y = np.sin(tt) * np.sin(pp) * rr
+            z = np.cos(tt) * rr
+            return x, y, z
+
+    @staticmethod
+    def cart2spherical(x, y, z=None):
+        """Converts cartesian to spherical (z!=None) or polar coordinates.
+        cart2sph(1, 0) -> r,phi = (1 , 0)
+        cart2sph(0, 0, 1) -> r,phi,theta = (1, 0, 0)
+        PARAMETER
+        ---------
+        x: int, float, list or ndarray
+        y: int, float, list or ndarray
+        z: int, float, list or ndarray, optional
+            set z (is not None) to use spherical coordinates
+        RETURN
+        ------
+        radius: float or ndarray
+        phi: float or ndarray
+            in the range from [0, 2*np.pi]
+        theta: float or ndarray, optional
+            in the range from [0, np.pi]
+        """
+        xx, yy, zz = np.broadcast_arrays(x, y, z)
+
+        r_xy = np.hypot(xx, yy)
+        phi = np.arctan2(yy, xx) % (np.pi * 2.)
+        if z is None:
+            return r_xy, phi
+
+        r_xyz = np.hypot(zz, r_xy)
+        theta = np.pi / 2 - np.arctan2(zz, r_xy)
+        return r_xyz, phi, theta
+
+    # Translation & Rotation
+    @staticmethod
+    def rotation(points, alpha=0., beta=0., gamma=0.):
+        """
+        Rotates points relative to world coordinates point of origin (lens).
+        Camera always looks in positive z direction.
+        PARAMETER
+        ---------
+        points: ndarray
+            coordinates of points with the shape [[x_0,...], [y_0,...], [z_0,...]]
+        alpha: float, optional
+            rotation around x-axis in rad
+        beta: float, optional
+            rotation around y-axis in rad
+        gamma: float, optional
+            rotation around z axis in rad
+        RETURN
+        ------
+        points: ndarray
+            coordinates of points with the shape [[x_0,...], [y_0,...], [z_0,...]]
+        """
+        Rx = np.array([[1, 0, 0],
+                       [0, np.cos(alpha), -np.sin(alpha)],
+                       [0, np.sin(alpha), np.cos(alpha)]])
+
+        Ry = np.array([[np.cos(beta), 0, np.sin(beta)],
+                       [0, 1, 0],
+                       [-np.sin(beta), 0, np.cos(beta)]])
+
+        Rz = np.array([[np.cos(gamma), -np.sin(gamma), 0],
+                       [np.sin(gamma), np.cos(gamma), 0],
+                       [0, 0, 1]])
+
+        return np.dot(np.dot(Rz, np.dot(Ry, Rx)), points)
+
+    @staticmethod
+    def translation(points, x=0, y=0, z=0):
+        """
+        Translate points according to world coordinates point of origin. Camera
+        always looks in positive z direction.
+        PARAMETER
+        ---------
+        points: ndarray
+            coordinates of points with the shape [[x_0,...], [y_0,...], [z_0,...]]
+        x,y,z: float, optional
+            translate distance in for all axes
+        RETURN
+        ------
+        points: ndarray
+            coordinates of points with the shape [[x_0,...], [y_0,...], [z_0,...]]
+        """
+        if len(points) == 3:
+            return points + reshape_data([x, y, z], target=points)
+        else:
+            return points + reshape_data([x, y], target=points)
+
+
+class CameraProjection:
+    """Calculates the Camera Projection for a pin-hole camera."""
+
+    def __init__(self, focal_length, pixel_size, pixel_center_index, invert_dir=False,
+                 distortion=None):
+        """Initialise the camera projection parameter.
+        Parameter
+        ---------
+        focal_length: float
+            focal length of the lens in meter
+        pixel_size_xy: tuple, list, ndarray, int, float
+            size of a pixel on the image sensor in meter.
+            If tuple, list, ndarray: different sizes in x and y. First values corresponds to x and second to y.
+            If int, float: same size for x and y.
+        pixel_center: tuple, list, ndarray of floats
+            pixel indexes of the lens center on the image plane. First values corresponds to x and second to y.
+        invert_dir: bool, optional
+            if the image should be rotated by 180deg
+        distribution: list or Distribution, optional
+            one `Distribution` instance or a list of instances. Applied one after the other.
+            Must be specified in the order from outside to inside, or real world to camera sensor.
+        """
+        # set and check distribution
+        if distortion is None:
+            distortion = []
+        elif isinstance(distortion, Distortion):
+            distortion = [distortion]
+
+        for distortion_i in distortion:
+            if not isinstance(distortion_i, Distortion):
+                raise TypeError(f'All distributions must be subclasses of Distortion. Got: {type(distortion_i)}')
+        self.distortion = distortion
+
+        self.focal_length = focal_length
+
+        self.invert_dir = bool(invert_dir)
+
+        if isinstance(pixel_size, (int, float)):
+            self.pixel_size_x = float(pixel_size)
+            self.pixel_size_y = float(pixel_size)
+        else:
+            self.pixel_size_x = pixel_size[0]
+            self.pixel_size_y = pixel_size[1]
+
+        if len(pixel_center_index) != 2:
+            raise ValueError(f'pixel_center_index length must be 2. Got: {pixel_center_index}')
+        self.pixel_center = np.array(pixel_center_index)
+
+    def pixel_index2image_coordinates(self, x_i, y_i):
+        """converts pixel index (can be a float) to location coordinates on the image sensor in meter.
+        PARAMETERS
+        ----------
+        x_i, y_i: float, ndarray
+            pixel index in x and y
+        RETURNS
+        -------
+        x_c, y_c: int, float, ndarray
+            coordinates on the image plane in meter.
+        """
+        x_c = (x_i - self.pixel_center[0]) * self.pixel_size_x  # [m]
+        y_c = (y_i - self.pixel_center[1]) * self.pixel_size_y  # [m]
+        return x_c, y_c
+
+    def image_coordinates2pixel_index(self, x_c, y_c):
+        """converts location coordinates on the image sensor in meter to pixel index (can be float)
+        PARAMETERS
+        ----------
+        x_c, y_c: int, float, ndarray
+            coordinates on the image plane in meter.
+        RETURNS
+        -------
+        x_i, y_i: float, ndarray
+            pixel index in x and y
+        """
+        x_i = x_c / self.pixel_size_x + self.pixel_center[0]  # [index]
+        y_i = y_c / self.pixel_size_y + self.pixel_center[1]  # [index]
+        return x_i, y_i
+
+    def image_coordinates2phi(self, x_c, y_c, invert_dir=None):
+        """
+        PARAMETERS
+        ----------
+        x_c, y_c: int, float, ndarray
+            coordinates on the image plane in meter.
+        invert_dir: bool, optional
+            if the image should be rotated by 180deg. If None, take the value of the initialisation.
+        RETURN
+        ------
+        phi: float, ndarray
+            the phi component of the direction the pixel get projected to
+        """
+        if invert_dir is None:  # If None, take the value of the initialisation.
+            invert_dir = self.invert_dir
+        if invert_dir:
+            return (np.arctan2(y_c, x_c) + np.pi) % (np.pi * 2)
+        else:
+            return np.arctan2(y_c, x_c) % (np.pi * 2)
+
+    def phi2image_coordinates(self, phi, radius, invert_dir=None):
+        """
+        PARAMETERS
+        ----------
+        phi: float, ndarray
+            the phi component of the direction the pixel get projected to
+        radius: int, float, ndarray
+            radius on the image plane in meter.
+        invert_dir: bool, optional
+            if the image should be rotated by 180deg (phi). If None, take the value of the initialisation.
+        RETURN
+        ------
+        x_c, y_c: int, float, ndarray
+            coordinates on the image plane in meter.
+        """
+        if invert_dir is None:  # If None, take the value of the initialisation.
+            invert_dir = self.invert_dir
+        if invert_dir:
+            return np.cos(phi + np.pi) * radius, np.sin(phi + np.pi) * radius
+        else:
+            return np.cos(phi) * radius, np.sin(phi) * radius
+
+    def image_coordinates2theta(self, x_c, y_c):
+        """
+        PARAMETERS
+        ----------
+        x_c, y_c: int, float, ndarray
+            coordinates on the image plane in meter.
+        RETURN
+        ------
+        theta: float, ndarray
+            the theta component of the direction the pixel get projected to
+        """
+        # the radius on the image plane
+        r_pixel = np.hypot(x_c, y_c)
+        return self.image_radius2theta(r_pixel)
+
+    # image_radius vs. theta: radius_pixel <-> theta
+    def image_radius2theta(self, radius_pixel):
+        """
+        PARAMETERS
+        ----------
+        radius_pixel: int, float, ndarray
+            radius on the image plane in meter.
+        RETURN
+        ------
+        theta: float, ndarray
+            the theta component of the direction the pixel get projected to
+        """
+        return np.arctan(radius_pixel / self.focal_length)
+
+    def theta2image_radius(self, theta):
+        """
+        PARAMETERS
+        ----------
+        theta: float, ndarray
+            the theta component of the direction the pixel get projected to
+        RETURN
+        ------
+        radius_pixel: int, float, ndarray
+            radius on the image plane in meter.
+        """
+        return np.tan(theta) * self.focal_length
+
+    # Pixel vs. angle: x_i, y_i <-> phi, theta
+    # removed: (r_xyz: the length that the z component of the vector(r_xyz, phi, theta) is 1)
+    def pixel2angle(self, x_i, y_i, invert_dir=None):
+        """
+        PARAMETERS
+        ----------
+        x_i, y_i: float, ndarray
+            pixel index in x and y
+        invert_dir: bool, optional
+            if the image should be rotated by 180deg (phi). If None, take the value of the initialisation.
+        RETURN
+        ------
+        phi: float, ndarray
+            the phi component of the direction the pixel get projected to
+        theta: float, ndarray
+            the theta component of the direction the pixel get projected to
+
+        removed
+        -------
+        r_xyz: float, ndarray
+            the length that the z component of the vector(r_xyz, phi, theta) is 1
+        """
+        # pixel coordinates to location on the image sensor in meter
+        x_c, y_c = self.pixel_index2image_coordinates(x_i, y_i)  # [m], [m]
+        phi = self.image_coordinates2phi(x_c, y_c, invert_dir=invert_dir)
+        theta = self.image_coordinates2theta(x_c, y_c)
+
+        # apply distortions
+        for distortion_i in self.distortion[::-1]:
+            phi = distortion_i.phi_distortion_inv(phi)
+            theta = distortion_i.theta_distortion_inv(theta)
+
+        # # provide a radius, that z=1 for all directions (phi, theta)
+        # r_xyz = np.hypot(np.tan(theta), 1)
+        return phi, theta
+
+    def angle2pixel(self, phi, theta, invert_dir=None):
+        """Calculates the pixel corresponding to a direction
+        PARAMETERS
+        ----------
+        phi: float, ndarray
+            the phi component of the direction the pixel get projected to
+        theta: float, ndarray
+            the theta component of the direction the pixel get projected to
+        invert_dir: bool, optional
+            if the image should be rotated by 180deg (phi). If None, take the value of the initialisation.
+        RETURN
+        ------
+        x_i, y_i: float, ndarray
+            pixel index in x and y
+        """
+        # apply distortions
+        for distortion_i in self.distortion:
+            phi = distortion_i.phi_distortion(phi)
+            theta = distortion_i.theta_distortion(theta)
+
+        radius = self.theta2image_radius(theta)
+        x_c, y_c = self.phi2image_coordinates(phi, radius, invert_dir=invert_dir)
+        return self.image_coordinates2pixel_index(x_c, y_c)
+
+    # Real world coordinates to pixel coordinates
+    def vec2pixel(self, x, y, z, invert_dir=None):
+        """
+        PARAMETERS
+        ----------
+        x, y, z: floats or ndarrays
+            object coordinates in x, y, z
+        invert_dir: bool, optional
+            if the image should be rotated by 180deg (phi). If None, take the value of the initialisation.
+            invert_dir = self.invert_dir
+        RETURNS
+        -------
+        x_i, y_i: float, ndarray
+            pixel index in x and y
+        """
+        r, phi, theta = ProjectionTools.cart2spherical(x, y, z)
+        return self.angle2pixel(phi, theta, invert_dir=invert_dir)
+
+    # Real world coordinates to pixel coordinates
+    def pixel2vec(self, x_i, y_i, invert_dir=None):
+        """
+        PARAMETERS
+        ----------
+        x_i, y_i: float, ndarray
+            pixel index in x and y
+        invert_dir: bool, optional
+            if the image should be rotated by 180deg (phi). If None, take the value of the initialisation.
+        RETURNS
+        -------
+        x, y, z: ndarrays
+            x, y, z coordinates on the unit sphere (r=1)
+        """
+        phi, theta = self.pixel2angle(x_i, y_i, invert_dir=invert_dir)
+        return ProjectionTools.spherical2cart(1., phi, theta)
+
+
+class EquisolidProjection(CameraProjection):
+    """Calculates the Camera Projection for an equisolid distortion."""
+
+    def image_radius2theta(self, radius_pixel):
+        """
+        PARAMETERS
+        ----------
+        radius_pixel: int, float, ndarray
+            radius on the image plane in meter.
+        RETURN
+        ------
+        theta: float, ndarray
+            the theta component of the direction the pixel get projected to
+        """
+        # r_pixel = 2*f*np.sin(theta/2)
+        # -> 2 * arcsin(r_pixel/2/f) = theta
+        x = np.ma.masked_outside(radius_pixel / 2. / self.focal_length, -1, 1)
+        return 2. * np.ma.arcsin(x).filled(np.nan)
+
+    def theta2image_radius(self, theta):
+        """
+        PARAMETERS
+        ----------
+        theta: float, ndarray
+            the theta component of the direction the pixel get projected to
+        RETURN
+        ------
+        radius: int, float, ndarray
+            radius on the image plane in meter.
+        """
+        # r_pixel = 2*f*np.sin(theta/2)
+        # -> 2 * arcsin(r_pixel/2/f) = theta
+        return 2. * self.focal_length * np.sin(theta / 2.)
+
+
+class Distortion:
+    def theta_distortion(self, theta, *args, **kwargs):
+        """Prototype for a distortion in theta. Theta is undistorted and theta_dis is distorted.
+        E.g. for a distribution of a lens, theta refers to the angle in the read world and theta_dis to the angle
+        after the lens.
+        PARAMETER
+        ---------
+        theta: ndarray, float
+            undistorted theta
+        args: iterable, optional
+        kwargs: dict, optional
+        RETURN
+        ---------
+        theta_dis: ndarray, float
+            distorted theta
+        """
+        return theta
+
+    def theta_distortion_inv(self, theta_dis, *args, **kwargs):
+        """Prototype for the inverse distortion of theta. Theta is undistorted and theta_dis is distorted.
+        E.g. for a distribution of a lens, theta refers to the angle in the read world and theta_dis to the angle
+        after the lens.
+        PARAMETER
+        ---------
+        theta_dis: ndarray, float
+            distorted theta
+        args: iterable, optional
+        kwargs: dict, optional
+        RETURN
+        ---------
+        theta: ndarray, float
+            undistorted theta
+        """
+        return theta_dis
+
+    def phi_distortion(self, phi, *args, **kwargs):
+        """Prototype for a distortion in phi. Phi is undistorted and phi_dis is distorted.
+        E.g. for a distribution of a lens, phi refers to the angle in the read world and phi_dis to the angle
+        after the lens.
+        PARAMETER
+        ---------
+        phi: ndarray, float
+            undistorted phi
+        args: iterable, optional
+        kwargs: dict, optional
+        RETURN
+        ---------
+        phi_dis: ndarray, float
+            distorted phi
+        """
+        return phi
+
+    def phi_distortion_inv(self, phi_dis, *args, **kwargs):
+        """Prototype for the inverse distortion of phi. Phi is undistorted and phi_dis is distorted.
+        E.g. for a distribution of a lens, phi refers to the angle in the read world and phi_dis to the angle
+        PARAMETER
+        ---------
+        phi_dis: ndarray, float
+            distorted phi
+        args: iterable, optional
+        kwargs: dict, optional
+        RETURN
+        ---------
+        phi: ndarray, float
+            undistorted phi
+        """
+        return phi_dis
+
+
+class SphereDistortion(Distortion):
+    """Calculates the Distortion of a sphere."""
+
+    def __init__(self, h, r, d, n_a=1., n_g=1.52, n_w=1.35):
+        """Calculates the Distortion of a sphere.
+        Values for STRAWb: h=.063, r=.1531, d=.012, n_a=1., n_g=1.52, n_w=1.35
+        PARAMETER
+        ---------
+        h: float; radius at which theta is measured, e.g. the location of camera in meter
+        r: float; inner radius of the sphere in meter
+        d: float; thickness of the sphere in meter
+        n_a: float, optional; refractive index inside the sphere (air)
+        n_g: float, optional; refractive index of the sphere (glass)
+        n_w: float, optional; refractive index outside the sphere (water)
+        """
+        self.h = h  # radius at which theta is measured, e.g. the location of camera in meter
+        self.r = r  # inner radius of the sphere in meter
+        self.d = d  # thickness of the sphere in meter
+        self.n_a = n_a  # refractive index inside the sphere (air)
+        self.n_g = n_g  # refractive index of the sphere (glass)
+        self.n_w = n_w  # refractive index outside the sphere (water)
+
+        # to calculate the inverse numerically
+        self.__theta_distortion__ = None
+
+    def theta_distortion(self, theta, n=int(1e6), **kwargs):
+        """Applies the theta distortion: theta -> theta_distortion
+        PARAMETER
+        ---------
+        theta: ndarray
+            undistorted theta values
+        n: int
+            the inverse is calculated numerically at the positions: np.linspace(0, np.pi, n).
+            Therefore higher n provides more accuracy.
+        args: iterable, optional
+            to match signature of the base method `SphereDistortion.theta_distortion_inv()'
+        """
+        # only calculate or update it when needed
+        if self.__theta_distortion__ is None or int(n) != len(self.__theta_distortion__.x):
+            theta_numeric = np.linspace(0, np.pi, int(n))
+            beta = self.theta_distortion_inv(theta_numeric)
+            self.__theta_distortion__ = scipy.interpolate.interp1d(x=beta, y=theta_numeric,
+                                                                   kind='cubic', assume_sorted=True)
+        return self.__theta_distortion__(theta)
+
+    def theta_distortion_inv(self, theta_dis, n=10000,  **kwargs):
+        """Applies the theta inverse distortion: theta_distortion -> theta.
+        PARAMETER
+        ---------
+        theta_dis: ndarray
+            distorted theta values
+        args: iterable, optional
+            to match signature of the base method `SphereDistortion.theta_distortion_inv()'
+        """
+        # only calculate or update it when needed
+        a_0 = np.arcsin(self.h / self.r * np.sin(theta_dis))
+        a_1 = np.arcsin(self.n_a / self.n_g * self.h / self.r * np.sin(theta_dis))
+        b_0 = np.arcsin(self.h / (self.r + self.d) * np.sin(theta_dis))
+        b_1 = np.arcsin(self.n_a / self.n_w * self.h / (self.r + self.d) * np.sin(theta_dis))
+        return theta_dis - a_0 + a_1 - b_0 + b_1
