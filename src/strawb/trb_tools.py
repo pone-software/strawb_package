@@ -597,7 +597,7 @@ class InterpolatedRatesFile:
             self.read()
             return np.ma.array(self.__time__)
         else:
-            return np.ma.array(self.__time__, mask=self.mask)
+            return np.ma.array(self.__time__, mask=self.self.__mask__)
 
     @property
     def rate(self):
@@ -613,7 +613,7 @@ class InterpolatedRatesFile:
         if self.mask is None:
             return np.ma.array(self.__rate__)
         else:
-            return np.ma.array(self.__rate__, mask=np.ones_like(self.__rate__, dtype=bool) * self.mask)
+            return np.ma.array(self.__rate__, mask=np.ones_like(self.__rate__, dtype=bool) * self.__mask__)
 
     @property
     def mask(self):
@@ -625,7 +625,7 @@ class InterpolatedRatesFile:
         """
         if self.__time__ is None:  # check if file is loaded
             self.read()  # read sets __time__
-        return self.__rate__
+        return self.__mask__
 
     def _write_to_file_(self, interp_time, interp_rate, interp_mask, file_attrs=None, group_attrs=None):
         """Write interpolated data of PMT to the file. It generates a hdf5 file and adds the data as follows:
