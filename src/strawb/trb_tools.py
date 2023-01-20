@@ -597,7 +597,7 @@ class InterpolatedRatesFile:
             self.read()
             return np.ma.array(self.__time__)
         else:
-            return np.ma.array(self.__time__, mask=self.self.__mask__)
+            return np.ma.array(self.__time__, mask=self.__mask__)
 
     @property
     def rate(self):
