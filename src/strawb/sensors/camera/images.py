@@ -341,6 +341,35 @@ class Images:
 
         return image_arr
 
+    # bit_dict = {-16: np.float16, -32: np.float32, -64: np.float64,
+    #             8: np.uint8, 16: np.uint16, 32: np.uint32, 64: np.uint64}
+    # bit_dict = {8: np.float8, 16: np.float16, 32: np.float32, 64: np.float64,
+    #             8: np.uint8, 16: np.uint16, 32: np.uint32, 64: np.uint64}
+    #
+    # mapping_dict = {0: (np.float64), 8: np.uint8, 16: np.uint16, 32: np.uint32, 64: np.uint64}
+    #
+    # def bit2range(bit):
+    #     if bit == 0:
+    #         return [0, 1]
+    #     elif (bit > 64) or (bit < 0):
+    #         raise ValueError(f'bit must be in the range [0, 64]. Got: {bit}]')
+    #     else:
+    #         return [0, int(2 ** bit - 1)]
+    #
+    # def bit2type(bit):
+    #     if (bit > 64) or (bit < 0):
+    #         raise ValueError(f'bit must be in the range [0, 64]. Got: {bit}]')
+    #     else:
+    #         keys = np.sort(np.array([*bit_dict]))
+    #         return bit_dict[keys[keys >= bit][0]]
+    #
+    # for i in [0, 1, 8, 16, 17, 31, 32, 64]:
+    #     print(i, bit2type(i), bit2range(i))
+    #
+    # x = np.array([4.])
+    # for j in [np.float64, np.uint8, np.int32]:
+    #     print([np.issubdtype(x.astype(j).dtype, i) for i in [np.floating, np.unsignedinteger, np.signedinteger]])
+
     def image2png(self, f_name_formatter='{datetime}', directory='{proc_data_dir}/{module_lower}',
                   bit=8, index=None, overwrite=False, file_name_iterator=None, ending='.png', **kwargs):
         """f_name has to include at least on of the formatter_dict.keys
