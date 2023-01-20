@@ -627,7 +627,7 @@ class InterpolatedRatesFile:
             self.read()  # read sets __time__
         return self.__mask__
 
-    def _write_to_file_(self, interp_time, interp_rate, interp_mask, file_attrs=None, group_attrs=None):
+    def _write_to_file_(self, interp_time, interp_rate, interp_mask, file_attrs=None, group_attrs=None, h5_mode='a'):
         """Write interpolated data of PMT to the file. It generates a hdf5 file and adds the data as follows:
         group: /rates_interpolated
         data_Set: /rates_interpolated/rate - with shape [channels, time]
@@ -644,6 +644,8 @@ class InterpolatedRatesFile:
             hdf5 file attributes
         group_attrs: dict, optional
             hdf5 group attributes
+        h5_mode: str, optional
+            hdf5 file mode. 'a' for append or 'w' to overwrite
         """
         if group_attrs is None:
             group_attrs = {}
@@ -656,7 +658,7 @@ class InterpolatedRatesFile:
                                 'fletcher32': True,
                                 'chunks': (2, 2 ** 13)}
 
-        with h5py.File(self.file_name, 'a') as f:  # libver='latest'
+        with h5py.File(self.file_name, mode=h5_mode) as f:  # libver='latest'
             for i in set(file_attrs).difference(f.attrs):
                 f.attrs.update({i: file_attrs[i]})
 
@@ -681,7 +683,7 @@ class InterpolatedRatesFile:
                               data=interp_mask,
                               **h5py_opt_1d)
 
-    def write_to_file(self, trb_tools, file_attrs=None, group_attrs=None):
+    def write_to_file(self, trb_tools, file_attrs=None, group_attrs=None, h5_mode='a'):
         """Write interpolated data of PMT to the file. It generates a hdf5 file and adds the data as follows:
         group: /rates_interpolated
         data_Set: /rates_interpolated/rate - with shape [channels, time]
@@ -698,12 +700,15 @@ class InterpolatedRatesFile:
             hdf5 file attributes
         group_attrs: dict, optional
             hdf5 group attributes
+        h5_mode: str, optional
+            hdf5 file mode. 'a' for append or 'w' to overwrite
         """
         self._write_to_file_(interp_time=trb_tools.interp_time.data,
                              interp_rate=trb_tools.interp_rate.data,
                              interp_mask=trb_tools.interp_time.mask,
                              file_attrs=file_attrs,
-                             group_attrs=group_attrs)
+                             group_attrs=group_attrs,
+                             h5_mode=h5_mode)
 
     def read(self, ):
         """ Reads the file. """
