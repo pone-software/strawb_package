@@ -206,9 +206,8 @@ class Config:
         item = None
         if key in dictionary:
             item = dictionary[key]
-            if item is not None:
+            if isinstance(item, (np.ndarray, list)):
                 item = item.copy()
-
         return item
 
     @property
