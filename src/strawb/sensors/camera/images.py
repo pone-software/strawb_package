@@ -156,7 +156,7 @@ class Images:
         PARAMETER
         ---------
         rgb: ndarray
-            at a least 2d array. The x- and y-axes have to be in this order, next to each other, and can be
+            at least a 2d array. The x- and y-axes have to be in this order, next to each other, and can be
             positioned anywhere. rgb.shape = (..., x-axis, y-axis,...)
         axis: int, optional
             the position of the pixel x-axis, e.g. rgb.shape = (images, x-axis, y-axis,...) -> axis=1
