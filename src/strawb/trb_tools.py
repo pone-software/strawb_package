@@ -627,7 +627,7 @@ class InterpolatedRatesFile:
             self.read()  # read sets __time__
         return self.__rate__
 
-    def write_to_file(self, trb_tools, file_attrs=None, group_attrs=None):
+    def _write_to_file_(self, interp_time, interp_rate, interp_mask, file_attrs=None, group_attrs=None):
         """Write interpolated data of PMT to the file. It generates a hdf5 file and adds the data as follows:
         group: /rates_interpolated
         data_Set: /rates_interpolated/rate - with shape [channels, time]
@@ -637,9 +637,9 @@ class InterpolatedRatesFile:
 
         PARAMETER
         ---------
-        trb_tools: strawb.trb_tools.TRBTools
-            class which holds the TRB Data and process code. To change the interpolation frequency,
-            do it before you execute this function.
+        interp_time: ndarray
+        interp_rate: ndarray
+        interp_mask: ndarray
         file_attrs: dict, optional
             hdf5 file attributes
         group_attrs: dict, optional
@@ -665,7 +665,7 @@ class InterpolatedRatesFile:
                 group.attrs.update({i: group_attrs[i]})
 
             tools.append_hdf5(f, '/rates_interpolated/rate',
-                              data=trb_tools.interp_rate.data,
+                              data=interp_rate,
                               axis=1,
                               **h5py_dataset_options)
 
@@ -674,12 +674,36 @@ class InterpolatedRatesFile:
                 h5py_opt_1d['chunks'] = (h5py_opt_1d['chunks'][1],)
 
             tools.append_hdf5(f, '/rates_interpolated/time',
-                              data=tools.datetime2float(trb_tools.interp_time.data),
+                              data=tools.datetime2float(interp_time),
                               **h5py_opt_1d)
 
             tools.append_hdf5(f, '/rates_interpolated/mask',
-                              data=trb_tools.interp_time.mask,
+                              data=interp_mask,
                               **h5py_opt_1d)
+
+    def write_to_file(self, trb_tools, file_attrs=None, group_attrs=None):
+        """Write interpolated data of PMT to the file. It generates a hdf5 file and adds the data as follows:
+        group: /rates_interpolated
+        data_Set: /rates_interpolated/rate - with shape [channels, time]
+                  /rates_interpolated/time - with shape time
+                  /rates_interpolated/mask - with shape time
+        If a dataset exists, it adds the data to the dataset.
+
+        PARAMETER
+        ---------
+        trb_tools: strawb.trb_tools.TRBTools
+            class which holds the TRB Data and process code. To change the interpolation frequency,
+            do it before you execute this function.
+        file_attrs: dict, optional
+            hdf5 file attributes
+        group_attrs: dict, optional
+            hdf5 group attributes
+        """
+        self._write_to_file_(interp_time=trb_tools.interp_time.data,
+                             interp_rate=trb_tools.interp_rate.data,
+                             interp_mask=trb_tools.interp_time.mask,
+                             file_attrs=file_attrs,
+                             group_attrs=group_attrs)
 
     def read(self, ):
         """ Reads the file. """
