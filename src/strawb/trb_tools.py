@@ -163,21 +163,21 @@ class TRBTools:
     @property
     def dcounts_time(self):
         """Channel which counts up at a constant frequency. The frequency is stored in `self.daq_frequency_readout`.
-        1darray with axes [time_i].
+        1d-array with axes [time_i].
         """
         return self._dcounts_arr_[0]  # [1:] is dcounts
 
     @property
     def counts_time(self):
         """Channel which counts up at a constant frequency. The frequency is stored in `self.daq_frequency_readout`.
-        1darray with axes [time_i].
+        1d-array with axes [time_i].
         """
         return self._counts_arr_[0]
 
     @property
     def time_counts(self):
         """Channel which counts up at a constant frequency. The frequency is stored in `self.daq_frequency_readout`.
-        1darray with axes [time_i].
+        1d-array with axes [time_i].
         """
         if self.daq_frequency_readout is not None:
             # noinspection PyTypeChecker
@@ -271,7 +271,7 @@ class TRBTools:
     @staticmethod
     def _diff_counts_(*args, **kwargs):
         """
-        Calculates the delta counts of the raw counts readings, similar to np.diff with overflow correction, and it
+        Calculates the delta counts of the raw counts readings, similar to 'np.diff' with overflow correction, and it
         takes care of the special TRB integer type. To calculate the absolute counts readings, do
         >>> counts, active_read = TRBTools._diff_counts_(*args, **kwargs)
         >>> np.cumsum(counts.astype(np.int64))
@@ -420,11 +420,14 @@ class TRBTools:
             the rates. For absolute timestamps subtract: strawb.tools.datetime2float(pmt.trb_rates.time)[0].
         RETURN
         ------
-        time_inter: np.array
+        time_inter: ndarray
             the interpolated absolute timestamp in seconds since the epoch. It corresponds to the middle of time_probe.
             Therefore, len(time_probe) -1 == len(time_inter)
-        rate_inter: np.array
+        rate_inter: ndarray
             the interpolated rate as a 2d array with shape [channel_i, rate_j] and len(rate_j) == len(time_inter).
+        active: ndarray
+            active read ratio. For how many reads, the TRB read during the signal was active (stored as an extra bit
+            in the raw data). Active is 'np.nan' when there is no data (counter read) in the interval
         """
         def interp_np(x, xp, fp):
             y = np.zeros((fp.shape[0], x.shape[0]), dtype=float)
@@ -720,7 +723,7 @@ class InterpolatedRatesFile:
         bins: float, int, list, ndarray
             sets the bins within the active ratio is calculated, directly.
         step_size:
-            sets the bins with `np.arange(t[0], t[-1] + step_size, step_size)` within the active ratio is calculated.
+            sets the bins with 'np.arange(t[0], t[-1] + step_size, step_size)' within the active ratio is calculated.
             bins must be None otherwise step_size is ignored.
         max_delta_t:
             the maximum between two measurements to be counted as active time. If the time between two measurements is

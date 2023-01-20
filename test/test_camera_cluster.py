@@ -1,12 +1,11 @@
-import os
-import random
 import time
 from unittest import TestCase
+
 import numpy as np
 
 from src.strawb import SyncDBHandler
-from strawb.sensors.camera import FindCluster
 from strawb.sensors.camera import Camera
+from strawb.sensors.camera import FindCluster
 
 
 def get_files():
@@ -83,7 +82,7 @@ class TestCameraClusterBase(TestCase):
                                    images=image, eff_margin=False)
 
         labels = find_cluster.get_cluster(0, max_gaps=0, min_size_cluster=1, mask_mounting=False)
-        specs = find_cluster.get_cluster_specs(0, labels, np.unique(labels))
+        find_cluster.get_cluster_specs(0, labels, np.unique(labels))
 
         # probe all colors here
         for color in label_unique_probe:

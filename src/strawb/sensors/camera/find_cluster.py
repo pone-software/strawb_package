@@ -118,7 +118,7 @@ class FindCluster:
         Parameters
         ----------
         pic_index : int
-            Index of the picture (in self.images) to get the labels of.
+            Index of the picture (in 'self.images') to get the labels of.
         min_std : int, optional
             Minimum multiple of the standard deviation for a pixel to be considered as bright. If None, take from init.
         min_size_cluster : int, optional
@@ -355,7 +355,7 @@ class FindCluster:
         if color is not None:
             color_str = f"_{color}"
 
-        # sn: signal to noise
+        # sn: signal-to-noise
         specs_dict = {
             f'n_pixel{color_str}': n_pixel.astype(np.int32),
             f'noise{color_str}': noise,
@@ -382,7 +382,7 @@ class FindCluster:
             the maximum gap size within one cluster. If None, take from init.
         mask_mounting: bool or ndarray, optional
             True if the mounting, if known, should be excluded from the cluster search (mounting will be all label=0).
-            An ndarray defines the mask which pixels should be excluded from the cluster search. Must match the pixel
+            A ndarray defines the mask which pixels should be excluded from the cluster search. Must match the pixel
             shape. `mask_mounting[i] = True` means include and `mask_mounting[i] = False` exclude the pixel i.
 
         Returns
@@ -390,7 +390,7 @@ class FindCluster:
         data frame
             Table with all clusters in the picture and their properties.
         """
-        # in case its not specified, take the default from init
+        # in case it's not specified, take the default from init
         if min_std is None:
             min_std = self.min_std
         if min_size_cluster is None:
@@ -438,7 +438,7 @@ class FindCluster:
         pic_index: list, ndarray, optional
             the indexes of the pictures to detect teh cluster. If None, take all
         progressbar: bool, optional
-            if the loop should print a progressbae.
+            if the loop should print a progressbar.
             It supports module tqdm: i.e. progressbar=tqdm.notebook.tqdm, or progressbar=tqdm.tqdm
         tqdm_kwargs: dict, optional
             kwargs for tqdm.notebook

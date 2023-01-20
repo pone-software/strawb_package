@@ -104,7 +104,7 @@ class SphereDistortion(Distortion):
         theta: ndarray
             undistorted theta values
         n: int
-            the inverse is calculated numerically at the positions: `np.linspace(0, np.pi, n)`.
+            the inverse is calculated numerically at the positions: 'np.linspace(0, np.pi, n)'.
             Therefore higher n provides more accuracy.
         args: iterable, optional
             to match signature of the base method `SphereDistortion.theta_distortion_inv()'
@@ -130,5 +130,6 @@ class SphereDistortion(Distortion):
         a_0 = np.arcsin(self.r_position / self.r_sphere * np.sin(theta_dis))
         a_1 = np.arcsin(self.n_a / self.n_g * self.r_position / self.r_sphere * np.sin(theta_dis))
         b_0 = np.arcsin(self.r_position / (self.r_sphere + self.thickness_sphere) * np.sin(theta_dis))
-        b_1 = np.arcsin(self.n_a / self.n_w * self.r_position / (self.r_sphere + self.thickness_sphere) * np.sin(theta_dis))
+        b_1 = np.arcsin(self.n_a / self.n_w * self.r_position / (self.r_sphere + self.thickness_sphere) *
+                        np.sin(theta_dis))
         return theta_dis - a_0 + a_1 - b_0 + b_1

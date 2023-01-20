@@ -11,7 +11,7 @@ from ...config_parser import Config
 class Images:
     """Everything related to a single hdf5 file. The RAW image data is accessed directly
     form the hdf5 file to save RAM. It is capable of determine invalid pictures (property: valid_mask)
-    and takes the n darkest pictures as an average for a dark frame. It also includes the
+    and takes the n the darkest pictures as an average for a dark frame. It also includes the
     basic functions to demosaic the raw data into RGB values for both, multiple frames or a single frame"""
     bayer_pattern_dict = {  # "COLOR_BAYER_BG2BGR_EA":cv2.COLOR_BAYER_BG2BGR_EA,
         # "COLOR_BAYER_GB2BGR_EA":cv2.COLOR_BAYER_GB2BGR_EA,
@@ -30,10 +30,6 @@ class Images:
         if file_handler is not None and not isinstance(file_handler, FileHandler):
             raise ValueError(f'file_handler is no instance of strawb.sensors.camera.FileHandler nor None. Got:'
                              f'{type(file_handler)}')
-        # elif self.file_handler.is_empty is None:  # protect against empty file
-        #     raise ValueError(f'No file defined in file handler.')
-        # elif self.file_handler.is_empty:  # protect against empty file
-        #     raise FileExistsError(f'File {self.file_handler.file_name} is empty! Can not load {type(self).__name__}.')
 
         # processed Data
         self._integrated_raw = None
@@ -170,7 +166,7 @@ class Images:
             shifts the mask according to the effective margin for images where the margin is cut, e.g. with
             cut2effective_pixel(..., eff_margin=eff_margin) ->  get_raw_rgb_mask(..., eff_margin=eff_margin)
             If None or True, it takes the eff_margin from the file, i.e. file_handler.EffMargins[:]
-            If its a list or ndarray: it must has the from [pixel_x_start, pixel_x_stop, pixel_y_start, pixel_y_stop]
+            If its a list or ndarray: it must have the form [pixel_x_start, pixel_x_stop, pixel_y_start, pixel_y_stop]
             and only integers are allowed.
         RETURN
         ------
@@ -202,12 +198,12 @@ class Images:
         PARAMETER
         ---------
         position: ndarray
-            at a least 1d array. First must be is x and y, e.g.
+            at least a 1d array. First must be is x and y, e.g.
         eff_margin: bool, list, ndarray, optional
             shifts the mask according to the effective margin for images where the margin is cut, e.g. with
             cut2effective_pixel(..., eff_margin=eff_margin) ->  get_raw_rgb_mask(..., eff_margin=eff_margin)
             If None or True, it takes the eff_margin from the file, i.e. file_handler.EffMargins[:]
-            If its a list or ndarray: it must has the from [pixel_x_start, pixel_x_stop, pixel_y_start, pixel_y_stop]
+            If its a list or ndarray: it must have the form [pixel_x_start, pixel_x_stop, pixel_y_start, pixel_y_stop]
             and only integers are allowed.
         RETURN
         ------
@@ -238,7 +234,7 @@ class Images:
             shifts the mask according to the effective margin for images where the margin is cut, e.g. with
             cut2effective_pixel(..., eff_margin=eff_margin) ->  get_raw_rgb_mask(..., eff_margin=eff_margin)
             If None or True, it takes the eff_margin from the file, i.e. file_handler.EffMargins[:]
-            If its a list or ndarray: it must has the from [pixel_x_start, pixel_x_stop, pixel_y_start, pixel_y_stop]
+            If its a list or ndarray: it must have the form [pixel_x_start, pixel_x_stop, pixel_y_start, pixel_y_stop]
             and only integers are allowed.
 
         RETURN
@@ -296,7 +292,8 @@ class Images:
 
         return image_arr
 
-    def normalize_rgb(self, image_arr, bit_out=0, bit_in=None, ):
+    @staticmethod
+    def normalize_rgb(image_arr, bit_out=0, bit_in=None):
         """Get the rgb values to the range 0->1. or 0,1...->255
         PARAMETERS
         ----------
@@ -304,14 +301,18 @@ class Images:
             array of images values. Can be a single image (2D array) or multiple (>3D array)
         bit_in: int, optional
             defines the range of the input values.
-            - None: determins the bit from the dtype. Supports np.uint8, np.uint16, np.uint32, float 
+            - None: determines the bit from the dtype. Supports np.uint8, np.uint16, np.uint32, float
             - 0 : (default) maps the values to the range [0, 1] as float
-            - 8 : maps the values to the range [0, 255] as int
-            - 16: maps the values to the range [0, 2**16-1] as int 
+            - 8 : maps the values to the range [0, 255] as uint
+            - 16: maps the values to the range [0, 2**16-1] as uint
+            - 32: maps the values to the range [0, 2**32-1] as uint
+            - 64: maps the values to the range [0, 2**64-1] as uint
         bit_out: int, optional
             - 0 : (default) maps the values to the range [0, 1[ as float
             - 8 : maps the values to the range [0, 255] as int
-            - 16: maps the values to the range [0, 2**16-1] as int  
+            - 16: maps the values to the range [0, 2**16-1] as uint
+            - 32: maps the values to the range [0, 2**32-1] as uint
+            - 64: maps the values to the range [0, 2**64-1] as uint
         """
         bit_dict = {8: np.uint8, 16: np.uint16, 32: np.uint32, 64: np.uint64}
         bit_dict_inv = {np.dtype(j): i for i, j in bit_dict.items()}
@@ -354,7 +355,7 @@ class Images:
             placeholder for all images in the file.
         directory: str, optional,
             can have a placeholders {module}, {module_lower} or {proc_data_dir} which will be replaced with
-            module name, the module name in lowercase or the directory for the processed STRAWb data specified in thee
+            module name, the module name in lowercase or the directory for the processed STRAWb data specified in the
             config file. Default is '{proc_data_dir}/{module_lower}'.
         ending: str, optional
             can be one of '.png' or '.jpg'. The ending is added automatically if the f_name_formatter doesn't end with
@@ -415,7 +416,7 @@ class Images:
         """ mode_list is something like [2, 0, 15, 7] or [1, 1, 15, -125] ([mode, addr, current, duration])"""
         if mode_list is None:
             mode_list = np.unique(self.file_handler.lucifer_options[:], axis=0)
-            # in the following line, only 'mode_list[:, 0] == -125' without np.argwhere raise an FutureWarning
+            # in the following line, only 'mode_list[:, 0] == -125' without 'np.argwhere' raise an FutureWarning
             mode_list = np.delete(mode_list, np.argwhere(mode_list[:, 0] == -125), axis=0)  # remove lucifer off
 
         mask_list = []
