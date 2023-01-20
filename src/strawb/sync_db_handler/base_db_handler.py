@@ -29,6 +29,7 @@ class BaseDBHandler:
         EXAMPLES
         --------
         Load the DB from disc
+        >>> import strawb
         >>> db = strawb.BaseDBHandler()  # loads the db
 
         Or if it doesn't exist, do the first creation of the DB. Also works to overwrite a existing DB.
