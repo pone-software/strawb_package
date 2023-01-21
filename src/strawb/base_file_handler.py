@@ -20,7 +20,7 @@ class BaseFileHandler:
         'still open hdf5': -7,
         'unknown error': -10,
     }
-    # invert the error2codes
+    # invert the error to codes dict
     codes2error = {i: j for j, i in error2codes.items()}
 
     def __init__(self, file_name=None, module=None, raise_error=True, skipp_init_open=False):
@@ -30,7 +30,7 @@ class BaseFileHandler:
         ---------
         file_name: Union[str, None], optional
             defines the file name. At initialisation, it checks if the file exists. The file name can be one of:
-            - None, to load initialise without an file name specified
+            - None, to load initialise without a file name specified
             - an absolut path, e.g. '/path/to/strawb/data/file_1.txt'
             - a relative path inside the strawb raw_data_dir, e.g. 'module_a/file_1.txt'
             - a file name which will be searched in the strawb raw_data_dir path, e.g. 'file_1.txt'
@@ -43,7 +43,7 @@ class BaseFileHandler:
         skipp_init_open: bool, optional
             don't open the file at initialisation
         """
-        # get all Meta Data arrays
+        # get all metadata arrays
         # self.__members__ = [attr for attr in dir(self) if
         #                     not callable(getattr(self, attr)) and not attr.startswith("__")]
 
@@ -51,7 +51,7 @@ class BaseFileHandler:
         self.file_name = None
         self.module = None
         self.file_typ = None  # file type
-        # can be either a error str or int for the file version. Default is 0 <-> not exist.
+        # can be either an error str or int for the file version. Default is 0 <-> not exist.
         self.file_version = self.error2codes['version not checked']
 
         # empty file
@@ -254,7 +254,7 @@ class BaseFileHandler:
                 file_error = self.error2codes['missing important group']
 
         except OSError as err:
-            err_str = err.args[0]  # h5py raise an error with tupel(tuple(str)
+            err_str = err.args[0]  # h5py raise an error with tuple(tuple(str)
             while not (isinstance(err_str, str) or err_str is None):
                 err_str = err_str[0]
             if err_str.startswith('Unable to open file (truncated file:'):

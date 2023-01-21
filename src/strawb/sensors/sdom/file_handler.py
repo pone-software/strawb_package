@@ -9,7 +9,7 @@ class FileHandler(BaseFileHandler):
         """The File Handler of the PMTSpectrometer hdf5 data."""
         # TODO: adopt to SDOM file, for simplification keep the naming where possible, i.e. self.counts_
         # Counter
-        self.counts_time = None  # absolute timestamps in seconds for each counts reading
+        self.counts_time = None  # absolute timestamps in seconds for each counter reading
         self.counts_ch0 = None  # channel which counts up at a constant frequency -> PMT Spectrometer
         self.counts_ch1 = None  # the PMT channel 1.
         self.counts_ch3 = None  # the PMT channel
@@ -24,7 +24,7 @@ class FileHandler(BaseFileHandler):
         self.counts_ch13 = None  # the PMT channel
         self.counts_ch15 = None  # the PMT channel
 
-        # interpolated rates. Based on the `counts` and interpolated to fit a artificially readout frequency.
+        # interpolated rates. Based on the `counts` and interpolated to fit an artificial readout frequency.
         self.interp_frequency = None  # artificially readout frequency
         self.interp_time = None  # absolute timestamps. Shape: [time_j]
         self.interp_rates = None  # rates a s a 2d array. Shape: [channel_i, time_j]
@@ -76,9 +76,6 @@ class FileHandler(BaseFileHandler):
         self.daq_time = None
         self.daq_trb = None
 
-        # holds the file version
-        self.file_version = None
-
         # comes last to load the data in case file_name is set
         BaseFileHandler.__init__(self, *args, **kwargs)
 
@@ -107,7 +104,7 @@ class FileHandler(BaseFileHandler):
         self.__load_counts_v1__()
         self.file_version = 1
 
-        # its the default frequency to fix files where writing failed
+        # it's the default frequency to fix files where writing failed
         self.daq_frequency_readout = np.array([10000.], dtype=np.float32)
 
     def __load_meta_data_v2__(self, ):
@@ -145,3 +142,52 @@ class FileHandler(BaseFileHandler):
         self.daq_trb = self.file['/daq/trb']
         self.padiwa_power = self.file['/daq/padiwa']
 
+
+class ProcessedFileHandler(BaseFileHandler):
+    def __init__(self, *args, **kwargs):
+        """File handler of the pre-processed STRAW file."""
+        self._time_ = None
+        self._trb_rate_up_0_ = None
+        self._trb_rate_down_0_ = None
+
+        # comes last to load the data in case file_name is set
+        BaseFileHandler.__init__(self, *args, **kwargs)
+
+    @property
+    def time(self, ):
+        """Absolut timestamp as seconds since epoch"""
+        return self._time_
+
+    @property
+    def rate_up(self, ):
+        """Rate in Hz of the upwards facing PMT in the SDOM."""
+        return self._trb_rate_up_0_
+
+    @property
+    def rate_down(self, ):
+        """Rate in Hz of the downwards facing PMT in the SDOM."""
+        return self._trb_rate_down_0_
+
+    def __load_meta_data__(self, ):
+        """Try to load the file with different versions."""
+        if not ('counts' in self.file or 'rates' in self.file):
+            raise KeyError('missing important group')
+
+        err_list = []
+        for i in [self.__load_meta_data_v1__]:
+            try:
+                i()  # try file versions
+                return
+            # version is detected because datasets in the hdf5 aren't present -> i() fails with KeyError
+            except (TypeError, KeyError) as a:
+                err_list.append(a.args[0])
+
+        raise KeyError('; '.join(err_list))
+
+    def __load_meta_data_v1__(self, ):
+        """Load a pre-processed STRAW / SDOM file."""
+        self.file_version = 1
+
+        self._time_ = self.file['trb_time']
+        self._trb_rate_up_0_ = self.file['trb_rate_up_0']
+        self._trb_rate_down_0_ = self.file['trb_rate_down_0']
