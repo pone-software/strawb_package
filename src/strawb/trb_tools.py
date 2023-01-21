@@ -712,15 +712,19 @@ class InterpolatedRatesFile:
 
     def read(self, ):
         """ Reads the file. """
-        with h5py.File(self.file_name, 'r') as f:
+        with h5py.File(self.file_name, 'r', swmr=True) as f:
             if '/rates_interpolated/mask' in f:
                 self.__mask__ = f['/rates_interpolated/mask'][:]
 
             self.__time__ = f['/rates_interpolated/time'][:]
             self.__rate__ = np.array(f['/rates_interpolated/rate'][:])
 
-            self.file_start = f.attrs['file_start']
-            self.file_end = f.attrs['file_end']
+            # read 'file_start', and 'file_end' if available
+            for i in ['file_start', 'file_end']:
+                try:
+                    self.__setattr__(i, f.attrs[i])
+                except KeyError:
+                    pass
 
     def get_active(self, step_size=3600, **kwargs):
         bins = np.arange(self.file_start, self.file_end + step_size, step_size)
