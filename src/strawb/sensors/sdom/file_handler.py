@@ -170,9 +170,6 @@ class ProcessedFileHandler(BaseFileHandler):
 
     def __load_meta_data__(self, ):
         """Try to load the file with different versions."""
-        if not ('counts' in self.file or 'rates' in self.file):
-            raise KeyError('missing important group')
-
         err_list = []
         for i in [self.__load_meta_data_v1__]:
             try:
