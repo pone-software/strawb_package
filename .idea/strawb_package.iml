@@ -16,6 +16,10 @@
       <excludeFolder url="file://$MODULE_DIR$/.pytest_cache" />
       <excludeFolder url="file://$MODULE_DIR$/examples/.ipynb_checkpoints" />
       <excludeFolder url="file://$MODULE_DIR$/examples/figures/.ipynb_checkpoints" />
+      <excludeFolder url="file://$MODULE_DIR$/resources/image_cluster_search/.ipynb_checkpoints" />
+      <excludeFolder url="file://$MODULE_DIR$/resources/lucifer/.ipynb_checkpoints" />
+      <excludeFolder url="file://$MODULE_DIR$/resources/.ipynb_checkpoints" />
+      <excludeFolder url="file://$MODULE_DIR$/.ipynb_checkpoints" />
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
