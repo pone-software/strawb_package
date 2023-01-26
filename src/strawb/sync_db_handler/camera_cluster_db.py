@@ -1,9 +1,11 @@
+import cv2
 import numpy as np
 import pandas
 
 import strawb
 from strawb import Config
 from strawb.sync_db_handler.base_db_handler import BaseDBHandler
+import strawb.sensors.camera.config
 
 
 class ImageClusterDB(BaseDBHandler):
@@ -36,6 +38,8 @@ class ImageClusterDB(BaseDBHandler):
         # directly add the charge, doesn't need long
         if self.dataframe is not None:
             self.add_charge()
+
+        self.cam_config = strawb.sensors.camera.config.Config(device_code=device_code)
 
     def save_db(self):
         # remove the extra columns again to save space
@@ -79,8 +83,8 @@ class ImageClusterDB(BaseDBHandler):
     def add_charge(self):
         """Adds new columns for charge based on charge_with_noise-noise also for the colors"""
         for i in ['', '_red', '_blue', '_green']:
-            if f'charge{i}' not in self.dataframe and\
-                    f'charge_with_noise{i}' in self.dataframe and\
+            if f'charge{i}' not in self.dataframe and \
+                    f'charge_with_noise{i}' in self.dataframe and \
                     f'noise{i}' in self.dataframe:
                 self.dataframe[f'charge{i}'] = self.dataframe[f'charge_with_noise{i}'] - self.dataframe[f'noise{i}']
 
@@ -177,3 +181,44 @@ class ImageClusterDB(BaseDBHandler):
             line,  # point of the steel cable at the mounting
         ).T
         return pos_x, pos_y
+
+    def add_classes(self, distance_cable=100, distance_fov=10):
+        """Split cluster into some basic classes. There are two types of classes,
+        where each cluster is individually labeled:
+        - 'cable': clusters within the maximum distance from the cables ('distance_cable')
+                   and in the module's FoV
+        - 'fov'  : clusters which are inside the module's FoV and are not in the class 'cable'
+        - 'noise': clusters which are outside the module's FoV
+        and where all clusters of one picture are labeled if it matches the condition
+        - 'invalid': if at least one cluster has greater dimensions as the module's FoV
+        - 'flash'  : if the flasher LEDs have been enabled for that picture.
+                     Flasher LEDs are located in the same modules as the camera and work like a normal flash
+        - 'led'    : if the LEDs in the neighboring module are enabled
+        """
+        # label cluster classes: 'cable', 'fov', 'noise'
+        mask_label = (self.dataframe.label > 0)  # don't label the label 0
+
+        self.dataframe['class'] = ''
+        # the label order is important: 'fov', 'cable', 'noise'!
+        # distance_fov is negative if it is inside
+        self.dataframe.loc[mask_label & (self.dataframe.distance_fov < distance_fov), 'class'] = 'fov'
+        # distance_cable is not negative as there can't be a cluster inside
+        self.dataframe.loc[mask_label &
+                           (self.dataframe.distance_cable < distance_cable) &
+                           (self.dataframe.distance_fov < 0), 'class'] = 'cable'
+        # all clusters outside the module's fov
+        self.dataframe.loc[mask_label & (self.dataframe.distance_fov >= distance_fov), 'class'] = 'noise'
+
+        # label image classes: 'invalid', 'flash', 'led'
+        # 'invalid': mask too big cluster that have greater dimensions as the fov and
+        rect = cv2.minAreaRect(np.argwhere(self.cam_config.mask_mounting))  # get dimensions
+        mask_box = self.dataframe.box_size_x > rect[1][0]
+        mask_box |= self.dataframe.box_size_y > rect[1][1]
+        # when one cluster is too big, mask also all cluster in the same picture
+        mask_box = self.dataframe.time.isin(self.dataframe[mask_box & mask_label].time)
+        self.dataframe.loc[mask_box, 'class'] = 'invalid'
+
+        # 'flash', 'led': mask cluster with enabled LED and label them as valid
+        mask_led_module = self.dataframe.luciver_deviceCode == self.device_code
+        self.dataframe.loc[~self.dataframe.option_tag.isna() & mask_led_module, 'class'] = 'flash'
+        self.dataframe.loc[~self.dataframe.option_tag.isna() & ~mask_led_module, 'class'] = 'led'
