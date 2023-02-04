@@ -19,6 +19,8 @@ def parser_args():
     parser = argparse.ArgumentParser(description='Sync local DB with the ONC DB and if set download missing files.')
     parser.add_argument('--download', action='store_true',
                         help='If set, download files. (default: %(default)s)')  # if set, args.download is True
+    parser.add_argument('-f', '--force', action='store_true',
+                        help='If set, overwrites an existing files and downloads the DB new')
     parser.add_argument('-s', '--start', type=str, default=None,
                         help="Defines the start time of the query. Supports: \n"
                              " - str in isoformat: '2021-08-31T14:00:00.000' or '2021-08-31T14:00:00.000Z' \n"
@@ -47,7 +49,7 @@ def parser_args():
 
 
 def main(download=False, dev_codes=None, date_from=None, date_to=None,
-         extensions=None, min_file_size=0, max_file_size=.75e9):
+         extensions=None, min_file_size=0, max_file_size=.75e9, force=False):
     """
     This function downloads all files from the ONC server for the all dev_codes defined in `strawb.dev_codes_deployed`
     It will download it with the following structure:
@@ -60,7 +62,7 @@ def main(download=False, dev_codes=None, date_from=None, date_to=None,
           <strawb.Config.raw_data_dir>/<dev_codes[1]>
           ...
 
-    In addition, it saves/updateds the metadata to the local data base (DB) with the data from the ONC server for all
+    In addition, it saves/updateds the metadata to the local database (DB) with the data from the ONC server for all
     files under: `strawb.Config.pandas_file_sync_db`
     This file DB be imported again with:
     >>> import strawb
@@ -68,7 +70,7 @@ def main(download=False, dev_codes=None, date_from=None, date_to=None,
     >>> db.dataframe
     """
 
-    db_handler = strawb.SyncDBHandler(file_name='Default')  # with no dataframe loaded
+    db_handler = strawb.SyncDBHandler(file_name='Default', load_db=not force)  # with no dataframe loaded
 
     # sync all if the db doesn't exist
     if db_handler.dataframe is None:
@@ -96,5 +98,6 @@ if __name__ == "__main__":
          date_from=args.start, date_to=args.to,
          extensions=args.extensions,
          min_file_size=int(args.min), max_file_size=int(args.max),
+         force=args.force,
          )
     print(f'Sync ended: {datetime.datetime.utcnow().isoformat()}')

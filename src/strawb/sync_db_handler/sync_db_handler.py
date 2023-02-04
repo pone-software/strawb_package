@@ -360,6 +360,8 @@ class SyncDBHandler(BaseDBHandler):
         """
 
         if dataframe.index.name != 'fullPath':
+            if 'fullPath' not in dataframe:
+                dataframe['fullPath'] = dataframe['outPath'] + '/' + dataframe['filename']
             dataframe.set_index(['fullPath'],
                                 inplace=True,
                                 verify_integrity=True,
@@ -951,3 +953,7 @@ class SyncDBHandler(BaseDBHandler):
 
         # use the super implementation
         BaseDBHandler.optimize_dataframe(self, exclude_columns=exclude_columns, include_columns=include_columns)
+
+    def save_db(self):
+        self.optimize_dataframe()
+        BaseDBHandler.save_db(self)
