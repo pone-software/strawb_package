@@ -16,7 +16,7 @@ class FileHandler(BaseFileHandler):
         self.daq_measured_frequency_pmt = None  # Removed from hdf5 ~05.10.2021, as moved to counts reading
         self.daq_measured_frequency_trigger = None  # Removed from hdf5 ~05.10.2021, as moved to counts reading
         self.daq_pmt = None  # PMT is; 0: OFF; 1: ON
-        self.daq_frequency_readout = None  # the frequency when the TRB counts up counts channel 0
+        self.daq_frequency_readout = None  # the frequency when the TRB counts up channel 0
         self.daq_frequency_trigger = None  # the frequency of the trigger pin controlled by the TRB
         self.daq_state = None  # 0: TRB not ready; 1: TRB ready; 2: TRB takes hld
         self.daq_trb = None  # TRB power; 0: OFF; 1: ON
