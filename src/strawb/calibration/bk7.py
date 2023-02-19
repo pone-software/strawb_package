@@ -77,7 +77,7 @@ class BK7(Absorption):
     >>>                 'absorption': bk7_absorption_3})
     """
     # default thickness in meter for the 13" sphere
-    thickness = .012
+    thickness = .012  # [m]
 
     # converted values from Data Sheet SCHOTT N-BK 7® 517642.251
     # 'absorption' is the mean of 'absorption_10mm', 'absorption_25mm' and the two are from the datasheet
@@ -149,7 +149,7 @@ class BK7(Absorption):
     b_bk7 = np.array([1.03961212, 0.231792344, 1.01046945])
     c_bk7 = np.array([0.00600069867, 0.0200179144, 103.560653]) * 1e6  # [nm]: 1e6 to convert from um to nm
 
-    # cite: Sellmeier (1871): Zur Erklärung der abnormen Farbenfolge im Spectrum einiger Substanzen
+    # cite: Sellmeier (1871): "Zur Erklärung der abnormen Farbenfolge im Spectrum einiger Substanzen"
     @staticmethod
     def sellmeier(wavelength, b=None, c=None):
         """ Dispersion formular by Sellmeier.

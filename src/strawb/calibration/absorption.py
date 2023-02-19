@@ -9,7 +9,7 @@ class Absorption:
     thickness = 1.  # default thickness in meter
 
     def __init__(self, thickness=None, config_parameters=None):
-        """Optical properties of BK7 glass.
+        """Base class to calculate the absorption of a material with a thickness.
         It is based on absorption length (a_l) to transmittance (t) for a given thickness (d):
         t = e^(-d/a_l) -> a_l = -d / ln(t)
         or similar for the absorption coefficient (a) (a = 1/a_l)
