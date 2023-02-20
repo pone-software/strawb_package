@@ -1,10 +1,12 @@
 import pandas
+import os
 
 from strawb.calibration.absorption import Absorption
 
 
 class Water(Absorption):
-    config_parameters_pool = pandas.read_parquet('water_data.parquet')
+    local_path = os.path.abspath(os.path.join(os.path.dirname(__file__)))
+    config_parameters_pool = pandas.read_parquet(os.path.join(local_path, 'water_data.parquet'))
 
     def __init__(self, thickness=None, publication='hale73', config_parameters=None):
         """Class to calculate the water absorption based on data (wavelength vs. absorption).
