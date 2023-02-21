@@ -9,5 +9,6 @@ a place for different calibration data, like:
   - a [csv file](water_publication.csv) listing the publications used
   - [notebook to generate the csv](../../../resources/water_absorption/water_absorption_data.ipynb), i.e. to add more data
 - [LED](led.py) radiation spectra for multiple LEDs
-- [Filters](filter.py) (used in the PMT-Spectrometer)
+- [PMT Filter](filter.py) (used in the PMT-Spectrometer)
+- [Camera Filter](filter.py) (used in the STRAW-b camera)
 - [Laser](laser.py) signal (used in the LiDAR)

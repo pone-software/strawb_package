@@ -22,7 +22,7 @@ class Filter:
             The value must be listed in filter_para_0 or filter_para as key.
         filter_para: dict, optional
             parameters which define the filters as a dict. If None (default) it takes
-            the internal parameters stored in filter_para_0. Otherwise the dict must
+            the internal parameters stored in filter_para_0. Otherwise, the dict must
             match the pattern:
             {central_wavelength [nm]: (fwhm [nm], transmittance_max [0<=..<=1), ...}
             transmittance_max: is the max transmittance of the filter
@@ -44,7 +44,7 @@ class Filter:
 
     def transmittance_erfc(self, wavelength=None, *args, **kwargs):
         """Calculate the transmittance (old version) of the filter which use
-        the error function: scipy.special.erfc to calculate the curfe."""
+        the error function: scipy.special.erfc to calculate the curve."""
         if wavelength is None:
             wavelength = self.get_linspace_wavelength(*args, **kwargs)
 
@@ -71,7 +71,7 @@ class Filter:
         return self.transmittance_max * np.exp(-(wavelength - self.central_wavelength) ** 2 / (2 * sigma ** 2))
 
     def get_linspace_wavelength(self, fwhm_scale=2, *args, **kwargs):
-        """Returns a array of wavelengths around the filter central wavelength.
+        """Returns an array of wavelengths around the filter central wavelength.
         central_wavelength +- fwhm*fwhm_scale
         PARAMETER
         ---------
