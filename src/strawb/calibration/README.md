@@ -1,11 +1,13 @@
 # Calibration Data
 
-a place for different calibration data:
+a place for different calibration data, like:
 - [BK7](bk7.py) glass (glass of the pressure housing)
   - transmittance
   - dispersion - refraction
 - [Water](water.py) models
-  - a collection of 24 water publications
-- LED radiation spectra for multiple LEDs
-- Filters (used in the PMT-Spectrometer)
-- Laser signal (used in the LiDAR)
+  - a collection of 24 water publications as [csv file](water_data.csv)
+  - a [csv file](water_publication.csv) listing the publications used
+  - [notebook to generate the csv](../../../resources/water_absorption/water_absorption_data.ipynb), i.e. to add more data
+- [LED](led.py) radiation spectra for multiple LEDs
+- [Filters](filter.py) (used in the PMT-Spectrometer)
+- [Laser](laser.py) signal (used in the LiDAR)
