@@ -20,7 +20,7 @@ class DatasetHandler:
         # set the label and check if it is a valid label
         self.label = label
 
-    # example if the dataset has to values: x and y
+    # example if the dataset has two values: x and y
     # the properties block setting the values from outside and provide a docstring with help
     # @property
     # def x(self):
