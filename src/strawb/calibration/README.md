@@ -12,3 +12,9 @@ a collection for different calibration data, like:
 - [PMT Filter](filter.py) (STRAW-b PMT-Spectrometer)
 - [Camera Filter](camera_filter.csv) (STRAW-b camera)
 - [Laser](laser.py) signal (STRAW-b LiDAR)
+- [Bio-fouling spectra](biofouling.csv)
+- [DNA damage model](dna_damage.py) and different datasets:
+  - [dna absorbance](dna_absorbance.csv),
+  - [Erythemal, DNA-damage, Vitamin-D](dna_absorbance_2.csv),
+  - [DNA absorbance and emission](dna_absorbance_emission.csv)
+  
