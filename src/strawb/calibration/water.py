@@ -6,7 +6,8 @@ from strawb.calibration.absorption import Absorption
 
 class Water(Absorption):
     local_path = os.path.abspath(os.path.join(os.path.dirname(__file__)))
-    config_parameters_pool = pandas.read_parquet(os.path.join(local_path, 'water_data.parquet'))
+    config_parameters_pool = pandas.read_csv(os.path.join(local_path, 'water_data.csv'), index_col='Unnamed: 0')
+    publications = pandas.read_csv(os.path.join(local_path, 'water_publication.csv'), index_col='publication')
 
     def __init__(self, thickness=None, publication='hale73', config_parameters=None):
         """Class to calculate the water absorption based on data (wavelength vs. absorption).
@@ -17,7 +18,7 @@ class Water(Absorption):
         publication: str, optional
             defines which dataset is selected from the `config_parameters_pool`.
             If a dataset is provided, with the `config_parameters` parameter, `publication` is ignored.
-            See all valid publication strings with: `config_parameters_pool.publication.unique()`
+            See all valid publications with: `Water.publications`
         thickness: float, optional
             the thickness of the glass in meter [m].
         config_parameters: pandas.DataFrame, optional
@@ -26,9 +27,9 @@ class Water(Absorption):
             The 'absorption' is the absorption coefficient or 1./'absorption_length'.
         """
         if config_parameters is None:
-            if 0 < (self.config_parameters_pool.publication == 'hale73').sum():
+            if 0 < (self.config_parameters_pool.publication == publication).sum():
                 df_i = self.config_parameters_pool
-                config_parameters = df_i[df_i.publication == 'hale73'].copy()
+                config_parameters = df_i[df_i.publication == publication].copy()
             else:
                 raise KeyError(f'publication not in config_parameters_pool. Got: {publication}')
 
