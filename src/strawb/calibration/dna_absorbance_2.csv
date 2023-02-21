@@ -1,3 +1,21 @@
+# Action spectra of TEMIS UV v2.0 data products
+# ---------------------------------------------
+#
+# Implemented in TEMIS UV v2.0 processing:
+#   Erythemal  = CIE-98, cf. Webb, A.R. et al. (2011)
+#   Vitamin-D  = CIE-174, cf. Bouillon, R. et al. (2006)
+#   DNA-damage = Setlow, R.B. (1974)
+#                Bernhard, G. and Seckmeyer, G. (1997)
+#
+# For more information, see
+# http://www.temis.nl/uvradiation/product/action.html
+#
+#
+# Action spectrum data at 0.1 nm interval, produced from
+# the implementation by Marc Allaart (KNMI, April 2017).
+#
+#
+#
 ,wavelength,Erythemal,DNA-damage,Vitamin-D
 0,250.0,1.0,30.1187,0.03
 1,250.1,1.0,30.1129,0.0303
