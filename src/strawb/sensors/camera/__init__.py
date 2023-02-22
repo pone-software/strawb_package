@@ -11,7 +11,7 @@ from .projection import EquisolidProjection
 
 
 class Camera:
-    def __init__(self, file: Union[str, FileHandler] = None, name='', invert_dir=None):
+    def __init__(self, file: Union[str, FileHandler] = None, name='', invert_dir=None, device_code=None):
         """
         PARAMETER
         ---------
@@ -21,6 +21,9 @@ class Camera:
             to set  a name
         invert_dir: bool, optional
             if the image should be rotated by 180deg. Used in the projection.
+        device_code: str, optional
+            to specify the device_code if no file is provided, e.g. to access the projection and config parameters.
+            If a file is specified, device_code is ignored.
         """
         self.name = name
 
@@ -32,12 +35,16 @@ class Camera:
             raise ValueError(f'file_handler is no instance of strawb.sensors.camera.FileHandler, a path, nor None. Got:'
                              f'{type(file)}')
 
-        self.images = Images(file_handler=self.file_handler)
+        if self.file_handler is not None:
+            device_code = self.file_handler.deviceCode
 
+        self.config = Config(device_code=device_code)
+
+        self.images = Images(file_handler=self.file_handler)
         self.find_cluster = FindCluster(camera=self)
 
-        if self.file_handler is not None:
-            self.config = Config(device_code=self.file_handler.deviceCode)
+        self.projection = None
+        if device_code is not None:
             sphere_distortion = SphereDistortion(r_position=self.config.camera_position,
                                                  r_sphere=self.config.radius_sphere,
                                                  thickness_sphere=self.config.thickness_sphere)
@@ -46,9 +53,6 @@ class Camera:
                                                   pixel_center_index=self.config.position_lenses_center,
                                                   invert_dir=invert_dir,
                                                   distortion=sphere_distortion)
-        else:
-            self.config = Config(device_code=None)
-            self.projection = None
 
     def __del__(self):
         del self.find_cluster
