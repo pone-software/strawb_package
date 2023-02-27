@@ -7,7 +7,7 @@ from .find_cluster import FindCluster
 from .tools import *
 from .config import Config
 from .distortion import SphereDistortion
-from .projection import EquisolidProjection
+from .projection import EquisolidProjection, ProjectionTools, TransformCoordinates
 
 
 class Camera:
@@ -44,6 +44,7 @@ class Camera:
         self.find_cluster = FindCluster(camera=self)
 
         self.projection = None
+        self.tc = None  # transforms the coordinates from real world to camera.
         if device_code is not None:
             sphere_distortion = SphereDistortion(r_position=self.config.camera_position,
                                                  r_sphere=self.config.radius_sphere,
@@ -53,6 +54,10 @@ class Camera:
                                                   pixel_center_index=self.config.position_lenses_center,
                                                   invert_dir=invert_dir,
                                                   distortion=sphere_distortion)
+            self.tc = TransformCoordinates(projection=self.projection,
+                                           position_module_vec=[.295, 0., 0.],
+                                           position_module=self.config.position_module,
+                                           position_steel_cable=self.config.position_steel_cable)
 
     def __del__(self):
         del self.find_cluster

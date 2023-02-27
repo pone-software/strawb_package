@@ -108,7 +108,7 @@ class ProjectionTools:
         return np.dot(np.dot(Rz, np.dot(Ry, Rx)), points)
 
     @staticmethod
-    def translation(points, x=0, y=0, z=0):
+    def translation(points, x=0., y=0., z=0.):
         """
         Translate points according to world coordinates point of origin. Camera
         always looks in positive z direction.
@@ -154,11 +154,11 @@ class CameraProjection:
         # set and check distribution
         if distortion is None:
             distortion = []
-        elif isinstance(distortion, (Distortion, )):
+        elif isinstance(distortion, (Distortion,)):
             distortion = [distortion]
 
         for distortion_i in distortion:
-            if not isinstance(distortion_i, (Distortion, )):
+            if not isinstance(distortion_i, (Distortion,)):
                 raise TypeError(f'All distributions must be subclasses of Distortion. Got: {type(distortion_i)}')
         self.distortion = distortion
 
@@ -301,11 +301,10 @@ class CameraProjection:
             pixel index in x and y
         invert_dir: bool, optional
             if the image should be rotated by 180deg (phi). If None, take the value of the initialisation.
-        RETURN
-        ------
-        phi: float, ndarray
-            the phi component of the direction the pixel get projected to
-        theta: float, ndarray
+        RETURNS
+        -------
+        phi, theta: float, ndarray
+            the phi component of the direction the pixel get projected to,
             the theta component of the direction the pixel get projected to
 
         removed
@@ -337,8 +336,8 @@ class CameraProjection:
             the theta component of the direction the pixel get projected to
         invert_dir: bool, optional
             if the image should be rotated by 180deg (phi). If None, take the value of the initialisation.
-        RETURN
-        ------
+        RETURNS
+        -------
         x_i, y_i: float, ndarray
             pixel index in x and y
         """
@@ -383,6 +382,7 @@ class CameraProjection:
         x, y, z: ndarrays
             x, y, z coordinates on the unit sphere (r=1)
         """
+        # noinspection PyTupleAssignmentBalance
         phi, theta = self.pixel2angle(x_i, y_i, invert_dir=invert_dir)
         return ProjectionTools.spherical2cart(1., phi, theta)
 
@@ -404,7 +404,15 @@ class EquisolidProjection(CameraProjection):
         # r_pixel = 2*f*np.sin(theta/2)
         # -> 2 * arcsin(r_pixel/2/f) = theta
         x = np.ma.masked_outside(radius_pixel / 2. / self.focal_length, -1, 1)
-        return 2. * np.ma.arcsin(x).filled(np.nan)
+        x = 2. * np.ma.arcsin(x)
+
+        # workaround if radius_pixel is an int or float
+        if isinstance(x, np.float64):
+            return x
+        elif isinstance(x, np.ma.core.MaskedConstant):
+            return np.nan
+        elif isinstance(x, np.ma.core.MaskedArray):
+            return x.filled(np.nan)
 
     def theta2image_radius(self, theta):
         """
@@ -420,3 +428,93 @@ class EquisolidProjection(CameraProjection):
         # r_pixel = 2*f*np.sin(theta/2)
         # -> 2 * arcsin(r_pixel/2/f) = theta
         return 2. * self.focal_length * np.sin(theta / 2.)
+
+
+class TransformCoordinates:
+    def __init__(self, projection, position_module, position_steel_cable, position_module_vec=None):
+        """Helper class to transform the real world coordinates to the camera coordinates including the inverse
+        transformation. The real world coordinates are defined by the steel line. The line is expected to be vertical
+        and defines the z-axis. The module is positioned at x=.295m and y=0m, as the module center is seperated by 295mm
+         from the steel cable in STRAW-b.
+
+        Parameters
+        ----------
+        projection: CameraProjection
+            projection model of the camera
+        position_module: ndarray, list[float]
+            the position of the module in pixel coordinates [pixel_x, pixel_y].
+            Usually this is 'camera.config.position_module'.
+        position_steel_cable: ndarray, list[float]
+            the position of the steel cable in pixel coordinates [pixel_x, pixel_y].
+            Usually this is 'camera.config.position_steel_cable'.
+        position_module_vec: ndarray, list[float], optional
+            the position of the module in the real world as vector [x,y,z] in meter. Usually (also the default if None)
+            this is: '[.295, 0., 0.], for STRAW-b as the module center is seperated by 295mm from the steel cable.
+        """
+        if position_module_vec is None:
+            position_module_vec = [.295, 0., 0.]
+        self.projection = projection
+        self.position_module_vec = position_module_vec
+
+        # noinspection PyTupleAssignmentBalance
+        self.phi_module, self.theta_module = self.projection.pixel2angle(*position_module[None].T)
+        # noinspection PyTupleAssignmentBalance
+        self.phi_cable, _ = self.projection.pixel2angle(*position_steel_cable[None].T)
+
+        # projection.pixel2angle returns an array here with shape= (1,), extract the floats
+        self.phi_module, self.theta_module, self.phi_cable = self.phi_module[0], self.theta_module[0], self.phi_cable[0]
+
+    def real2camera(self, points):
+        """ Transform the real world coordinates to the camera coordinates
+        Parameters
+        ----------
+        points: ndarray
+            real world coordinates of points with the shape [[x_0,...], [y_0,...], [z_0,...]]
+
+        Returns
+        -------
+        points: ndarray
+            camera coordinates of points with the shape [[x_0,...], [y_0,...], [z_0,...]]
+        """
+        # the string is .295 from the module center == optical axis
+        points = ProjectionTools.translation(points,
+                                             x=-self.position_module_vec[0],
+                                             y=-self.position_module_vec[1],
+                                             z=-self.position_module_vec[2])
+
+        # align to the cable orientation
+        points = ProjectionTools.rotation(points, gamma=-self.phi_cable)
+
+        # align to the module position
+        # first rotation around z <-> gamma <-> phi
+        points = ProjectionTools.rotation(points, beta=self.theta_module)
+        # second rotation around y <-> beta <-> theta
+        return ProjectionTools.rotation(points, gamma=self.phi_module)
+
+    def camera2real(self, points):
+        """ Transform the real world coordinates to the camera coordinates
+        Parameters
+        ----------
+        points: ndarray
+            camera coordinates of points with the shape [[x_0,...], [y_0,...], [z_0,...]]
+
+        Returns
+        -------
+        points: ndarray
+
+            real world coordinates of points with the shape [[x_0,...], [y_0,...], [z_0,...]]
+        """
+        # align to the module position
+        # first rotation around z <-> gamma <-> phi
+        points = ProjectionTools.rotation(points, gamma=-self.phi_module)
+        # second rotation around y <-> beta <-> theta
+        points = ProjectionTools.rotation(points, beta=-self.theta_module)
+
+        # align to the cable orientation
+        points = ProjectionTools.rotation(points, gamma=self.phi_cable)
+
+        # the string is .295 from the module center == optical axis
+        return ProjectionTools.translation(points,
+                                           x=self.position_module_vec[0],
+                                           y=self.position_module_vec[1],
+                                           z=self.position_module_vec[2])
