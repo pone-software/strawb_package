@@ -458,11 +458,39 @@ class TransformCoordinates:
 
         # noinspection PyTupleAssignmentBalance
         self.phi_module, self.theta_module = self.projection.pixel2angle(*position_module[None].T)
-        # noinspection PyTupleAssignmentBalance
-        self.phi_cable, _ = self.projection.pixel2angle(*position_steel_cable[None].T)
-
         # projection.pixel2angle returns an array here with shape= (1,), extract the floats
-        self.phi_module, self.theta_module, self.phi_cable = self.phi_module[0], self.theta_module[0], self.phi_cable[0]
+        self.phi_module, self.theta_module = self.phi_module[0], self.theta_module[0]
+
+        # not 100% the true solution, but close
+        steel_cable_vec = self._align_camera_(projection.pixel2vec(*position_steel_cable[None].T))
+        self.phi_cable = -np.pi + projection.pixel2angle(*projection.vec2pixel(*steel_cable_vec))[0][0]
+
+    def _align_camera_(self, points, inverse=False):
+        """ Align to real world orientation to the camera orientation or vise versa.
+        Parameters
+        ----------
+        points: ndarray
+            real world coordinates of points with the shape [[x_0,...], [y_0,...], [z_0,...]]
+        inverse:
+            if True calculates the inverse camera -> real world. Default False.
+        Returns
+        -------
+        points: ndarray
+            camera coordinates of points with the shape [[x_0,...], [y_0,...], [z_0,...]]
+        """
+        if inverse:
+            # real world -> Camera
+            # first rotation around z <-> gamma <-> phi
+            points = ProjectionTools.rotation(points, beta=self.theta_module)
+            # second rotation around y <-> beta <-> theta
+            return ProjectionTools.rotation(points, gamma=self.phi_module)
+
+        else:
+            # Camera -> real world
+            # first rotation around y <-> beta <-> theta
+            points = ProjectionTools.rotation(points, gamma=-self.phi_module)
+            # second rotation around z <-> gamma <-> phi
+            return ProjectionTools.rotation(points, beta=-self.theta_module)
 
     def real2camera(self, points):
         """ Transform the real world coordinates to the camera coordinates
@@ -483,13 +511,10 @@ class TransformCoordinates:
                                              z=-self.position_module_vec[2])
 
         # align to the cable orientation
-        points = ProjectionTools.rotation(points, gamma=-self.phi_cable)
+        points = ProjectionTools.rotation(points, gamma=self.phi_cable)
 
         # align to the module position
-        # first rotation around z <-> gamma <-> phi
-        points = ProjectionTools.rotation(points, beta=self.theta_module)
-        # second rotation around y <-> beta <-> theta
-        return ProjectionTools.rotation(points, gamma=self.phi_module)
+        return self._align_camera_(points, inverse=True)
 
     def camera2real(self, points):
         """ Transform the real world coordinates to the camera coordinates
@@ -501,17 +526,14 @@ class TransformCoordinates:
         Returns
         -------
         points: ndarray
-
             real world coordinates of points with the shape [[x_0,...], [y_0,...], [z_0,...]]
         """
         # align to the module position
-        # first rotation around z <-> gamma <-> phi
-        points = ProjectionTools.rotation(points, gamma=-self.phi_module)
-        # second rotation around y <-> beta <-> theta
-        points = ProjectionTools.rotation(points, beta=-self.theta_module)
+        # align to the module position
+        points = self._align_camera_(points, inverse=False)
 
         # align to the cable orientation
-        points = ProjectionTools.rotation(points, gamma=self.phi_cable)
+        points = ProjectionTools.rotation(points, gamma=-self.phi_cable)
 
         # the string is .295 from the module center == optical axis
         return ProjectionTools.translation(points,
