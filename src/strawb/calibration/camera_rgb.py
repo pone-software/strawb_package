@@ -11,7 +11,7 @@ class CameraRGB(Absorption):
 
     # set default - from the IMX225LQR datasheet
     local_path = os.path.abspath(os.path.join(os.path.dirname(__file__)))
-    config_parameters_all = pandas.read_csv(os.path.join(local_path, 'IMX225LQR-spectra.csv'))
+    config_parameters_all = pandas.read_csv(os.path.join(local_path, 'camera_filter.csv'))
     config_parameters = config_parameters_all[config_parameters_all['color'] == 'red'].copy()
 
     def __init__(self, color='red', config_parameters=None):
