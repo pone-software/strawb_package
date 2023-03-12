@@ -493,7 +493,7 @@ class TransformCoordinates:
             return ProjectionTools.rotation(points, beta=-self.theta_module)
 
     def real2camera(self, points):
-        """ Transform the real world coordinates to the camera coordinates
+        """ Transform the real world coordinates (x,y,z) to the camera coordinates (x',y',z')
         Parameters
         ----------
         points: ndarray
@@ -502,7 +502,7 @@ class TransformCoordinates:
         Returns
         -------
         points: ndarray
-            camera coordinates of points with the shape [[x_0,...], [y_0,...], [z_0,...]]
+            camera coordinates of points with the shape [[x'_0,...], [y'_0,...], [z'_0,...]]
         """
         # the string is .295 from the module center == optical axis
         points = ProjectionTools.translation(points,
@@ -517,11 +517,11 @@ class TransformCoordinates:
         return self._align_camera_(points, inverse=True)
 
     def camera2real(self, points):
-        """ Transform the real world coordinates to the camera coordinates
+        """ Transform the camera coordinates (x',y',z') to real world coordinates (x,y,z)
         Parameters
         ----------
         points: ndarray
-            camera coordinates of points with the shape [[x_0,...], [y_0,...], [z_0,...]]
+            camera coordinates of points with the shape [[x'_0,...], [y'_0,...], [z'_0,...]]
 
         Returns
         -------
