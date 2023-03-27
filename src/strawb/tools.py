@@ -226,7 +226,7 @@ class ShareJobThreads:
 
         with tqdm.tqdm(self.iterable,
                        file=sys.stdout,
-                       unit=self.unit) as bar:
+                       unit=self.unit, smoothing=0) as bar:
             while any([thread_i.is_alive() for thread_i in self.threads]) or last_i != self.i_bar:
                 with self.lock:
                     # print(self.i, self.active)
@@ -812,3 +812,64 @@ def explore_hdf5(fn, data_view=False, include_attrs=False, precision=2, suppress
     with h5py.File(fn, 'r') as f:
         h5_iter_group(f, data_view=data_view, include_attrs=include_attrs, precision=precision,
                       suppress=suppress, threshold=threshold, **kwargs)
+
+
+def sper2cart(radius, phi, theta=None):
+    """Converts spherical or polar coordinates to cartesian.
+    sph2cart(1, 0) -> x,y = (1 , 0)
+    sph2cart(1, 0, 0) -> x,y,z = (0, 0, 1)
+    PARAMETER
+    ---------
+    radius: int, float, list or ndarray
+    phi: int, float, list or ndarray
+        should be in the range from [0, 2*np.pi]
+    theta: int, float, list or ndarray, optional
+        set theta (is not None) to use spherical coordinates
+        should be in the range from [0, np.pi]
+    RETURN
+    ------
+    x: float or ndarray
+    y: float or ndarray
+    z: float or ndarray, optional
+        if theta is not None
+    """
+    rr, pp, tt = np.broadcast_arrays(radius, phi, theta)
+    if theta is None:
+        x = np.cos(pp) * rr
+        y = np.sin(pp) * rr
+        return x, y
+    else:
+        x = np.sin(tt) * np.cos(pp) * rr
+        y = np.sin(tt) * np.sin(pp) * rr
+        z = np.cos(tt) * rr
+        return x, y, z
+
+
+def cart2sper(x, y, z=None):
+    """Converts cartesian to spherical (z!=None) or polar coordinates.
+    cart2sph(1, 0) -> r,phi = (1 , 0)
+    cart2sph(0, 0, 1) -> r,phi,theta = (1, 0, 0)
+    PARAMETER
+    ---------
+    x: int, float, list or ndarray
+    y: int, float, list or ndarray
+    z: int, float, list or ndarray, optional
+        set z (is not None) to use spherical coordinates
+    RETURN
+    ------
+    radius: float or ndarray
+    phi: float or ndarray
+        in the range from [0, 2*np.pi]
+    theta: float or ndarray, optional
+        in the range from [0, np.pi]
+    """
+    xx, yy, zz = np.broadcast_arrays(x, y, z)
+
+    r_xy = np.hypot(xx, yy)
+    phi = np.arctan2(yy, xx) % (np.pi * 2.)
+    if z is None:
+        return r_xy, phi
+
+    r_xyz = np.hypot(zz, r_xy)
+    theta = np.pi / 2 - np.arctan2(zz, r_xy)
+    return r_xyz, phi, theta

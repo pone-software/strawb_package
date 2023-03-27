@@ -43,8 +43,9 @@ class TestTRBTools(TestCase):
 class TestIntegratedRates(TestCase):
     def setUp(self):
         __daq_frequency_readout__ = 100
+
         # COUNTS
-        # counts for one second
+        # create counts for one second
         counts = np.ones((5, __daq_frequency_readout__))
 
         # set every second entry to 0, but exclude the time counter (`1:`)
@@ -59,13 +60,14 @@ class TestIntegratedRates(TestCase):
             f.require_group('test')
 
         class ChildClass(TRBTools):
+            """Mock class which use the __time__, counts and __daq_frequency_readout__ from before"""
             @property
             def __daq_frequency_readout__(self):
                 return __daq_frequency_readout__
 
             @property
             def raw_counts_arr(self):
-                # the raw counts are the cum. sum
+                # the raw counts are the cum sum
                 return np.cumsum(counts, axis=-1)
 
             @property
@@ -76,17 +78,19 @@ class TestIntegratedRates(TestCase):
 
     def tearDown(self) -> None:
         os.remove('./test.h5')
+        # os.remove('./test_v2.h5')
 
     def test_integrate_rates(self):
         # set interp_frequency, setter executes the calculation
         self.trb_tools.interp_frequency = self.trb_tools.daq_frequency_readout / 2.
-        self.assertTrue(np.all(self.trb_tools.daq_frequency_readout / 2. == self.trb_tools.interp_rate.round(0)))
+        self.assertAlmostEqual((self.trb_tools.daq_frequency_readout / 2. - self.trb_tools.interp_rate).max(),
+                               0, places=12)
 
     def test_write_hdf5(self):
         self.trb_tools.write_interp_rate()
         self.assertTrue('counts_interpolated' in self.trb_tools.file_handler.file)
         self.assertTrue('time' in self.trb_tools.file_handler.file['counts_interpolated'])
         self.assertTrue('rate' in self.trb_tools.file_handler.file['counts_interpolated'])
-
+        # print('/counts_interpolated/mask' in self.trb_tools.file_handler.file)
         self.trb_tools.remove_interp_rate()
         self.assertTrue('counts_interpolated' not in self.trb_tools.file_handler.file)

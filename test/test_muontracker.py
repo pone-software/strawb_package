@@ -1,9 +1,8 @@
 import os
-import random
 from unittest import TestCase
+
 import numpy as np
 
-from src.strawb.config_parser import Config
 from src.strawb.sensors.muontracker.file_handler import FileHandler
 from strawb import SyncDBHandler
 
@@ -29,7 +28,6 @@ class TestMuonTrackerFileHandlerInit(TestCase):
         db_i = db.get_files_from_names(file_list)
 
         # file_list, mask, db = get_files()
-
 
         # self.full_path = random.choice(db_i.fullPath)  # select a random file
         self.full_path = db_i.fullPath.iloc[0]

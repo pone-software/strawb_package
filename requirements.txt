@@ -16,4 +16,7 @@ nbformat>=4.2.0
 
 utm~=0.7.0
 psutil~=5.9.1
-shapely~=1.8.2
+shapely~=1.8.5
+healpy~=1.16.1
+
+pyarrow~=11.0.0

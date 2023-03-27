@@ -4,14 +4,33 @@ import shapely.geometry
 import shapely.ops
 
 
+def cut_fov(img, rect=None, axis=0):
+    """Cropped an image to size of the rectangle without rotation.
+    PARAMETER
+    ---------
+    img: ndarray
+        image
+    rect: tuple, optional
+        define the region of interest. If None, it takes the whole picture
+    """
+    if rect is None:
+        rect = (tuple(np.array(img.shape) * .5), img.shape, 0)
+    box = cv2.boxPoints(rect)
+    min_xy = box.min(axis=0).astype(int)
+    max_xy = box.max(axis=0).astype(int)
+    slicer = (*[None] * axis, slice(min_xy[0], max_xy[0]), slice(min_xy[1], max_xy[1]))
+    return img[slicer]
+
+
 def img_rectangle_cut(img, rect=None, angle=None, angle_normalize=True):
     """Translate an image, defined by a rectangle. The image is cropped to the size of the rectangle
     and the cropped image can be rotated.
-    The rect must be of the from (tuple(center_xy), tuple(width_xy), angle).
+    The rect must be of the form (tuple(center_xy), tuple(width_xy), angle).
     The angle are in degrees.
     PARAMETER
     ---------
     img: ndarray
+        image
     rect: tuple, optional
         define the region of interest. If None, it takes the whole picture
     angle: float, optional
@@ -80,7 +99,7 @@ def rect_scale_pad(rect, scale=1., pad=40.):
 
 def rect_rotate(rect, angle=None, angle_normalize=True):
     """Rotate a rectangle by an angle in respect to it's center.
-    The rect must be of the from (tuple(center_xy), tuple(width_xy), angle).
+    The rect must be of the form (tuple(center_xy), tuple(width_xy), angle).
     The angle is in degrees.
     PARAMETER
     ---------
@@ -168,7 +187,7 @@ def rect_rotate(rect, angle=None, angle_normalize=True):
 
 def equalization(image, dev=8):
     """
-    image: RGB as float [0..1] or uint8
+    image: RGB as float [0..1] or uint8 or uint16
     dev: in how many parts n = dev**2, the image should be split and equalized.
     """
 
@@ -181,7 +200,14 @@ def equalization(image, dev=8):
 
     # convert from RGB color-space to YCrCb
     ycrcb_img = cv2.cvtColor(image, cv2.COLOR_BGR2YCrCb)
-    ycrcb_img = (ycrcb_img * 2 ** 8).astype(np.uint8)
+    if np.issubdtype(ycrcb_img.dtype, np.floating):
+        ycrcb_img = (ycrcb_img * 2 ** 8).astype(np.uint8)
+    elif np.issubdtype(ycrcb_img.dtype, np.uint8):
+        pass
+    elif np.issubdtype(ycrcb_img.dtype, np.uint16):
+        ycrcb_img = (ycrcb_img / 2).astype(np.uint8)
+    else:
+        raise TypeError(f'Unsupported dtype.  Got: {image.dtype}')
 
     # equalize the histogram of the Y channel
     #     ycrcb_img[:, :, 0] = cv2.equalizeHist(ycrcb_img[:, :, 0])
@@ -190,9 +216,7 @@ def equalization(image, dev=8):
     clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=tuple([dev] * 2))
     ycrcb_img[:, :, 0] = clahe.apply(ycrcb_img[:, :, 0])
 
-    # convert back to RGB color-space from YCrCb
-    img = cv2.cvtColor(ycrcb_img, cv2.COLOR_YCrCb2BGR)
-    return img
+    return cv2.cvtColor(ycrcb_img, cv2.COLOR_YCrCb2BGR)
 
 
 def get_bit(bit):
@@ -208,14 +232,14 @@ def get_bit(bit):
 
 
 def mirror_rgb(rgb, axis=0):
-    """ Alias for np.flip with axis=0 as default.
+    """ Alias for 'np.flip' with axis=0 as default.
     PARAMETER
     ---------
     rgb: ndarray
         rgb array of an image
     axis: int, optional
-        define the axis to mirror. For an image use: 1 for x axis and 0 (default) for y axis. As plt.imshow and other
-        plot the first axis of the array as the y axis and the second as x axis.
+        define the axis to mirror. For an image use: 1 for x-axis and 0 (default) for y-axis. As plt.imshow and other
+        plot the first axis of the array as the y-axis and the second as x-axis.
     RETURN
     ------
     mirror_rgb: ndarray
@@ -229,9 +253,9 @@ def mirror_position(position, axis=1, axis_length=1280):
     PARAMETER
     ---------
     position: ndarray
-        at a least 1d array. First dimension must be is x and y, i.e. shape[0] == 2.
+        at least a 1d array. First dimension must be is x and y, i.e. shape[0] == 2.
     axis: int, optional
-        define the axis to mirror. 0 for x axis and 1 (default) for y axis.
+        define the axis to mirror. 0 for x-axis and 1 (default) for y-axis.
     axis_length: int, optional
         mirroring happens at `axis_length/2`. Depends on the actual image size, for 'x' it is 960 and
         for 'y' it is '1280'.
@@ -251,12 +275,12 @@ def shift_effective_pixel(position, eff_margin=None, inverse=False):
     PARAMETER
     ---------
     position: ndarray
-        at a least 1d array. First dimension must be is x and y.
+        at least a 1d array. First dimension must be is x and y.
     eff_margin: bool, list, ndarray, optional
         shifts the position according to the effective margin for images where the margin is cut, e.g. with
         cut2effective_pixel(..., eff_margin=eff_margin),  get_raw_rgb_mask(..., eff_margin=eff_margin)
         If None or True, it takes the default eff_margin = np.array([8, 9, 8, 9])
-        If its a list or ndarray: it must has the from [pixel_x_start, pixel_x_stop, pixel_y_start, pixel_y_stop]
+        If its a list or ndarray: it must have the form [pixel_x_start, pixel_x_stop, pixel_y_start, pixel_y_stop]
         and only integers are allowed.
     inverse: True
         if True, adds the margins: cut margin -> uncut margin
@@ -300,7 +324,7 @@ def get_contours(mask):
 
 def simplify_contours(contours, simplify_tolerance=1., preserve_topology=True):
     """Simplify a contour, i.e. points all in a single line will reduce to start and endpoint, removing the points
-    in between. It use shapely.geometry.simplify which base on the Douglas-Peucker algorithm.
+    in between. It uses shapely.geometry.simplify which base on the Douglas-Peucker algorithm.
     PARAMETER
     ---------
     contours: ndarray
@@ -350,7 +374,7 @@ def get_contours_simplify(mask, simplify_tolerance=1., preserve_topology=True):
     return contours, hierarchy
 
 
-# get distance to polygon (its not too fast)
+# get distance to polygon (it's not too fast)
 def get_distance_poly(x, y, poly):
     """Shortest distance between a point and a polygon. Positive values for point is inside the polygon,
     negative when outside.
@@ -393,7 +417,7 @@ def get_distances_poly(x, y, poly):
     return np.array([get_distance_poly(x_i, y_i, poly) for x_i, y_i in zip(x, y)])
 
 
-# get distance to polygon (its not too fast)
+# get distance to polygon (it's not too fast)
 def get_distance_line(x, y, line):
     """Shortest distance between a point and a line. Respect a polygon, a line is not closed.
     PARAMETER

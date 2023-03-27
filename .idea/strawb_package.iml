@@ -12,13 +12,21 @@
       <excludeFolder url="file://$MODULE_DIR$/processed_data" />
       <excludeFolder url="file://$MODULE_DIR$/raw_module_data" />
       <excludeFolder url="file://$MODULE_DIR$/.git" />
-      <excludeFolder url="file://$MODULE_DIR$/examples/.ipynb_checkpoints" />
       <excludeFolder url="file://$MODULE_DIR$/.pytest_cache/v" />
-      <excludeFolder url="file://$MODULE_DIR$/examples/figures/.ipynb_checkpoints" />
       <excludeFolder url="file://$MODULE_DIR$/.pytest_cache" />
+      <excludeFolder url="file://$MODULE_DIR$/examples/.ipynb_checkpoints" />
+      <excludeFolder url="file://$MODULE_DIR$/examples/figures/.ipynb_checkpoints" />
+      <excludeFolder url="file://$MODULE_DIR$/resources/image_cluster_search/.ipynb_checkpoints" />
+      <excludeFolder url="file://$MODULE_DIR$/resources/lucifer/.ipynb_checkpoints" />
+      <excludeFolder url="file://$MODULE_DIR$/resources/.ipynb_checkpoints" />
+      <excludeFolder url="file://$MODULE_DIR$/.ipynb_checkpoints" />
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
+  </component>
+  <component name="PyDocumentationSettings">
+    <option name="format" value="NUMPY" />
+    <option name="myDocStringFormat" value="NumPy" />
   </component>
   <component name="TestRunnerService">
     <option name="PROJECT_TEST_RUNNER" value="Unittests" />

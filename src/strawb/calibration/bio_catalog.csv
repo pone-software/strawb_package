@@ -1,0 +1,96 @@
+# Spectral characteristics of bioluminescence measured during 1985 Biowatt cruise.
+# Spectral emissions characterized by wavelength of maximum emission (max.)
+# full bandwidth at half maximum intensity (FWHM), and signal to noise ratio (S:N).
+# Values represent averaged spectrum for all measurements of a given
+# species with same calibration curve
+
+# @article{Latz1988,
+#   abstract = {The spectral characteristics of single identified epipelagic sources
+#   of bioluminescence from the western Sargasso Sea were measured with an optical
+#   multichannel analyzer (OMA) system during the April, 1985, Biowatt cruise.
+#   The emission spectra of specimens representing 45 species from 8 phyla were measured.
+#   Peak bioluminescence emissions typically occurred between 440 and 500 nm, in the blue
+#   region of the visible spectrum. Three exceptions involved emission in the green, yellow,
+#   and red spectral regions. Intraspectific variability in spectra, was noted in several species.
+#   One shrimp species exhibited two modes of light emission, each with different emission spectra.
+#   Other cases involved dynamic color shifts of 10 to 14 nm; the source of the spectral variability is unknown,
+#   but may involve optical filtering or differences in the color of luminescence from multiple sites of light emission.
+#   Measurements from independent samples of unsorted plankton revealed different spectral distributions.
+#   This suggests that the spectral emissions of bioluminescence in the upper water column will vary,
+#   based on species assemblage.},
+#   author = {Latz, M. I. and Frank, T. M. and Case, J. F.},
+#   date = {1988/06/01},
+#   doi = {10.1007/BF00391120},
+#   id = {Latz1988},
+#   isbn = {1432-1793},
+#   journal = {Marine Biology},
+#   number = {3},
+#   pages = {441--446},
+#   title = {Spectral composition of bioluminescence of epipelagic organisms from the Sargasso Sea},
+#   url = {https://doi.org/10.1007/BF00391120},
+#   volume = {98},
+#   year = {1988},
+#   bdsk-url-1 = {https://doi.org/10.1007/BF00391120}
+# }
+
+# bm = bimodal main peak
+# bs = bimodal second peak
+
+# 'peak' and 'fwhm' in nm
+
+group,identification,peak,fwhm,SN,second_peak,publication
+Unsorted plankton,mixed plankton 0 (collection mesh size 333 um),459,66,50,,Latz1988
+Unsorted plankton,mixed plankton 1 (collection mesh size 25 um),474,40,66,,Latz1988
+Unsorted plankton,mixed plankton 2 (collection mesh size 25 um),478,56,18,,Latz1988
+Unsorted plankton,mixed plankton 3 (collection mesh size 25 um),484,62,24,472.0,Latz1988
+Protozoa,Rhaphidozoum acuferum,458,87,28,,Latz1988
+Protozoa,A crosphaera murrayana,443,80,36,,Latz1988
+Protozoa,Siphonosphaera tenera,450,78,34,,Latz1988
+Protozoa,Myxosphaera coerulea,453,84,37,,Latz1988
+Protozoa,Collosphaera huxleyi,456,79,31,,Latz1988
+Protozoa,Collosphaera toroid colony morphology 1,452,77,35,,Latz1988
+Protozoa,Collosphaera toroid colony morphology 2,445,87,71,,Latz1988
+Protozoa,Collosphaera spherical colony morphology,443,75,63,,Latz1988
+Coelenterata,Chrysaora hysosceles,478,95,67,,Latz1988
+Coelenterata,Bougainvillia carolinensis,452,74,38,,Latz1988
+Coelenterata,Pelagia noctiluca,469,94,32,,Latz1988
+Coelenterata,Aeginea citrea,459,73,149,,Latz1988
+Coelenterata,Pegantha clara,460,71,103,,Latz1988
+Coelenterata,Pandea sp. nov.,466,80,94,,Latz1988
+Coelenterata,Hippopodius hippopus,447,80,112,,Latz1988
+Coelenterata,A galma okeni,444,70,94,,Latz1988
+Coelenterata,Amphicaryon ernesti,487,47,144,,Latz1988
+Coelenterata,Amphicaryon acaula,487,65,78,,Latz1988
+Coelenterata,Diphyes dispar,464,92,25,,Latz1988
+Coelenterata,Rosacea larva,488,55,90,,Latz1988
+Ctenophora,Cestum veneris,490,84,72,,Latz1988
+Ctenophora,Tinerfe lactae,486,85,57,,Latz1988
+Ctenophora,Beroe cucumis,479,94,52,496.0,Latz1988
+Ctenophora,Beroe ovata,478,86,51,,Latz1988
+Ctenophora,Bolinopsis sp.,488,80,28,,Latz1988
+Mollusca,Phyllirrhoe sp. Leachia lemur,475,89,44,,Latz1988
+Mollusca,Leachia lemur 0,500,84,55,473.0,Latz1988
+Mollusca,Leachia lemur 1,514,68,75,489.0,Latz1988
+Mollusca,Leachia lemur 2,458,74,58,485.0,Latz1988
+Mollusca,Leachia lemur 3,449,86,40,459.0,Latz1988
+Mollusca,Pyroteuthis margaritifera 0,477,54,24,,Latz1988
+Mollusca,Pyroteuthis margaritifera 1,475,62,81,,Latz1988
+Mollusca,Pyroteuthis margaritifera 2,485,42,12,470.0,Latz1988
+Annelida,Tomopteris nisseni,565,55,92,,Latz1988
+Crustacea,Conchoecia imbricata,474,94,47,,Latz1988
+Crustacea,Conchoecia secernenda,481,95,24,,Latz1988
+Crustacea,Scina sp.,444,89,38,,Latz1988
+Crustacea,Pleuromamma xiphias,492,77,117,472.0,Latz1988
+Crustacea,Pleuromamma abdominalis,486,77,78,465.0,Latz1988
+Crustacea,Gaussiaprinceps,479,73,38,489.0,Latz1988
+Crustacea,Nematoscelis microps,463,43,77,,Latz1988
+Crustacea,Nematobrachionflexipes,453,32,32,,Latz1988
+Crustacea,Euphausia brevis,462,43,64,,Latz1988
+Crustacea,Euphausia gibboides,467,53,42,,Latz1988
+Crustacea,Oplophorus spinosus (luminescent secretion),457,69,133,,Latz1988
+Crustacea,Systellaspis debilis (luminescent secretion),460,65,73,,Latz1988
+Crustacea,Systellaspis debilis (photphore emission),467,48,38,,Latz1988
+Tunicata,Pyrosoma atlanticum,493,101,39,471.0,Latz1988
+Pisces,Ultrastomias mirabilis,477,73,325,,Latz1988
+Pisces,Hygophum hygomi,448,76,58,,Latz1988
+Pisces,Stomias brevibarbatus,689,150,105,,Latz1988

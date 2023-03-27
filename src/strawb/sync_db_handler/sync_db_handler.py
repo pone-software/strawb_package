@@ -39,9 +39,10 @@ class SyncDBHandler(BaseDBHandler):
     _default_raw_data_dir_ = Config.raw_data_dir
     _default_file_name_ = Config.pandas_file_sync_db
 
-    def __init__(self, file_name='Default', update=False, load_db=True, **kwargs):
+    def __init__(self, file_name='Default', update=False, load_db=True, optimize_dataframe=True, **kwargs):
         """Handle the DB, which holds the metadata from the ONC DB and adds quantities like hdf5 attributes.
         If the DB isn't synced so far you can load the entiere DB with:
+        >>> import strawb
         >>> db = strawb.SyncDBHandler(load_db=False)
         >>> db.load_onc_db_update(output=True, save_db=True)
         Once this is done, you can change to
@@ -62,15 +63,18 @@ class SyncDBHandler(BaseDBHandler):
             True (default) loads the DB if it exists and if `file_name` is not None. False doesn't load it.
         kwargs: dict, optional
             parsed to ONCDownloader(**kwargs), e.g.: token, outPath, download_threads
+        optimize_dataframe: bool, optional
+            if the dataframe should be optimized for RAM and disc size based on `self.optimize_dataframe()`.
+            It manly introduces pandas dtype 'category'
 
         EXAMPLES
         --------
-        Load the DB from disc (also works if there non on disc), update it and store it on disc
-        >>> db = strawb.BaseDBHandler(load_db=False)  # loads the db
+        Load the DB from disc (also works if there is no one on disc), update it and store it on disc
+        >>> db = strawb.SyncDBHandler(load_db=False)  # loads the db
         >>> db.load_onc_db_update(output=True, save_db=True)
 
         Overwrites the existing DB, also works if there is no DB on disc.
-        >>> db = strawb.BaseDBHandler(load_db=False)  # loads the db
+        >>> db = strawb.SyncDBHandler(load_db=False)  # loads the db
         >>> db.load_onc_db_update(output=True, save_db=True)
 
         Or both combined into one
@@ -83,6 +87,9 @@ class SyncDBHandler(BaseDBHandler):
         self.onc_downloader = ONCDownloader(**kwargs)
 
         BaseDBHandler.__init__(self, file_name=file_name, update=update, load_db=load_db)
+
+        if optimize_dataframe:
+            self.optimize_dataframe()
 
     def update(self):
         self.update_sync_state()
@@ -146,7 +153,7 @@ class SyncDBHandler(BaseDBHandler):
             try:
                 dataframe.sort_values(by=['dateFrom', 'dateTo', 'deviceCode', 'dataProductCode'],
                                       inplace=True,
-                                      ascending=True)  # old first, latest last
+                                      ascending=True)  # old first, the latest last
             except KeyError:
                 pass
             # dataframe.sort_index(inplace=True, ignore_index=False)  # and sort it inplace
@@ -154,7 +161,7 @@ class SyncDBHandler(BaseDBHandler):
 
     def add_new_db(self, dataframe2add, dataframe=None, ):
         """Updates a pandas.DataFrame to the internal pandas.DataFrame. If there is no internal pandas.DataFrame it set
-        the provided dataframe as the internal. Otherwise it appends the dataframe to the internal.
+        the provided dataframe as the internal. Otherwise, it appends the dataframe to the internal.
 
         PARAMETER
         ---------
@@ -192,9 +199,49 @@ class SyncDBHandler(BaseDBHandler):
 
         return dataframe
 
+    def __add_new_columns__(self, dataframe2add, dataframe=None, use='left'):
+        """Alternative version with `pandas.merge` not test"""
+        if use not in ['right', 'left']:
+            raise ValueError(f'Use must be one of [right, left], got: {use}')
+        in_place = False
+        if dataframe is None:
+            in_place = True
+            dataframe = self.dataframe
+
+        if dataframe is None:
+            return dataframe2add  # no second dataframe defined -> nothing to add
+
+        else:
+            # convert dtypes == 'category'
+            columns_categories = dataframe.columns[dataframe.dtypes == 'category']
+            for i in columns_categories:
+                dataframe[i] = dataframe[i].astype(object)
+
+            df_a = dataframe.merge(dataframe2add, on='x', how='outer', suffixes=[None, '_right_merge'])
+            mask_columns = df_a.columns.str.find('_right_merge') > 0
+
+            if use == 'left':
+                for i in df_a.columns[mask_columns]:
+                    mask_na = ~df_a[i].isna()
+                    df_a.loc[mask_na, i.replace('_right_merge', '')] = df_a.pop(i)[mask_na]
+
+            elif use == 'right':
+                for i in df_a.columns[mask_columns]:
+                    mask_na = df_a[i.replace('_right_merge', '')].isna()
+                    df_a.loc[mask_na, i.replace('_right_merge', '')] = df_a.pop(i)[mask_na]
+
+            # convert it back to 'category'
+            for i in columns_categories:
+                df_a[i] = df_a[i].astype('category')
+
+        if in_place:
+            self.dataframe = dataframe
+
+        return dataframe
+
     def add_new_columns(self, dataframe2add, dataframe=None, overwrite=False):
         """Adds new columns from a pandas.DataFrame to the internal pandas.DataFrame. If there is no internal
-        pandas.DataFrame it set the provided dataframe as the internal. Otherwise it adds the columns from the provided
+        pandas.DataFrame it set the provided dataframe as the internal. Otherwise, it adds the columns from the provided
          dataframe to the internal dataframe (here in-place).
 
         PARAMETER
@@ -223,6 +270,11 @@ class SyncDBHandler(BaseDBHandler):
         else:
             self._check_index_(dataframe2add)  # check the new dataframe
             self._check_index_(dataframe)  # check the new dataframe
+
+            # convert dtypes == 'category'
+            columns_categories = dataframe.columns[dataframe.dtypes == 'category']
+            for i in columns_categories:
+                dataframe[i] = dataframe[i].astype(object)
 
             # handle rows with the same indexes
             intersection = dataframe2add.index.intersection(dataframe.index)
@@ -255,6 +307,10 @@ class SyncDBHandler(BaseDBHandler):
                 dataframe2add_diff = dataframe2add.loc[difference]
                 dataframe = dataframe.append(dataframe2add_diff)  # for newer pandas versions: concat = append
 
+            # convert it back to 'category'
+            for i in columns_categories:
+                dataframe[i] = dataframe[i].astype('category')
+
         if in_place:
             self.dataframe = dataframe
 
@@ -271,7 +327,7 @@ class SyncDBHandler(BaseDBHandler):
         b: dataset
         priority_column: str
             the column to detect from which dataset (`a` or `b`) to delete the index.
-            `a` has an higher priority then `b`. If None, delete all intersections from `b`.
+            `a` has a higher priority then `b`. If None, delete all intersections from `b`.
         """
         if priority_column not in a:
             a[priority_column] = None
@@ -304,6 +360,8 @@ class SyncDBHandler(BaseDBHandler):
         """
 
         if dataframe.index.name != 'fullPath':
+            if 'fullPath' not in dataframe:
+                dataframe['fullPath'] = dataframe['outPath'] + '/' + dataframe['filename']
             dataframe.set_index(['fullPath'],
                                 inplace=True,
                                 verify_integrity=True,
@@ -313,13 +371,13 @@ class SyncDBHandler(BaseDBHandler):
     @staticmethod
     def _convert_dict_entries_(dictionary, converter):
         """Converts entries in a dictionary following the converter dict. The converter must be in the shape
-        {<key>: {<value>: <replacement>} where the original dictionary is {<key>: <value>}. It also suports np.nan as
+        {<key>: {<value>: <replacement>} where the original dictionary is {<key>: <value>}. It also suports `np.nan` as
         <values>, because np.nan == np.nan if False, by default.
 
         PARAMETER
         ---------
         dictionary: dict
-            dictionary to replace the values
+            dictionary for the replacemet
         converter: dict
             The converter must be in the shape of {<key>: {<value>: <replacement>}
 
@@ -339,7 +397,7 @@ class SyncDBHandler(BaseDBHandler):
             for key_ii in converter[key_i]:
                 if isinstance(key_ii, float) and np.isnan(key_ii):
                     converter_nan[key_i] = converter[key_i][key_ii]
-                    break  # there can only be one np.nan per key_i as its a dict
+                    break  # there can only be one np.nan per key_i as it's a dict
 
         for key_i in converter:
             if key_i in dictionary:
@@ -358,7 +416,7 @@ class SyncDBHandler(BaseDBHandler):
         PARAMETER
         ---------
         dictionary: dict
-            dictionary to replace the values
+            dictionary for the replacemet
         converter: dict
             The converter must be in the shape of {<key>: {<value>: <replacement>}
 
@@ -390,7 +448,7 @@ class SyncDBHandler(BaseDBHandler):
         PARAMETER
         ---------
         dataframe: Union[None, pandas.DataFrame], optional
-            If None (default) it checks the internal dataframe. Otherwise it checks the provided dataframe.
+            If None (default) it checks the internal dataframe. Otherwise, it checks the provided dataframe.
         """
         if dataframe is None:
             dataframe = self.dataframe
@@ -481,7 +539,7 @@ class SyncDBHandler(BaseDBHandler):
         items_to_check &= dataframe.fullPath.str.endswith('hdf5') | dataframe.fullPath.str.endswith('h5')
         items_to_check &= dataframe['synced']  # exclude non existing files
 
-        # convert file_id's with nan to int. Otherwise pandas interprets the Series as float and the resolution
+        # convert file_id's with nan to int. Otherwise, pandas interprets the Series as float and the resolution
         # of the np.float64 isn't sufficient for a np.uint64.
         if entries_converter is None:
             entries_converter = {'previous_file_id': {np.nan: 0}, 'following_file_id': {np.nan: 0}}
@@ -519,7 +577,7 @@ class SyncDBHandler(BaseDBHandler):
         RETURN
         ------
         h5_dataframe: pandas.DataFrame
-            a pandas.DataFrame from the hdf5 file attributes. This is a new DataFrame and independent from the provided
+            a pandas.DataFrame from the hdf5 file attributes. This is a new DataFrame and independent of the provided
             dataframe. Therefore, both DataFrames have to be combined in case this is needed.
         """
         if dataframe is None:
@@ -555,7 +613,7 @@ class SyncDBHandler(BaseDBHandler):
 
     def update_db_and_load_files(self, dataframe=None, output=False, download=False, add_hdf5_attributes=True,
                                  add_dataframe=True, add_file_version=True, save_db=False):
-        """Depending which options are set, this function does any combination of the following 4 tasks:
+        """Depending on which options are set, this function does any combination of the following 4 tasks:
         1. `download=True` -> loads all missing files from the dataframe
         2. `add_hdf5_attributes=True` -> updates the hdf5 attributes from the files which are present on the disc
         3. 'add_file_version' -> scan the files and extract the file_version
@@ -566,7 +624,7 @@ class SyncDBHandler(BaseDBHandler):
         PARAMETER
         ---------
         dataframe: pandas.DataFrame, optional
-            the above steps are executeted for the files defined in the dataframe. E.g. if `download=True` all files
+            the above steps are executed for the files defined in the dataframe. E.g. if `download=True` all files
             are downloaded. None (default) takes the internal dataframe.
         download: bool, optional
             if the missing files should be downloaded.
@@ -640,7 +698,7 @@ class SyncDBHandler(BaseDBHandler):
         return self.load_onc_db(**kwargs)
 
     def load_onc_db_update(self, **kwargs):
-        """Load the newest entries of the ONC DB. If the local DB doesn't exists, it loads the entire db
+        """Load the newest entries of the ONC DB. If the local DB doesn't exist, it loads the entire db
         `date_from='strawb_all'`. If the local DB exists, it takes the time of the latest entry. If this time is
         older than a day, it updated the entries from that date incl. the day before. If it is less than a day, it
         doesn't load something.
@@ -738,8 +796,8 @@ class SyncDBHandler(BaseDBHandler):
         PARAMETER
         ---------
         i: int or str
-            could a integer or string to select a item from the dataframe. Or directly a pandas.Series.
-            The integer is used as an numeric index and the string as the index (fullPath) of the pandas dataframe.
+            could an integer or string to select an item from the dataframe. Or directly a pandas.Series.
+            The integer is used as a numeric index and the string as the index (fullPath) of the pandas dataframe.
         dataframe: pandas.DataFrame ro None, optional
             the dataframe to which i_or_full_path revers. If None, default, it takes the internal dataframe.
         *args, **kwargs: optional
@@ -772,8 +830,8 @@ class SyncDBHandler(BaseDBHandler):
         PARAMETER
         ---------
         i: int or str
-            could a integer or string to select a item from the dataframe. Or directly a pandas.Series.
-            The integer is used as an numeric index and the string as the index (fullPath) of the pandas dataframe.
+            could an integer or string to select an item from the dataframe. Or directly a pandas.Series.
+            The integer is used as a numeric index and the string as the index (fullPath) of the pandas dataframe.
         dataframe: pandas.DataFrame ro None, optional
             the dataframe to which i_or_full_path revers. If None, default, it takes the internal dataframe.
         """
@@ -807,7 +865,7 @@ class SyncDBHandler(BaseDBHandler):
         PARAMETER
         ---------
         dataframe: Union[None, pandas.DataFrame], optional
-            If None (default) it checks the internal dataframe. Otherwise it checks the provided dataframe.
+            If None (default) it checks the internal dataframe. Otherwise, it checks the provided dataframe.
         """
         if dataframe is None:
             dataframe = self.dataframe
@@ -856,15 +914,46 @@ class SyncDBHandler(BaseDBHandler):
         time_from, time_to: datetime-like, str, int, float
             Value to be converted to Timestamp.
         dataframe: Union[None, pandas.DataFrame], optional
-            If None (default) it checks the internal dataframe. Otherwise it checks the provided dataframe.
+            If None (default) it checks the internal dataframe. Otherwise, it checks the provided dataframe.
         tz : str, pytz.timezone, dateutil.tz.tzfile or None, optional
             Time zone for time_from, time_to. Default: "UTC"
         RETURNS
         -------
         mask: bool pandas.Series
-            masked series of entires which overlap with the time range
+            masked series of entries which overlap with the time range
         """
         if dataframe is None:
             dataframe = self.dataframe
 
         return pd_timestamp_mask_between(dataframe.dateFrom, dataframe.dateTo, time_from, time_to, tz=tz)
+
+    def optimize_dataframe(self, exclude_columns=None, include_columns=None):
+        """function which optimize the dataframe to reduce the size, manly RAM but also on disc.
+        It uses converts the columns as defined in this function. Which is manly by introducing pandas dtype "category"
+        PARAMETER
+        ---------
+        exclude_columns: list
+            columns to exclude, default None
+        """
+        if self.dataframe is None:
+            return
+        if exclude_columns is None:
+            exclude_columns = []
+
+        # 'filename', 'fullPath' are different for every row and h5_attrs can't be converted to category
+        exclude_columns = ['filename', 'fullPath', 'h5_attrs', *exclude_columns]
+
+        # prepare 'following_file_id', 'previous_file_id' columns for a 'category'
+        for i in ['following_file_id', 'previous_file_id']:
+            if i in self.dataframe:
+                if self.dataframe[i].dtype == object:
+                    self.dataframe.loc[self.dataframe[i].isna(), i] = 0
+                    self.dataframe.loc[self.dataframe[i] < 0, i] = 0
+                    self.dataframe[i] = self.dataframe[i].astype(np.uint64)
+
+        # use the super implementation
+        BaseDBHandler.optimize_dataframe(self, exclude_columns=exclude_columns, include_columns=include_columns)
+
+    def save_db(self):
+        self.optimize_dataframe()
+        BaseDBHandler.save_db(self)

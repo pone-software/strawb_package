@@ -10,20 +10,20 @@ from strawb import tools
 class TRBTools:
     def __init__(self, file_handler=None, frequency_interp=33.):
         """Base Class for the TRB. It takes care about the counter readings and calculates the rates based on the
-        counts. In addition it can also calculate a interpolated rate based on the counts. To open and close a file can
-        cause corrupt links. Therefore, the following properties must be set in the child class which inherits from
-        TRBTools and they should set the link to the data source:
+        counts. In addition, it can also calculate an interpolated rate based on the counts. To open and close a file
+        can cause corrupt links. Therefore, the following properties must be set in the child class which inherits from
+        TRBTools, and they should set the link to the data source:
         - raw_counts_arr; __daq_frequency_readout__; __time__
 
         PARAMETER
         ---------
         frequency_interp: float or int
-            sets the default frequency for the rates interpolation. Is only set, if there is no frequency_interp in
+            sets the default frequency for the rates' interpolation. Is only set, if there is no frequency_interp in
             the file set. To overwrite, set frequency_interp (i.e. `frequency_interp=24`) after the initialisation.
         """
         self.__dcounts_arr__ = None  # stores result of self.diff_counts()
         self.__counts_arr__ = None  # stores 'absolute' counts as a 2D array,
-        self._active_read_arr_ = None  # stores if the counter read happens at a event (1) or not (0)
+        self._active_read_arr_ = None  # stores if the counter read happens at an event (1) or not (0)
         self._rate_delta_time = None
         self._rate = None  # stores result of self.calculate_rates() (needs `self._dcounts_arr_`)
 
@@ -31,7 +31,7 @@ class TRBTools:
         # where n is the length of the SDAQ buffer
         self._index_start_valid_data_ = None
 
-        # interpolated rates. Based on the `counts` and interpolated to fit a artificially readout frequency.
+        # interpolated rates. Based on the `counts` and interpolated to fit an artificial readout frequency.
         self._interp_frequency_ = None  # artificially readout frequency
         self._interp_time_ = None  # absolute timestamps. Shape: [time_j]
         self._interp_rate_ = None  # rate as a 2d array. Shape: [channel_i, time_j]
@@ -163,21 +163,21 @@ class TRBTools:
     @property
     def dcounts_time(self):
         """Channel which counts up at a constant frequency. The frequency is stored in `self.daq_frequency_readout`.
-        1darray with axes [time_i].
+        1d-array with axes [time_i].
         """
         return self._dcounts_arr_[0]  # [1:] is dcounts
 
     @property
     def counts_time(self):
         """Channel which counts up at a constant frequency. The frequency is stored in `self.daq_frequency_readout`.
-        1darray with axes [time_i].
+        1d-array with axes [time_i].
         """
         return self._counts_arr_[0]
 
     @property
     def time_counts(self):
         """Channel which counts up at a constant frequency. The frequency is stored in `self.daq_frequency_readout`.
-        1darray with axes [time_i].
+        1d-array with axes [time_i].
         """
         if self.daq_frequency_readout is not None:
             # noinspection PyTypeChecker
@@ -228,7 +228,7 @@ class TRBTools:
 
     @property
     def active_read(self):
-        """A bool array which signalise, that the TRB read a counter when there was a event ongoing at this channel.
+        """A bool array which signalise, that the TRB read a counter when there was an event ongoing at this channel.
         """
         if self._active_read_arr_ is None:
             self.diff_counts()
@@ -271,7 +271,7 @@ class TRBTools:
     @staticmethod
     def _diff_counts_(*args, **kwargs):
         """
-        Calculates the delta counts of the raw counts readings, similar to np.diff with overflow correction and it
+        Calculates the delta counts of the raw counts readings, similar to 'np.diff' with overflow correction, and it
         takes care of the special TRB integer type. To calculate the absolute counts readings, do
         >>> counts, active_read = TRBTools._diff_counts_(*args, **kwargs)
         >>> np.cumsum(counts.astype(np.int64))
@@ -355,7 +355,7 @@ class TRBTools:
                     ][0]
 
         daq_frequency_readout = float(daq_frequency_readout)  # must be a float
-        dcounts_arr = np.array(dcounts_arr, dtype=np.float)  # must be of int64
+        dcounts_arr = np.array(dcounts_arr, dtype=float)  # must be of int64
 
         # Calculate Rates
         delta_time = dcounts_time.astype(float) / daq_frequency_readout  # seconds
@@ -420,13 +420,15 @@ class TRBTools:
             the rates. For absolute timestamps subtract: strawb.tools.datetime2float(pmt.trb_rates.time)[0].
         RETURN
         ------
-        time_inter: np.array
+        time_inter: ndarray
             the interpolated absolute timestamp in seconds since the epoch. It corresponds to the middle of time_probe.
-            Therefore len(time_probe) -1 == len(time_inter)
-        rate_inter: np.array
+            Therefore, len(time_probe) -1 == len(time_inter)
+        rate_inter: ndarray
             the interpolated rate as a 2d array with shape [channel_i, rate_j] and len(rate_j) == len(time_inter).
+        active: ndarray
+            active read ratio. For how many reads, the TRB read during the signal was active (stored as an extra bit
+            in the raw data). Active is 'np.nan' when there is no data (counter read) in the interval
         """
-
         def interp_np(x, xp, fp):
             y = np.zeros((fp.shape[0], x.shape[0]), dtype=float)
             for i in range(y.shape[0]):
@@ -435,7 +437,17 @@ class TRBTools:
 
         timestamps = self.rate_time  # seconds since file started
         if time_probe is None:
-            time_probe = np.arange(timestamps[0], timestamps[-1], 1. / frequency)
+            if timestamps[-1] - timestamps[0] > 0:
+                # if counters are not growing over the time
+                time_probe = np.arange(timestamps[0], timestamps[-1], 1./frequency)
+            else:
+                # use the CPU time when the counters are read with the pearl script
+                time_probe = np.arange(self._time_[0] - self._time_[0],
+                                       self._time_[-1] - self._time_[0],
+                                       1./frequency)
+        # check if there are entries in time_probe
+        if len(time_probe) == 0:
+            raise ValueError('File has corrupt time data in `file_handler.counts_ch0` and `file_handler.counts_time`.')
 
         active, b, n = scipy.stats.binned_statistic(timestamps,
                                                     self.active_read,
@@ -469,13 +481,18 @@ class TRBTools:
         return time_inter, rate_inter, active
 
     def __load_interp_rate__(self):
-        group = self.file_handler.file['counts_interpolated']
+        """Moved to InterpolatedRatesFile"""
+        group = self.file_handler.file['rates_interpolated']
         self._interp_frequency_ = group.attrs['interpolated_frequency']
+
         self._interp_time_ = group['time']
-        self._interp_rate_ = group['rate']
+        if 'mask' in group:
+            self._interp_mask_ = group['mask']
+        self._interp_rate_ = np.array(group['rate'])
 
     def write_interp_rate(self, force_write=False, compression_dict=None):
-        """Write the interpolated rates and time to the file.
+        """Moved to InterpolatedRatesFile
+        Write the interpolated rates and time to the file.
         PARAMETER
         ---------
         force_write: bool, optional
@@ -515,6 +532,7 @@ class TRBTools:
             self.file_handler.open()  # open in read only mode
 
     def remove_interp_rate(self, ):
+        """Moved to InterpolatedRatesFile"""
         if self.file_handler is None:
             return
 
@@ -532,26 +550,84 @@ class TRBTools:
 
 
 class InterpolatedRatesFile:
-    def __init__(self, file_name, version=2, read_data=True):
-        """Loads or write the interpolated rate data to a hdf5 file."""
+    def __init__(self, file_name, read_data=True):
+        """Loads or write the interpolated rate data to a hdf5 file. Interpolated rates are processed rates in order
+        to transform the raw rates with unequal readout frequency to a fixed artificial readout frequency by
+        interpolation. To handle periods where no raw rates are available, the interpolated rates come with a mask
+        that flags the artificial readout intervals where no raw rates are recorded. Consequently, interpolated
+        rates intervals are not masked when at least one raw rate is recorded.
+
+        EXAMPLE
+        -------
+        Legend: artificial intervals: '|', interpolated rater: 'i', raw rates data: 'x'
+        Time         : ->
+        RAW          : | x    | x    |  x  x|  x   |   x  |      |x x  x|  x   | x  x |  x x | x    |   x  |
+        Interpolated : |  i   |  i   |  i   |  i   |  i   |  i   |  i   |  i   |  i   |  i   |  i   |  i   |
+        mask         : |  0   |  0   |  0   |  0   |  0   |  1   |  0   |  0   |  0   |  0   |  0   |  0   |
+        """
 
         self.file_name = os.path.abspath(file_name)
 
-        self.time = None
-        self.rate = None
+        self.__time__ = None
+        self.__rate__ = None
+        self.__mask__ = None
 
         self.file_start = None
         self.file_end = None
 
         self._t_probe_, self._active_ = None, None
 
-        self.version = version
         if read_data and os.path.exists(self.file_name):
             self.read()
         elif read_data and not os.path.exists(self.file_name):
             print(f"WARNING: file doesn't exist {self.file_name}")
 
-    def write_to_file(self, pmt, file_attrs=None, group_attrs=None):
+    @property
+    def time(self):
+        """Interpolated (artificial) readout time of the rates.
+        RETURN
+        ------
+        time: np.ma.ndarray
+            time in seconds with fixed frequency. Periods where no RAW rates are available, are masked.
+            However, the time is still available for these periods with `time.data`.
+        """
+        if self.__time__ is None:
+            self.read()
+        if self.__mask__ is None:
+            self.read()
+            return np.ma.array(self.__time__)
+        else:
+            return np.ma.array(self.__time__, mask=self.__mask__)
+
+    @property
+    def rate(self):
+        """Interpolated (artificial) readout rates.
+        RETURN
+        ------
+        mask: np.ndarray
+            interpolated rate in Hz as a 2D array with the shape : [channel_i, time_i]. Periods where no RAW rates are
+            available, are masked. However, the interpolated is still available for these periods with `rate.data`.
+        """
+        if self.__rate__ is None:
+            self.read()
+        if self.mask is None:
+            return np.ma.array(self.__rate__)
+        else:
+            return np.ma.array(self.__rate__, mask=np.ones_like(self.__rate__, dtype=bool) * self.__mask__)
+
+    @property
+    def mask(self):
+        """Interpolated (artificial) readout mask. A flag for period where no RAW data is recorded.
+        RETURN
+        ------
+        maks: np.ndarray
+            interpolated rate in Hz. Periods where no RAW rates are available, are True (np.ma.array logic)
+        """
+        if self.__time__ is None:  # check if file is loaded
+            self.read()  # read sets __time__
+        return self.__mask__
+
+    def _write_to_file_(self, interp_time, interp_rate, interp_mask, file_attrs=None, group_attrs=None, h5_mode='a'):
         """Write interpolated data of PMT to the file. It generates a hdf5 file and adds the data as follows:
         group: /rates_interpolated
         data_Set: /rates_interpolated/rate - with shape [channels, time]
@@ -561,13 +637,15 @@ class InterpolatedRatesFile:
 
         PARAMETER
         ---------
-        pmt: strawb.sensors.PMTSpec
-            class which holds the PMT Data and process code.
-            To change the interpolation frequency, do it before you execute this function.
+        interp_time: ndarray
+        interp_rate: ndarray
+        interp_mask: ndarray
         file_attrs: dict, optional
             hdf5 file attributes
         group_attrs: dict, optional
             hdf5 group attributes
+        h5_mode: str, optional
+            hdf5 file mode. 'a' for append or 'w' to overwrite
         """
         if group_attrs is None:
             group_attrs = {}
@@ -580,7 +658,7 @@ class InterpolatedRatesFile:
                                 'fletcher32': True,
                                 'chunks': (2, 2 ** 13)}
 
-        with h5py.File(self.file_name, 'a') as f:  # libver='latest'
+        with h5py.File(self.file_name, mode=h5_mode) as f:  # libver='latest'
             for i in set(file_attrs).difference(f.attrs):
                 f.attrs.update({i: file_attrs[i]})
 
@@ -589,7 +667,7 @@ class InterpolatedRatesFile:
                 group.attrs.update({i: group_attrs[i]})
 
             tools.append_hdf5(f, '/rates_interpolated/rate',
-                              data=pmt.trb_rates.interp_rate.data,
+                              data=interp_rate,
                               axis=1,
                               **h5py_dataset_options)
 
@@ -598,25 +676,55 @@ class InterpolatedRatesFile:
                 h5py_opt_1d['chunks'] = (h5py_opt_1d['chunks'][1],)
 
             tools.append_hdf5(f, '/rates_interpolated/time',
-                              data=tools.datetime2float(pmt.trb_rates.interp_time.data),
+                              data=tools.datetime2float(interp_time),
                               **h5py_opt_1d)
 
             tools.append_hdf5(f, '/rates_interpolated/mask',
-                              data=pmt.trb_rates.interp_time.mask,
+                              data=interp_mask,
                               **h5py_opt_1d)
+
+    def write_to_file(self, trb_tools, file_attrs=None, group_attrs=None, h5_mode='a'):
+        """Write interpolated data of PMT to the file. It generates a hdf5 file and adds the data as follows:
+        group: /rates_interpolated
+        data_Set: /rates_interpolated/rate - with shape [channels, time]
+                  /rates_interpolated/time - with shape time
+                  /rates_interpolated/mask - with shape time
+        If a dataset exists, it adds the data to the dataset.
+
+        PARAMETER
+        ---------
+        trb_tools: strawb.trb_tools.TRBTools
+            class which holds the TRB Data and process code. To change the interpolation frequency,
+            do it before you execute this function.
+        file_attrs: dict, optional
+            hdf5 file attributes
+        group_attrs: dict, optional
+            hdf5 group attributes
+        h5_mode: str, optional
+            hdf5 file mode. 'a' for append or 'w' to overwrite
+        """
+        self._write_to_file_(interp_time=trb_tools.interp_time.data,
+                             interp_rate=trb_tools.interp_rate.data,
+                             interp_mask=trb_tools.interp_time.mask,
+                             file_attrs=file_attrs,
+                             group_attrs=group_attrs,
+                             h5_mode=h5_mode)
 
     def read(self, ):
         """ Reads the file. """
-        with h5py.File(self.file_name, 'r') as f:
-            if self.version == 2:
-                self.time = np.ma.array(f['/rates_interpolated/time'][:],
-                                        mask=f['/rates_interpolated/mask'][:])
-            else:
-                self.time = f['/rates_interpolated/time'][:]
-            self.rate = np.array(f['/rates_interpolated/rate'][:])
+        with h5py.File(self.file_name, 'r', swmr=True) as f:
+            if '/rates_interpolated/mask' in f:
+                self.__mask__ = f['/rates_interpolated/mask'][:]
 
-            self.file_start = f.attrs['file_start']
-            self.file_end = f.attrs['file_end']
+            self.__time__ = f['/rates_interpolated/time'][:]
+            self.__rate__ = np.array(f['/rates_interpolated/rate'][:])
+
+            # read 'file_start', and 'file_end' if available
+            for i in ['file_start', 'file_end']:
+                try:
+                    self.__setattr__(i, f.attrs[i])
+                except KeyError:
+                    pass
 
     def get_active(self, step_size=3600, **kwargs):
         bins = np.arange(self.file_start, self.file_end + step_size, step_size)
@@ -640,7 +748,7 @@ class InterpolatedRatesFile:
 
     @staticmethod
     def _get_active_(t, bins=None, step_size=None, max_delta_t=1.5):
-        """Calculate the active (up time) time of the measurement within the periods (bins). If the time between two
+        """Calculate the active (up-time) time of the measurement within the periods (bins). If the time between two
         measurements is greater as the `max_delta_t`, the period is counted as inactive.
         PARAMETER
         t: ndarray
@@ -648,7 +756,7 @@ class InterpolatedRatesFile:
         bins: float, int, list, ndarray
             sets the bins within the active ratio is calculated, directly.
         step_size:
-            sets the bins with `np.arange(t[0], t[-1] + step_size, step_size)` within the active ratio is calculated.
+            sets the bins with 'np.arange(t[0], t[-1] + step_size, step_size)' within the active ratio is calculated.
             bins must be None otherwise step_size is ignored.
         max_delta_t:
             the maximum between two measurements to be counted as active time. If the time between two measurements is

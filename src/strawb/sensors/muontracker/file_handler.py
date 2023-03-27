@@ -1,9 +1,3 @@
-import pandas
-
-from strawb.base_file_handler import BaseFileHandler
-
-import pandas
-
 from strawb.base_file_handler import BaseFileHandler
 
 
@@ -175,7 +169,7 @@ class FileHandler(BaseFileHandler):
         results = self.test_all()
         results_2 = {}
         for j in results:
-            results_2.update({f'{j}_{i}': results[j][i] == True for i in results[j]})
+            results_2.update({f'{j}_{i}': results[j][i] is True for i in results[j]})
 
         return results_2
 
@@ -204,7 +198,14 @@ class FileHandler(BaseFileHandler):
     def __load_tot__(self):
         # TOT - sometime there are is no TOT available
         self.tot_time = self.file['tot/time']
-        self.tot_time_ns = self.file['tot/time_ns']
+        # fix bug, that swapped `tot_time` and  `tot_time_ns`
+        if self.tot_time[0].max() < 1e8:
+            self.tot_time = self.file['tot/time_ns']
+            self.tot_time_ns = self.file['tot/time']
+        else:
+            self.tot_time = self.file['tot/time']
+            self.tot_time_ns = self.file['tot/time_ns']
+
         self.tot_tot = self.file['tot/tot']
         self.tot_channel = self.file['tot/channel']
 

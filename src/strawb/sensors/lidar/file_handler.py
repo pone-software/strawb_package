@@ -16,7 +16,7 @@ class FileHandler(BaseFileHandler):
         self.daq_measured_frequency_pmt = None  # Removed from hdf5 ~05.10.2021, as moved to counts reading
         self.daq_measured_frequency_trigger = None  # Removed from hdf5 ~05.10.2021, as moved to counts reading
         self.daq_pmt = None  # PMT is; 0: OFF; 1: ON
-        self.daq_frequency_readout = None  # the frequency when the TRB counts up counts channel 0
+        self.daq_frequency_readout = None  # the frequency when the TRB counts up channel 0
         self.daq_frequency_trigger = None  # the frequency of the trigger pin controlled by the TRB
         self.daq_state = None  # 0: TRB not ready; 1: TRB ready; 2: TRB takes hld
         self.daq_trb = None  # TRB power; 0: OFF; 1: ON
@@ -30,7 +30,7 @@ class FileHandler(BaseFileHandler):
 
         # Laser
         self.laser_time = None
-        self.laser_diode = None  # diode readings to calibrate the intensity. Gimbal is be in calibration position.
+        self.laser_diode = None  # diode readings to calibrate the intensity. Gimbal is in calibration position.
         self.laser_frequency = None  # if the power is en-/disabled
         self.laser_power = None  # if the laser power is en-/disabled
         self.laser_pulsewidth = None  # sets the intensity
@@ -44,10 +44,12 @@ class FileHandler(BaseFileHandler):
         self.tot_time = None  # absolute timestamps in seconds for the event
         self.tot_time_ns = None  # timestamps from trb in seconds for the event, not absolut and with overflow
         self.tot_tot = None  # time over threshold (tot) in ns for the event
+        self.tot_hld_start_time = None  # the start time of a hld file
+        # A file is covers usually several hld files as there is a new hld file if it exceeds 100MB.
 
         # Counter, similar to PMTSpectrometer. Added to hdf5 ~05.10.2021.
         # -> File version 2
-        self.counts_time = None  # absolute timestamps in seconds for each counts reading
+        self.counts_time = None  # absolute timestamps in seconds for each count reading
         self.counts_ch0 = None  # channel which counts up at a constant frequency -> PMT Spectrometer
         self.counts_ch17 = None  # the readout/PMT channel.
         self.counts_ch18 = None  # the Laser trigger channel.
@@ -57,6 +59,12 @@ class FileHandler(BaseFileHandler):
         self.measurement_time = None
         self.measurement_step = None
 
+        # hld-file start and end times.
+        # -> File version 7
+        self.hld_time = None  # absolute timestamps in seconds (usually it's the time after unpacking the hld-file)
+        self.hld_file_start = None  # start time of the hld-file (when the cmd is sent to the TRB)
+        self.hld_file_start = None  # stop time of the hld-file (when the cmd is sent to the TRB)
+
         # holds the file version
         self.file_version = None
 
@@ -64,10 +72,10 @@ class FileHandler(BaseFileHandler):
         BaseFileHandler.__init__(self, *args, **kwargs)
 
     def __load_meta_data__(self, ):
-        # order is important, tries to load newest first and oldest latest.
+        # order is important, tries to load the newest first and oldest latest.
         err_list = []
-        for i in [self.__load_meta_data_v5__, self.__load_meta_data_v4__, self.__load_meta_data_v3__,
-                  self.__load_meta_data_v2__, self.__load_meta_data_v1__]:
+        for i in [self.__load_meta_data_v6__, self.__load_meta_data_v5__, self.__load_meta_data_v4__,
+                  self.__load_meta_data_v3__, self.__load_meta_data_v2__, self.__load_meta_data_v1__]:
             try:
                 i()  # try file versions
                 return
@@ -148,6 +156,39 @@ class FileHandler(BaseFileHandler):
         self.__load_meta_data_measurement__()
         self.file_version = 5
 
+    def __load_meta_data_v6__(self, ):
+        """Loads the SDAQ-hdf5 version 6 introduced from 23rd of December 2022.
+
+        CHANGES in respect to version 5
+        -------------------------------
+        added: @TOT - 'tot/hld_start_time'
+        """
+        # load the single hdf5 groups
+        self.__load_meta_data_daq_v3__()  # TRB_DAQ
+        self.__load_meta_data_gimbal__()  # Gimbal
+        self.__load_meta_data_laser_v2__()  # Laser
+        self.__load_meta_data_counts__()  # counts
+        self.__load_meta_data_tot_v2__()  # TOT
+        self.__load_meta_data_measurement__()
+        self.file_version = 6
+
+    def __load_meta_data_v7__(self, ):
+        """Loads the SDAQ-hdf5 version 7 introduced from 26th of December 2022 at 13:02.
+
+        CHANGES in respect to version 6
+        -------------------------------
+        added: @hld - 'hld/file_start', 'hld/file_end'
+        """
+        # load the single hdf5 groups
+        self.__load_meta_data_daq_v3__()  # TRB_DAQ
+        self.__load_meta_data_gimbal__()  # Gimbal
+        self.__load_meta_data_laser_v2__()  # Laser
+        self.__load_meta_data_counts__()  # counts
+        self.__load_meta_data_tot_v2__()  # TOT
+        self.__load_meta_data_hld__()  # TOT
+        self.__load_meta_data_measurement__()
+        self.file_version = 7
+
     # ---- Helper functions for load ----
     def __load_meta_data_gimbal__(self):
         # Gimbal
@@ -174,13 +215,27 @@ class FileHandler(BaseFileHandler):
         self.__load_meta_data_laser_v1__()
 
     def __load_meta_data_tot__(self):
-        # TOT - sometime there are is no TOT available
+        """TOT - sometime there is no TOT available"""
         try:
             self.tot_time = self.file['tot/time']
             self.tot_time_ns = self.file['tot/time_ns']
             self.tot_tot = self.file['tot/tot']
         except KeyError:
             pass
+
+    def __load_meta_data_tot_v2__(self):
+        """TOT - sometime there are is no TOT available"""
+        self.tot_time = self.file['tot/time']
+        self.tot_time_ns = self.file['tot/time_ns']
+        self.tot_tot = self.file['tot/tot']
+        self.tot_hld_start_time = self.file['tot/hld_start_time']
+
+    def __load_meta_data_hld__(self):
+        """hld-file start and end times. The time represents the storage of the parameters in the sdaq job.
+        Usually, it's after the unpacking of the hld file."""
+        self.hld_time = self.file['hld/time']
+        self.hld_file_start = self.file['hld/file_start']
+        self.hld_file_start = self.file['hld/file_end']
 
     def __load_meta_data_counts__(self):
         # Counter

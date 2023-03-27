@@ -1,4 +1,3 @@
-import numpy as np
 import pandas
 
 from strawb.sensors.lidar.file_handler import FileHandler
