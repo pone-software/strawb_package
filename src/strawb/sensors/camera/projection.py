@@ -462,10 +462,10 @@ class TransformCoordinates:
         self.phi_module, self.theta_module = self.phi_module[0], self.theta_module[0]
 
         # not 100% the true solution, but close
-        steel_cable_vec = self._align_camera_(projection.pixel2vec(*position_steel_cable[None].T))
+        steel_cable_vec = self.align_camera(projection.pixel2vec(*position_steel_cable[None].T))
         self.phi_cable = -np.pi + projection.pixel2angle(*projection.vec2pixel(*steel_cable_vec))[0][0]
 
-    def _align_camera_(self, points, inverse=False):
+    def align_camera(self, points, inverse=False):
         """ Align to real world orientation to the camera orientation or vise versa.
         Parameters
         ----------
@@ -514,7 +514,7 @@ class TransformCoordinates:
         points = ProjectionTools.rotation(points, gamma=self.phi_cable)
 
         # align to the module position
-        return self._align_camera_(points, inverse=True)
+        return self.align_camera(points, inverse=True)
 
     def camera2real(self, points):
         """ Transform the camera coordinates (x',y',z') to real world coordinates (x,y,z)
@@ -530,7 +530,7 @@ class TransformCoordinates:
         """
         # align to the module position
         # align to the module position
-        points = self._align_camera_(points, inverse=False)
+        points = self.align_camera(points, inverse=False)
 
         # align to the cable orientation
         points = ProjectionTools.rotation(points, gamma=-self.phi_cable)
