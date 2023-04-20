@@ -75,4 +75,14 @@ quickenden80,pure water,"Quickenden and Irvin,
      The column denoted aw2 corresponds to the absorption values deduced from the 
      attenuation values between 196 nm and 320 nm.
      (1980)."
-straw,sea water,STRAW absorption values
+straw21,sea water,"Nicolai Bailly et al.,
+     ""Two-year optical site characterization for the Pacific Ocean Neutrino Experiment 
+     (P-ONE) in the Cascadia Basin"", The European Physical Journal C, (2021)"
+KM3Net06,sea water,"G. Riccobene et al, 
+    ""Deep seawater inherent optical properties in the Southern Ionian Sea"", 
+    2006"
+KM3Net10,sea water,"E.G. Anassontzis et al, 
+    ""Light transmission measurements with LAMS in the Mediterranean Sea"", 
+    2010"
+KM3Net15,sea water,"KM3NeT, ""Technical Design Report (2015); Sites: Pylos (N4.5),and Capo Passero (CP1 and CP2)"",
+    https://www.km3net.org/wp-content/uploads/2015/07/KM3NeT-TDR-Part-2.pdf"
