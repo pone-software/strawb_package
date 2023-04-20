@@ -6,7 +6,7 @@ from strawb.calibration.absorption import Absorption
 
 class Water(Absorption):
     local_path = os.path.abspath(os.path.join(os.path.dirname(__file__)))
-    config_parameters_pool = pandas.read_csv(os.path.join(local_path, 'water_data.csv'), index_col='Unnamed: 0')
+    config_parameters_pool = pandas.read_csv(os.path.join(local_path, 'water_data.csv'))
     publications = pandas.read_csv(os.path.join(local_path, 'water_publication.csv'), index_col='publication')
 
     def __init__(self, thickness=None, publication='hale73', config_parameters=None):
@@ -34,3 +34,5 @@ class Water(Absorption):
                 raise KeyError(f'publication not in config_parameters_pool. Got: {publication}')
 
         Absorption.__init__(self, thickness=thickness, config_parameters=config_parameters)
+
+# class Chlorophyll(Absorption):
