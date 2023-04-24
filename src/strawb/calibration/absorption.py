@@ -40,10 +40,54 @@ class Absorption:
         """Absorption coefficient in [1/m] (1/meter)"""
         return self.config_parameters.absorption.to_numpy()
 
+    def absorption_interp(self, wavelength=None, *args, **kwargs):
+        """Interpolated absorption.
+        PARAMETERS
+        ----------
+        wavelength: float, ndarray, optional
+            the wavelength(s) where the transmittance is calculated. If None (default) it takes the
+            np.linspace(self.wavelength.min(), self.wavelength.max(), 1000).
+        *args, **kwargs: optional
+            parsed to scipy.interpolate.interp1d(wavelength, transmittance, *args, **kwargs).
+            E.g. to change the of interpolation order: kind='linear', kind='quadratic',or kind='cubic', respectively,
+            for first-, second-, and third-order interpolation.
+
+        RETURNS
+        -------
+        absorption: ndarray
+            the absorption for the given wavelength of the material in [1/m].
+        """
+        if wavelength is None:
+            wavelength = np.linspace(self.wavelength.min(), self.wavelength.max(), 1000)
+
+        interpolation = scipy.interpolate.interp1d(self.wavelength, self.absorption,
+                                                   *args, **kwargs
+                                                   )
+        return interpolation(wavelength)
+
     @property
     def absorption_length(self, ):
         """Absorption length in [m] (meter)"""
         return 1. / self.absorption
+
+    def absorption_length_interp(self, wavelength=None, *args, **kwargs):
+        """Interpolated absorption length in [m] (meter)
+        PARAMETERS
+        ----------
+        wavelength: float, ndarray, optional
+            the wavelength(s) where the transmittance is calculated. If None (default) it takes the
+            np.linspace(self.wavelength.min(), self.wavelength.max(), 1000).
+        *args, **kwargs: optional
+            parsed to scipy.interpolate.interp1d(wavelength, transmittance, *args, **kwargs).
+            E.g. to change the of interpolation order: kind='linear', kind='quadratic',or kind='cubic', respectively,
+            for first-, second-, and third-order interpolation.
+
+        RETURNS
+        -------
+        absorption_length: ndarray
+            the absorption for the given wavelength of the material in [1/m].
+        """
+        return 1. / self.absorption_interp(wavelength=wavelength, *args, **kwargs)
 
     def transmittance(self, wavelength=None, thickness=None, *args, **kwargs):
         """Transmittance of the glass for a glass thickness.

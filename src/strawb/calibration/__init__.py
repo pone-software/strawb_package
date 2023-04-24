@@ -6,4 +6,4 @@ from .filter import Filter
 from .camera_rgb import CameraRGB
 from .led import LED
 from .laser import Laser
-from .water import Water
+from .water import Water, Chlorophyll

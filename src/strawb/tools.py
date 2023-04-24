@@ -366,23 +366,93 @@ def add_docs(org_func):
 
 
 # From: https://stackoverflow.com/questions/1094841/get-human-readable-version-of-file-size
-def human_size(size_bytes, units=None, base=1024, precision=2):
-    """ Returns a human readable string representation of bytes
+def human_size(size_bytes, precision=2):
+    """ Returns a human-readable string representation of bytes
     PARAMETER
     ---------
     size_bytes: int, float
         the file size as number
-    units: list, optional
-        the units to take as a list starting from small to big. Units are separated by the factor defined in base.
-        Default: [' bytes', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB'].
-    base: float, optional
-        defines the base which defines the factor between units, i.e. base=1024; 1024 -> 1 KB. Default: 1024
     precision: int, optional
         the precision the returned string has. I.e.: precision=2 -> `XXX.XX ...`
     """
-    if units is None:
-        units = [' bytes', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB']
-    return f'{size_bytes:.{precision}f} {units[0]}' if size_bytes < base else human_size(size_bytes / base, units[1:])
+    return si_prefix(size_bytes, base=1024, unit='B', precision=precision)
+
+
+def si_prefix(value, unit=None, precision=2, significant=False, base=1000, prefix_type='short',
+              fmt='{value} {prefix}{unit}'):
+    """ Returns a human-readable string representation of value with SI prefix notation
+    following ISO/IEC 80000 standard (https://en.wikipedia.org/wiki/Metric_prefix).
+    PARAMETER
+    ---------
+    size_bytes: int, float
+        the file size as number
+    unit: str, optional
+        the unit to add after the SI prefix. Default: None which doesn't add a unit to the string
+    precision: int, optional
+        the precision the returned string has. I.e.: precision=2 -> `XXX.XX ...`
+    significant: bool, optional
+        if precision indicating significant digits. significant=True with precision=0 will allways result in 0
+    base: float, optional
+        defines the base which defines the factor between units,
+        i.e. usually its 1000 but for bytes base=1024; 1024 -> 1 KB. Default: 1000
+    prefix_type: str, optional
+        defines the type of prefix and is either 'short' (default) or 'long',
+        e.g. 'short'->k, 'long'->kilo.
+    fmt: str, optional
+        the string formatter which can be any combination out '{value}', '{prefix}', '{unit}',
+        e.g.: 'Value: {value}, Unit: [{prefix}{unit}]'. Default: '{value} {prefix}{unit}'
+    """
+    prefixes = {
+        30: {'long': 'quetta', 'short': 'Q'},
+        27: {'long': 'ronna', 'short': 'R'},
+        24: {'long': 'yotta', 'short': 'Y'},
+        21: {'long': 'zetta', 'short': 'Z'},
+        18: {'long': 'exa', 'short': 'E'},
+        15: {'long': 'peta', 'short': 'P'},
+        12: {'long': 'tera', 'short': 'T'},
+        9: {'long': 'giga', 'short': 'G'},
+        6: {'long': 'mega', 'short': 'M'},
+        3: {'long': 'kilo', 'short': 'k'},
+        0: {'long': '', 'short': ''},
+        -3: {'long': 'milli', 'short': 'm'},
+        -6: {'long': 'micro', 'short': 'µ'},
+        -9: {'long': 'nano', 'short': 'n'},
+        -12: {'long': 'pico', 'short': 'p'},
+        -15: {'long': 'femto', 'short': 'f'},
+        -18: {'long': 'atto', 'short': 'a'},
+        -21: {'long': 'zepto', 'short': 'z'},
+        -24: {'long': 'yocto', 'short': 'y'},
+        -27: {'long': 'ronto', 'short': 'r'},
+        -30: {'long': 'quecto', 'short': 'q'},
+    }
+
+    if unit is None:
+        unit = ''
+
+    index = int(np.floor(np.log(np.abs(value)) / np.log(base)))
+
+    # check if value in range of prefixes
+    if index * 3 in prefixes:
+        prefix = prefixes[index * 3][prefix_type]
+
+        value = np.round(value / base ** index, precision)
+        if significant:
+            precision = precision - int(np.floor(np.log10(np.abs(value)))) - 1
+            value_str = f'{np.round(value, precision):g}'
+        else:
+            value_str = f'{value:.{precision}f}'
+
+    # fallback to scientific notation
+    else:
+        prefix = ''
+        if significant:
+            value_str = f'{value:.{precision}g}'
+        else:
+            value_str = f'{value:.{precision}e}'
+
+    return fmt.format(value=f'{value_str}',
+                      prefix=prefix,
+                      unit=unit)
 
 
 def wavelength_to_rgb(wavelength, gamma=1., alpha_outside=.5):
@@ -392,8 +462,8 @@ def wavelength_to_rgb(wavelength, gamma=1., alpha_outside=.5):
     Based on code by Dan Bruton: http://www.physics.sfasu.edu/astro/color/spectra.html
     Mod. from: http://www.noah.org/wiki/Wavelength_to_RGB_in_Python
 
-    PARAMTERS
-    ---------
+    PARAMETERS
+    ----------
     wavelength: float,
         wavelength in nm
     gamma: float, optional
