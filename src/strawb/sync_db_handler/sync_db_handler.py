@@ -759,7 +759,7 @@ class SyncDBHandler(BaseDBHandler):
 
         return dataframe
 
-    def get_files_from_names(self, file_names):
+    def get_files_from_names(self, file_names, save_db=True):
         """Checks:
         1. if all files are listed in the DB. If not it raise a ValueError.
         2. if all files are downloaded. In case load the missing files
@@ -769,6 +769,8 @@ class SyncDBHandler(BaseDBHandler):
         ---------
         file_name: Union(str, list, set)
             The file_names, it can be multiple file names as a list or set, or one as a str.
+        save_db: bool, optional
+            when new files are downloaded, should it saves the DB on disc `True` (default) or not `False`.
         """
 
         if isinstance(file_names, str):
@@ -786,7 +788,7 @@ class SyncDBHandler(BaseDBHandler):
             mask |= self.dataframe.filename == i
 
         if not all(self.dataframe.synced[mask]):
-            return self.update_db_and_load_files(self.dataframe[mask], download=True)
+            return self.update_db_and_load_files(self.dataframe[mask], download=True, save_db=save_db)
 
         else:
             return self.dataframe[mask]
@@ -906,17 +908,19 @@ class SyncDBHandler(BaseDBHandler):
 
         return dataframe
 
-    def date_mask_between(self, time_from, time_to, dataframe=None, tz="UTC"):
+    def date_mask_between(self, time_from, time_to, dataframe=None, tz="UTC", include_time_to=False):
         """Mask files based on 'dateFrom' and 'dateTo' which overlap with a time range: [time_from, time_to].
         It is based on strawb.tools.pd_timestamp_mask_between.
         PARAMETER
         ---------
         time_from, time_to: datetime-like, str, int, float
-            Value to be converted to Timestamp.
+            Value to be converted to Timestamp (using `strawb.tools.pd_timestamp_convert()`).
         dataframe: Union[None, pandas.DataFrame], optional
             If None (default) it checks the internal dataframe. Otherwise, it checks the provided dataframe.
         tz : str, pytz.timezone, dateutil.tz.tzfile or None, optional
             Time zone for time_from, time_to. Default: "UTC"
+        include_time_to : bool, optional
+            `True` to include `time_to` (`<=`) or `False`(default) to exclude `time_to` (`<`)
         RETURNS
         -------
         mask: bool pandas.Series
@@ -925,7 +929,8 @@ class SyncDBHandler(BaseDBHandler):
         if dataframe is None:
             dataframe = self.dataframe
 
-        return pd_timestamp_mask_between(dataframe.dateFrom, dataframe.dateTo, time_from, time_to, tz=tz)
+        return pd_timestamp_mask_between(dataframe.dateFrom, dataframe.dateTo, time_from, time_to,
+                                         tz=tz, include_time_to=include_time_to)
 
     def optimize_dataframe(self, exclude_columns=None, include_columns=None):
         """function which optimize the dataframe to reduce the size, manly RAM but also on disc.

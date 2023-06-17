@@ -768,7 +768,7 @@ def pd_timestamp_convert(time_0, tz='UTC'):
     return time_0
 
 
-def pd_timestamp_mask_between(series_start, series_stop, time_from, time_to, tz="UTC"):
+def pd_timestamp_mask_between(series_start, series_stop, time_from, time_to, tz="UTC", include_time_to=False):
     """Mask time-extended entries which overlap with a time range: [time_from, time_to].
     time-extended entries are specified with series_start, series_stop.
     PARAMETER
@@ -776,9 +776,11 @@ def pd_timestamp_mask_between(series_start, series_stop, time_from, time_to, tz=
     series_start, series_stop: pandas.Series
         two series with the same length indicating the start and stop time of each entry
     time_from, time_to: datetime-like, str, int, float
-        Value to be converted to Timestamp.
+        Value to be converted to Timestamp (using strawb.tools.pd_timestamp_convert())
     tz : str, pytz.timezone, dateutil.tz.tzfile or None, optional
         Time zone for time_from, time_to. Default: "UTC"
+    include_time_to : bool, optional
+        `True` to include `time_to` (`<=`) or `False`(default) to exclude `time_to` (`<`)
     RETURNS
     -------
     mask: bool pandas.Series
@@ -790,11 +792,14 @@ def pd_timestamp_mask_between(series_start, series_stop, time_from, time_to, tz=
     # files which cover the start time
     mask = (series_start <= time_from) & (series_stop >= time_from)
 
-    # files which cover the end time
-    mask |= (series_start <= time_to) & (series_stop >= time_to)
-
     # files in-between start and end time
     mask |= (series_start >= time_from) & (series_stop <= time_to)
+
+    # files which cover the end time
+    if include_time_to:
+        mask |= (series_start <= time_to) & (series_stop >= time_to)
+    else:
+        mask |= (series_start < time_to) & (series_stop >= time_to)
 
     return mask
 
