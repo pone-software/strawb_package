@@ -101,25 +101,26 @@ class ONCDeviceDB(BaseDBHandler):
         else:
             result_i[-1].update({'index': index})
             return result_i[-1]
-
+            
     def add_distance_to_straw(self):
-        # add position in meters too DataFrame (normalized to STRAWb position)
+        """ adds position in meters to the DataFrame (normalized to STRAW-b's position, i.e. TUMSTANDARDMODULE001)"""
         mask_xy = ~(self.dataframe.lat.isnull() | self.dataframe.lon.isnull())
         # limit it to the northern hemisphere also because utm can't handle positiv and negative lat. simultaniously
         mask_xy &= self.dataframe.lat >=0 
-        x, y, _, _ = utm.from_latlon(self.dataframe[mask_xy].lat.to_numpy(),
-                                     self.dataframe[mask_xy].lon.to_numpy())
-
+    
+        # gen two arrays with np.nan at the masked data, copy() is here important
+        x = self.dataframe.lat.to_numpy().copy()
+        x[mask_xy] = np.nan
+        y = x.copy()
+        
+        x[mask_xy], y[mask_xy], _, _ = utm.from_latlon(
+            self.dataframe[mask_xy].lat.to_numpy(),
+            self.dataframe[mask_xy].lon.to_numpy())
+    
         # normalize pos, use TUMSTANDARDMODULE001
         standard_module1 = self.dataframe[self.dataframe.deviceCode == 'TUMSTANDARDMODULE001'].iloc[0]
         x_norm, y_norm, _, _ = utm.from_latlon(standard_module1.lat, standard_module1.lon)
-
+    
         # add positions to DataFrame
-        df_xy = pandas.DataFrame(data={'pos_x': x - x_norm, 'pos_y': y - y_norm},
-                                 index=self.dataframe[mask_xy].index)
-
-        self.dataframe.drop(columns=['pos_x_x', 'pos_y_x', 'pos_x_y', 'pos_y_y'],
-                            inplace=True,
-                            errors='ignore')
-
-        self.dataframe = self.dataframe.merge(df_xy, how='left', left_index=True, right_index=True)
+        self.dataframe['pos_x'] = x - x_norm
+        self.dataframe['pos_y'] = y - y_norm
