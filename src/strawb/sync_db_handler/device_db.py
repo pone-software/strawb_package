@@ -105,6 +105,8 @@ class ONCDeviceDB(BaseDBHandler):
     def add_distance_to_straw(self):
         # add position in meters too DataFrame (normalized to STRAWb position)
         mask_xy = ~(self.dataframe.lat.isnull() | self.dataframe.lon.isnull())
+        # limit it to the northern hemisphere also because utm can't handle positiv and negative lat. simultaniously
+        mask_xy &= self.dataframe.lat >=0 
         x, y, _, _ = utm.from_latlon(self.dataframe[mask_xy].lat.to_numpy(),
                                      self.dataframe[mask_xy].lon.to_numpy())
 
